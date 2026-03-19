@@ -4,32 +4,29 @@ import { Waves, ArrowRight, Bot, Search, Eye, Shield, BarChart3, Zap } from "luc
 import { Link } from "react-router-dom";
 
 const TERMINAL_LINES = [
-  { type: "input", text: "wave, find me creative agencies struggling with content ops" },
-  { type: "status", text: "Searching web + LinkedIn + X/Twitter...", icon: "search" },
-  { type: "status", text: "Delegating to Strategist for market analysis...", icon: "agent" },
+  { type: "input", text: "find creative agencies with content ops problems" },
+  { type: "status", text: "Searching web + LinkedIn...", icon: "search" },
+  { type: "status", text: "Delegating to Strategist...", icon: "agent" },
   { type: "output", text: "Found 5 prospects. Top match:" },
-  { type: "result", text: "Yard NYC — Score: 95/100 (AdAge Small Agency of the Year)" },
-  { type: "result", text: "CEO: Ruth Bernstein | 96 employees | Clients: Tanqueray, Walmart" },
-  { type: "result", text: "Pain signal: content ops bottleneck with tier-1 clients" },
-  { type: "status", text: "Generating 4-touch outreach sequence...", icon: "zap" },
-  { type: "output", text: "Outreach ready. Day 1: Email, Day 2: LinkedIn, Day 5: Follow-up, Day 10: Close" },
+  { type: "result", text: "Yard NYC — 95/100 (AdAge Small Agency of the Year)" },
+  { type: "result", text: "CEO: Ruth Bernstein | 96 employees" },
+  { type: "status", text: "Generating outreach...", icon: "zap" },
+  { type: "output", text: "4-touch sequence ready (email + LinkedIn)" },
   { type: "divider", text: "" },
-  { type: "input", text: "analyze this image for brand compliance" },
-  { type: "status", text: "Claude Vision analyzing image...", icon: "eye" },
-  { type: "result", text: "Compliance: 87/100 — Colors match, typography off-brand" },
-  { type: "result", text: "Issue: Using Helvetica instead of Inter (x-height differs 7%)" },
-  { type: "result", text: "Suggestion: Switch to Inter with fallback system-ui" },
+  { type: "input", text: "check brand compliance on this image" },
+  { type: "status", text: "Claude Vision analyzing...", icon: "eye" },
+  { type: "result", text: "Compliance: 87/100 — typography off-brand" },
+  { type: "result", text: "Fix: Helvetica → Inter (x-height differs 7%)" },
   { type: "divider", text: "" },
   { type: "input", text: "I need a Hacker News monitor" },
-  { type: "status", text: "Creating skill: hacker_news_monitor.py...", icon: "zap" },
-  { type: "output", text: "Skill created! 4 new tools: hn_top, hn_search, hn_comments, hn_monitor" },
-  { type: "result", text: "9KB of Python generated, validated, registered. Available now." },
+  { type: "status", text: "Creating skill...", icon: "zap" },
+  { type: "output", text: "hacker_news_monitor.py — 4 new tools created" },
+  { type: "result", text: "9KB Python, validated, registered. Live now." },
   { type: "divider", text: "" },
-  { type: "input", text: "what's our Hedera billing status?" },
-  { type: "status", text: "Querying Hedera Mirror Node...", icon: "chain" },
-  { type: "result", text: "1,247 AI actions this month — $62.35 revenue" },
-  { type: "result", text: "Hedera tx fees: $0.12 total (vs $18.14 on Stripe)" },
-  { type: "result", text: "Savings: $18.02 (99.3% cheaper)" },
+  { type: "input", text: "Hedera billing status?" },
+  { type: "status", text: "Querying Mirror Node...", icon: "chain" },
+  { type: "result", text: "1,247 actions — $62.35 revenue" },
+  { type: "result", text: "Hedera: $0.12 vs Stripe: $18.14 (99.3% saved)" },
 ];
 
 function HeroTerminal() {
@@ -63,23 +60,23 @@ function HeroTerminal() {
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay: 0.7 }}
-      className="mt-16 mx-auto max-w-3xl"
+      className="mt-10 sm:mt-16 mx-auto max-w-3xl px-2 sm:px-0"
     >
-      <div className="relative rounded-xl border border-white/10 bg-[#0d1117] shadow-2xl shadow-blue-500/5 overflow-hidden">
+      <div className="relative rounded-lg sm:rounded-xl border border-white/10 bg-[#0d1117] shadow-2xl shadow-blue-500/5 overflow-hidden">
         {/* Terminal chrome */}
-        <div className="flex items-center gap-2 px-4 py-3 bg-[#161b22] border-b border-white/5">
-          <div className="w-3 h-3 rounded-full bg-red-500/70" />
-          <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
-          <div className="w-3 h-3 rounded-full bg-green-500/70" />
-          <div className="ml-3 flex items-center gap-2 flex-1">
-            <Bot className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-xs text-white/40 font-mono">wave@bluewave</span>
-            <span className="text-[10px] text-green-400/60 ml-auto font-mono">58 tools active</span>
+        <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-[#161b22] border-b border-white/5">
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500/70" />
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500/70" />
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500/70" />
+          <div className="ml-2 sm:ml-3 flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+            <Bot className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-400 shrink-0" />
+            <span className="text-[10px] sm:text-xs text-white/40 font-mono truncate">wave@bluewave</span>
+            <span className="text-[9px] sm:text-[10px] text-green-400/60 ml-auto font-mono shrink-0 hidden sm:inline">58 tools active</span>
           </div>
         </div>
 
         {/* Terminal content */}
-        <div className="p-4 sm:p-5 font-mono text-[12px] sm:text-[13px] leading-relaxed h-[340px] overflow-hidden">
+        <div className="p-3 sm:p-5 font-mono text-[10px] sm:text-[13px] leading-relaxed h-[280px] sm:h-[340px] overflow-hidden">
           {TERMINAL_LINES.slice(0, visibleLines).map((line, i) => (
             <motion.div
               key={i}
@@ -114,15 +111,15 @@ function HeroTerminal() {
         </div>
 
         {/* Bottom bar */}
-        <div className="px-4 py-2 bg-[#161b22] border-t border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="px-3 sm:px-4 py-2 bg-[#161b22] border-t border-white/5 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
             {[
               { label: "6 agents", color: "text-blue-400" },
               { label: "58 tools", color: "text-cyan-400" },
               { label: "Hedera", color: "text-purple-400" },
               { label: "self-evolving", color: "text-green-400" },
             ].map((tag) => (
-              <span key={tag.label} className={`text-[10px] font-medium ${tag.color}`}>
+              <span key={tag.label} className={`text-[9px] sm:text-[10px] font-medium ${tag.color}`}>
                 {tag.label}
               </span>
             ))}
@@ -131,9 +128,9 @@ function HeroTerminal() {
             href="https://t.me/bluewave_wave_bot"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] text-white/30 hover:text-cyan-400 transition-colors"
+            className="text-[9px] sm:text-[10px] text-white/30 hover:text-cyan-400 transition-colors shrink-0"
           >
-            try live on Telegram →
+            try on Telegram →
           </a>
         </div>
       </div>
@@ -156,31 +153,31 @@ export default function Hero({ isAuthenticated }: HeroProps) {
       </div>
 
       {/* Top nav bar */}
-      <nav className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 sm:px-10 py-5">
+      <nav className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-10 py-4 sm:py-5">
         <Link to="/" className="flex items-center gap-2">
-          <Waves className="w-6 h-6 text-blue-500" />
-          <span className="text-lg font-bold text-white tracking-tight">Bluewave</span>
+          <Waves className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
+          <span className="text-base sm:text-lg font-bold text-white tracking-tight">Bluewave</span>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {isAuthenticated ? (
             <Link
               to="/assets"
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-all duration-150"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-5 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs sm:text-sm hover:bg-blue-700 transition-all duration-150"
             >
-              Go to Dashboard
-              <ArrowRight className="w-4 h-4" />
+              Dashboard
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           ) : (
             <>
               <Link
                 to="/login"
-                className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors"
+                className="px-3 py-2 text-xs sm:text-sm font-medium text-white/70 hover:text-white transition-colors"
               >
                 Sign in
               </Link>
               <Link
                 to="/register"
-                className="inline-flex items-center px-5 py-2 rounded-lg bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-all duration-150"
+                className="inline-flex items-center px-3 sm:px-5 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs sm:text-sm hover:bg-blue-700 transition-all duration-150"
               >
                 Start free
               </Link>
@@ -189,15 +186,15 @@ export default function Hero({ isAuthenticated }: HeroProps) {
         </div>
       </nav>
 
-      <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center pt-20 sm:pt-0">
         {/* Eyebrow */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
         >
-          <span className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-            Autonomous AI Agent &middot; 58 Tools &middot; Hedera-Powered
+          <span className="inline-flex items-center px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            Autonomous AI Agent &middot; 58 Tools &middot; Hedera
           </span>
         </motion.div>
 
@@ -206,7 +203,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="mt-8 text-4xl sm:text-5xl lg:text-[56px] font-bold text-[#F9FAFB] leading-tight tracking-tight"
+          className="mt-6 sm:mt-8 text-3xl sm:text-5xl lg:text-[56px] font-bold text-[#F9FAFB] leading-tight tracking-tight"
         >
           You upload.
           <br />
@@ -218,7 +215,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-6 text-lg sm:text-xl text-[#9CA3AF] max-w-2xl mx-auto leading-relaxed"
+          className="mt-4 sm:mt-6 text-base sm:text-xl text-[#9CA3AF] max-w-2xl mx-auto leading-relaxed px-2"
         >
           An autonomous AI agent with 58 tools, 6 specialists, computer vision,
           sales prospecting, and self-evolving skills — billing on Hedera at 99.3% less cost.
@@ -229,7 +226,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
+          className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 px-4"
         >
           {isAuthenticated ? (
             <Link
@@ -264,10 +261,10 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           transition={{ duration: 0.8, delay: 0.6 }}
           className="mt-16"
         >
-          <p className="text-sm text-[#9CA3AF] mb-6">
+          <p className="text-xs sm:text-sm text-[#9CA3AF] mb-4 sm:mb-6">
             Trusted by 500+ creative teams
           </p>
-          <div className="flex items-center justify-center gap-8 sm:gap-12 opacity-40">
+          <div className="flex items-center justify-center gap-4 sm:gap-12 opacity-40 flex-wrap">
             {["Acme Studio", "PixelCo", "MediaFlow", "CreativeHub", "BrandLab"].map(
               (name) => (
                 <span

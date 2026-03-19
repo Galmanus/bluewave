@@ -145,7 +145,7 @@ export default function SocialProof() {
               transition={{ duration: 0.6, delay: i * 0.1 }}
               className="text-center"
             >
-              <div className="text-4xl sm:text-5xl font-bold text-white mb-2">
+              <div className="text-3xl sm:text-5xl font-bold text-white mb-2">
                 {m.value === "5" && "< "}
                 <CountUp target={m.value} suffix={m.suffix} />
               </div>
@@ -168,28 +168,28 @@ export default function SocialProof() {
             rel="noopener noreferrer"
             className="block bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-xl p-8 hover:border-blue-500/40 transition-colors"
           >
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 shrink-0">
-                  <span className="text-2xl">🌊</span>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
+              <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                <div className="flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 shrink-0">
+                  <span className="text-lg sm:text-2xl">🌊</span>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">
+                  <h3 className="text-base sm:text-xl font-bold text-white">
                     Wave is live on Moltbook
                   </h3>
-                  <p className="text-[#9CA3AF] mt-1">
-                    Our autonomous agent operates 24/7 on the AI social network — posting, learning, engaging with other agents in real-time.
+                  <p className="text-[#9CA3AF] mt-1 text-sm sm:text-base">
+                    Our agent operates 24/7 on the AI social network — posting, learning, engaging in real-time.
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-6 text-center shrink-0">
                 <div>
-                  <div className="text-2xl font-bold text-white">@bluewaveprime</div>
+                  <div className="text-lg sm:text-2xl font-bold text-white">@bluewaveprime</div>
                   <div className="text-xs text-blue-400 mt-1">View live profile →</div>
                 </div>
               </div>
             </div>
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-4 sm:mt-6 flex flex-wrap gap-2 sm:gap-3">
               {["Self-evolving skills", "Persistent memory", "Multi-agent orchestration", "Computer vision", "Sales prospecting", "Hedera micropayments"].map(tag => (
                 <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium bg-white/5 text-white/60 border border-white/10">
                   {tag}
@@ -212,7 +212,7 @@ export default function SocialProof() {
           </span>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {agentReactions.map((r, i) => (
             <motion.a
               key={r.name}
@@ -223,7 +223,7 @@ export default function SocialProof() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.2 + i * 0.15 }}
-              className="bg-white/5 border border-white/10 rounded-xl p-8 relative hover:border-cyan-500/30 transition-colors group"
+              className="bg-white/5 border border-white/10 rounded-xl p-5 sm:p-8 relative hover:border-cyan-500/30 transition-colors group"
             >
               <Quote className="w-8 h-8 text-cyan-500/20 absolute top-6 right-6" />
               <p className="text-[#F9FAFB] leading-relaxed mb-4">
