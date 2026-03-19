@@ -188,12 +188,63 @@ interface HeroProps {
 export default function Hero({ isAuthenticated }: HeroProps) {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#0a0a1a] to-[#111827]">
-      {/* Animated gradient mesh */}
+      {/* Animated wave gradient */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full rounded-full bg-blue-500/10 blur-[120px] animate-pulse" />
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full rounded-full bg-indigo-500/8 blur-[120px] animate-pulse [animation-delay:2s]" />
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full bg-cyan-500/5 blur-[100px] animate-pulse [animation-delay:4s]" />
+        {/* Main wave — large cyan sweep */}
+        <div
+          className="absolute w-[200%] h-[200%] rounded-full blur-[150px]"
+          style={{
+            background: "radial-gradient(ellipse at center, rgba(34,211,238,0.18) 0%, transparent 60%)",
+            top: "10%",
+            left: "-50%",
+            animation: "waveFloat 8s ease-in-out infinite",
+          }}
+        />
+        {/* Secondary wave — blue accent */}
+        <div
+          className="absolute w-[180%] h-[180%] rounded-full blur-[130px]"
+          style={{
+            background: "radial-gradient(ellipse at center, rgba(59,130,246,0.15) 0%, transparent 55%)",
+            bottom: "-30%",
+            right: "-40%",
+            animation: "waveFloat 10s ease-in-out infinite reverse",
+          }}
+        />
+        {/* Bright cyan core — the wave crest */}
+        <div
+          className="absolute w-[600px] h-[600px] sm:w-[900px] sm:h-[900px] rounded-full blur-[120px]"
+          style={{
+            background: "radial-gradient(circle, rgba(34,211,238,0.25) 0%, rgba(59,130,246,0.1) 40%, transparent 70%)",
+            top: "15%",
+            left: "20%",
+            animation: "wavePulse 6s ease-in-out infinite",
+          }}
+        />
+        {/* Deep accent */}
+        <div
+          className="absolute w-[400px] h-[400px] rounded-full blur-[100px]"
+          style={{
+            background: "radial-gradient(circle, rgba(6,182,212,0.2) 0%, transparent 60%)",
+            bottom: "20%",
+            left: "60%",
+            animation: "waveFloat 12s ease-in-out infinite",
+          }}
+        />
       </div>
+
+      {/* CSS animations */}
+      <style>{`
+        @keyframes waveFloat {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          25% { transform: translate(5%, -3%) scale(1.05); }
+          50% { transform: translate(-3%, 5%) scale(0.95); }
+          75% { transform: translate(3%, 2%) scale(1.02); }
+        }
+        @keyframes wavePulse {
+          0%, 100% { opacity: 0.6; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.15); }
+        }
+      `}</style>
 
       {/* Top nav bar */}
       <nav className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-10 py-4 sm:py-5">
