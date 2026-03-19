@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useState } from "react";
-import { Palette, Plus, Trash2, Save, ShieldCheck } from "lucide-react";
+import { FormEvent, useEffect, useState, useCallback } from "react";
+import { Palette, Plus, Trash2, Save, ShieldCheck, Upload, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import {
   useBrandGuidelines,
   useUpdateBrandGuidelines,
@@ -8,6 +8,8 @@ import { Button } from "../components/ui/Button";
 import { Textarea } from "../components/ui/Input";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
+
+const WAVE_API = import.meta.env.VITE_WAVE_API_URL || "http://localhost:18790";
 
 function ListEditor({
   label,
@@ -250,6 +252,124 @@ export default function BrandPage() {
           Save Guidelines
         </Button>
       </form>
+
+      {/* Compliance Check Section */}
+      {guidelines && (
+        <ComplianceChecker brandName={guidelines.custom_rules?.brand_name || "your brand"} />
+      )}
     </div>
+  );
+}
+
+function ComplianceChecker({ brandName }: { brandName: string }) {
+  const [checking, setChecking] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  const handleFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => setPreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+
+    // Send to Wave for compliance check
+    setChecking(true);
+    setResult(null);
+    try {
+      const base64 = await new Promise<string>((resolve) => {
+        const r = new FileReader();
+        r.onload = () => resolve((r.result as string).split(",")[1]);
+        r.readAsDataURL(file);
+      });
+
+      const res = await fetch(`${WAVE_API}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Analyze this image for brand compliance against ${brandName} guidelines. Check colors, typography, tone, and all brand rules. Return a score 0-100 and specific issues. Image data (base64): ${base64.substring(0, 500)}...`,
+          session_id: "compliance_check_" + Date.now(),
+        }),
+      });
+      const data = await res.json();
+      setResult({ success: true, analysis: data.response });
+    } catch (err) {
+      setResult({ success: false, analysis: "Failed to analyze. Wave may be offline." });
+    }
+    setChecking(false);
+  }, [brandName]);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  }, [handleFile]);
+
+  return (
+    <Card className="mt-xl p-lg space-y-lg">
+      <h2 className="text-heading text-text-primary flex items-center gap-2">
+        <ShieldCheck className="h-5 w-5 text-accent" strokeWidth={1.5} />
+        Brand Compliance Check
+      </h2>
+      <p className="text-body text-text-secondary">
+        Drop an image to check if it follows {brandName}'s brand guidelines.
+        Wave analyzes colors, typography, composition and tone against your Brand DNA.
+      </p>
+
+      {/* Drop zone */}
+      <div
+        onDrop={onDrop}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-12 transition-colors cursor-pointer ${
+          dragOver
+            ? "border-accent bg-accent-subtle/30"
+            : "border-border-subtle hover:border-accent/50"
+        }`}
+        onClick={() => {
+          const input = document.createElement("input");
+          input.type = "file";
+          input.accept = "image/*";
+          input.onchange = (e: any) => {
+            const file = e.target.files[0];
+            if (file) handleFile(file);
+          };
+          input.click();
+        }}
+      >
+        {preview ? (
+          <img src={preview} alt="Preview" className="max-h-48 rounded-lg" />
+        ) : (
+          <>
+            <Upload className="h-10 w-10 text-text-tertiary" strokeWidth={1} />
+            <span className="text-body text-text-secondary">
+              Drop an image here or click to upload
+            </span>
+          </>
+        )}
+        {checking && (
+          <div className="absolute inset-0 flex items-center justify-center bg-surface/80 rounded-xl">
+            <div className="flex items-center gap-3">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+              <span className="text-body-medium text-accent">Wave is analyzing...</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Result */}
+      {result && (
+        <div className={`rounded-xl p-lg ${
+          result.success ? "bg-surface-raised" : "bg-danger-subtle"
+        }`}>
+          <div className="prose prose-sm max-w-none text-text-primary whitespace-pre-wrap">
+            {result.analysis}
+          </div>
+        </div>
+      )}
+    </Card>
   );
 }
