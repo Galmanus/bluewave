@@ -348,6 +348,73 @@ async def generate_content_endpoint(request: Request):
     return {"content": result, "elapsed_seconds": elapsed}
 
 
+# ── Brand Suite (10 high-revenue features) ───────────────────
+
+@app.post("/brand/social-calendar")
+async def social_calendar(request: Request):
+    import time as _t; t=_t.time()
+    from brand_suite import generate_social_calendar
+    b = await request.json()
+    r = await generate_social_calendar(b.get("weeks",4), b.get("posts_per_week",5), b.get("channels","instagram_feed,instagram_stories"), b.get("themes",""), b.get("language","pt-BR"))
+    return {"content": r, "elapsed_seconds": _t.time()-t}
+
+@app.post("/brand/repurpose")
+async def repurpose(request: Request):
+    import time as _t; t=_t.time()
+    from brand_suite import repurpose_content
+    b = await request.json()
+    r = await repurpose_content(b.get("content",""), b.get("channel","instagram_feed"), b.get("language","pt-BR"))
+    return {"content": r, "elapsed_seconds": _t.time()-t}
+
+@app.post("/brand/ad-copy")
+async def ad_copy(request: Request):
+    import time as _t; t=_t.time()
+    from brand_suite import generate_ad_copy
+    b = await request.json()
+    r = await generate_ad_copy(b.get("product",""), b.get("objective","conversions"), b.get("audience",""), b.get("variations",3), b.get("language","pt-BR"))
+    return {"content": r, "elapsed_seconds": _t.time()-t}
+
+@app.post("/brand/email-sequence")
+async def email_seq(request: Request):
+    import time as _t; t=_t.time()
+    from brand_suite import generate_email_sequence
+    b = await request.json()
+    r = await generate_email_sequence(b.get("type","welcome"), b.get("count",5), b.get("product",""), b.get("language","pt-BR"))
+    return {"content": r, "elapsed_seconds": _t.time()-t}
+
+@app.post("/brand/product-descriptions")
+async def prod_desc(request: Request):
+    import time as _t; t=_t.time()
+    from brand_suite import generate_product_descriptions
+    b = await request.json()
+    r = await generate_product_descriptions(b.get("products",[]), b.get("style","short"), b.get("language","pt-BR"))
+    return {"content": r, "elapsed_seconds": _t.time()-t}
+
+@app.post("/brand/hashtags")
+async def hashtags(request: Request):
+    import time as _t; t=_t.time()
+    from brand_suite import research_hashtags
+    b = await request.json()
+    r = await research_hashtags(b.get("topic",""), b.get("count",15), b.get("language","pt-BR"))
+    return {"content": r, "elapsed_seconds": _t.time()-t}
+
+@app.post("/brand/competitor-audit")
+async def comp_audit(request: Request):
+    import time as _t; t=_t.time()
+    from brand_suite import audit_competitor_content
+    b = await request.json()
+    r = await audit_competitor_content(b.get("competitor",""), b.get("description",""), b.get("language","pt-BR"))
+    return {"content": r, "elapsed_seconds": _t.time()-t}
+
+@app.post("/brand/report")
+async def brand_report(request: Request):
+    import time as _t; t=_t.time()
+    from brand_suite import generate_brand_report
+    b = await request.json()
+    r = await generate_brand_report(b.get("period","monthly"), b.get("scores",[]), b.get("content_generated",0), b.get("language","pt-BR"))
+    return {"content": r, "elapsed_seconds": _t.time()-t}
+
+
 # ── Main ─────────────────────────────────────────────────────
 
 if __name__ == "__main__":
