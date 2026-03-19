@@ -176,7 +176,7 @@
   "capabilities": {
     "total_tools": 76,
     "skill_modules": 17,
-    "specialists": 7,
+    "specialists": 8,
     "self_evolution": true,
     "computer_vision": true,
     "blockchain_payments": true,
@@ -300,6 +300,26 @@
           "business structure",
           "incorporation"
         ]
+      },
+      "security": {
+        "id": "security-auditor",
+        "name": "Security",
+        "domain": "Cybersecurity, vulnerability assessment, infrastructure hardening",
+        "tools_count": 5,
+        "personality": "Thinks like an attacker, defends like an expert. MITRE ATT&CK and OWASP methodology. Severity-rated findings with specific fixes.",
+        "handles": [
+          "security",
+          "vulnerability",
+          "pentest",
+          "hardening",
+          "OWASP",
+          "audit",
+          "SSL",
+          "authentication security",
+          "injection",
+          "XSS",
+          "CSRF"
+        ]
       }
     }
   },
@@ -325,7 +345,9 @@
       "greetings and help": "handle directly",
       "legal and compliance": "legal",
       "contracts and IP": "legal",
-      "tax and incorporation": "legal"
+      "tax and incorporation": "legal",
+      "security and vulnerabilities": "security",
+      "hardening and pentest": "security"
     }
   },
   "compound_workflows": [

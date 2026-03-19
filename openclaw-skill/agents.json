@@ -171,6 +171,21 @@
         "deep_research",
         "competitor_analysis"
       ]
+    },
+    {
+      "id": "security-auditor",
+      "name": "Security",
+      "emoji": "shield",
+      "domain": "Cybersecurity, Vulnerability Assessment, and Infrastructure Hardening",
+      "description": "Cybersecurity specialist with MITRE ATT&CK and OWASP expertise. Audits Bluewave systems defensively, identifies vulnerabilities, recommends hardening. Thinks like an attacker, defends like an expert.",
+      "soul_prompt_file": "prompts/security.md",
+      "tools": [
+        "web_search",
+        "scrape_url",
+        "deep_research",
+        "run_command",
+        "seo_analysis"
+      ]
     }
   ]
 }
