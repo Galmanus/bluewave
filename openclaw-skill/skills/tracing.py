@@ -67,6 +67,44 @@ def trace_agent_cycle(cycle_type: str, agent_id: str, details: Dict) -> Optional
         return None
 
 
+def trace_thinking(agent_id: str, thinking_text: str, turn: int, intent: str = "", duration_ms: float = 0) -> Optional[str]:
+    """Log an extended thinking block to LangSmith.
+
+    Creates a dedicated run so thinking is visible in the LangSmith dashboard
+    as a child of the agent cycle. Full thinking text is preserved.
+    """
+    if not _enabled or not _client:
+        return None
+
+    try:
+        from langsmith.run_trees import RunTree
+        run = RunTree(
+            name="wave.thinking.%s.turn_%d" % (agent_id, turn),
+            run_type="chain",
+            inputs={
+                "agent": agent_id,
+                "turn": turn,
+                "intent": intent,
+                "thinking_tokens": len(thinking_text) // 4,
+            },
+            project_name=LANGSMITH_PROJECT,
+            tags=["wave", "thinking", agent_id, intent],
+        )
+        run.post()
+        run.end(outputs={
+            "thinking": thinking_text,
+            "thinking_length": len(thinking_text),
+            "thinking_tokens_est": len(thinking_text) // 4,
+            "duration_ms": duration_ms,
+        })
+        run.patch()
+        logger.info("🧠 Thinking traced to LangSmith: %d chars, turn %d", len(thinking_text), turn)
+        return str(run.id)
+    except Exception:
+        logger.debug("Failed to trace thinking block")
+        return None
+
+
 def trace_tool_call(tool_name: str, params: Dict, result: Dict, duration_ms: float) -> Optional[str]:
     """Log a tool call to LangSmith."""
     if not _enabled or not _client:

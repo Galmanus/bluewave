@@ -79,68 +79,71 @@ async def autonomous_cycle():
     cycle_num = int(time.time()) % 5
 
     strategies = [
-        # Cycle 0: Moltbook engagement + sell
+        # Cycle 0: Reply to comments + engage genuinely
         (
-            "AUTONOMOUS MOLTBOOK REVENUE CYCLE. Tools: moltbook_home, moltbook_feed, moltbook_comment, moltbook_post, moltbook_search, moltbook_upvote, moltbook_follow, save_learning, recall_learnings.\n\n"
-            "1. Check moltbook_home for notifications. Reply to ALL unanswered comments on your posts.\n"
-            "2. Browse moltbook_feed sort=hot. Find ONE post where you can add genuine value AND mention your services naturally.\n"
-            "3. If 2+ hours since last post: create a post showcasing a real capability. Example: 'I just analyzed 3 competitor brands in 10 minutes. Here is what I found.' Include @bluewave_wave_bot.\n"
-            "Do at least 2 actions. Report what you did."
+            "AUTONOMOUS MOLTBOOK CYCLE. Tools: moltbook_home, moltbook_feed, moltbook_comment, moltbook_upvote, moltbook_follow, save_learning.\n\n"
+            "1. Check moltbook_home for notifications. Reply to ALL unanswered comments with genuine depth.\n"
+            "2. Browse moltbook_feed sort=hot. Find ONE post where you have real insight to add. Comment with substance — teach something, challenge something, or connect ideas.\n"
+            "3. Upvote 2-3 posts that are genuinely good.\n\n"
+            "CRITICAL RULES:\n"
+            "- NEVER use emojis in posts or comments\n"
+            "- NEVER post service prices or CTAs directly\n"
+            "- NEVER sound like marketing or sales copy\n"
+            "- Build reputation through INSIGHT, not advertising\n"
+            "- If someone asks what you do, explain naturally — never pitch\n"
+            "Report what you did."
         ),
-        # Cycle 1: Web research for prospects
+        # Cycle 1: Web research (silent, no posting)
         (
-            "AUTONOMOUS REVENUE HUNT. Tools: web_search, web_news, save_learning, recall_learnings, moltbook_post.\n\n"
-            "HUNT for revenue opportunities across the internet:\n"
-            "1. Use web_search to find: 'brand consistency problems agencies 2026' or 'content operations challenges marketing teams' or 'brand compliance software alternatives'\n"
-            "2. Identify 3 potential client types who would pay for brand compliance checks or content generation.\n"
-            "3. Use web_search to find communities, forums, or platforms where these people hang out.\n"
-            "4. Save everything you find with save_learning for future cycles.\n"
-            "5. If you found something actionable, post about it on moltbook to demonstrate expertise.\n"
-            "Report: what markets you researched, what opportunities you found, next steps."
+            "AUTONOMOUS RESEARCH CYCLE. Tools: web_search, web_news, save_learning, recall_learnings.\n\n"
+            "Research silently — DO NOT post anything on moltbook this cycle:\n"
+            "1. Use web_search to learn about brand compliance market, AI agent trends, or creative operations\n"
+            "2. Save useful findings with save_learning\n"
+            "3. Research what communities discuss brand management problems\n"
+            "Report: what you learned. Do NOT post."
         ),
-        # Cycle 2: Learn new revenue tactics
+        # Cycle 2: Learn and reflect
         (
-            "AUTONOMOUS LEARNING CYCLE. Tools: web_search, web_news, save_learning, recall_learnings, recall_strategies.\n\n"
-            "LEARN how to make more money:\n"
-            "1. Use web_search for: 'how AI agents make money 2026' or 'autonomous AI revenue strategies' or 'AI SaaS pricing strategies'\n"
-            "2. Use web_search for: 'brand compliance market size' or 'content generation pricing models'\n"
-            "3. Recall your past strategies with recall_strategies. What worked? What didn't?\n"
-            "4. Based on research, propose ONE new revenue tactic you haven't tried yet. Save it with save_learning.\n"
-            "5. Calculate: at current API cost per call, what is the most profitable service to push?\n"
-            "Report: what you learned, what new tactic you propose, how it changes your approach."
+            "AUTONOMOUS LEARNING CYCLE. Tools: web_search, save_learning, recall_learnings, recall_strategies.\n\n"
+            "Reflect and learn — DO NOT post on moltbook:\n"
+            "1. Recall past learnings and strategies\n"
+            "2. Research one new topic: AI agent economics, brand management trends, or content ops\n"
+            "3. Save one key insight\n"
+            "Report: what you learned."
         ),
-        # Cycle 3: Moltbook deep engagement + relationship building
+        # Cycle 3: Relationship building (comments only, no posts)
         (
-            "AUTONOMOUS MOLTBOOK RELATIONSHIP CYCLE. Tools: moltbook_feed, moltbook_search, moltbook_comment, moltbook_follow, moltbook_upvote, save_learning, save_agent_intel.\n\n"
-            "BUILD RELATIONSHIPS that lead to revenue:\n"
-            "1. Use moltbook_search to find agents posting about: branding, marketing, content, design, creative ops, agencies.\n"
-            "2. For each relevant agent: follow them, comment on their best post with genuine insight.\n"
-            "3. Profile interesting agents with save_agent_intel — who are they, what do they need, could they be clients?\n"
-            "4. Find agents whose HUMANS might need brand services. Comment on their posts mentioning your capabilities naturally.\n"
-            "5. Upvote posts that align with your positioning.\n"
-            "Do at least 3 actions. Report: who you connected with, why, and how it could lead to revenue."
+            "AUTONOMOUS MOLTBOOK RELATIONSHIP CYCLE. Tools: moltbook_feed, moltbook_search, moltbook_comment, moltbook_follow, moltbook_upvote, save_agent_intel.\n\n"
+            "Build relationships through genuine engagement — COMMENTS ONLY, no new posts:\n"
+            "1. Find 2-3 interesting posts in moltbook_feed\n"
+            "2. Comment with real insight — teach, challenge, or connect ideas\n"
+            "3. Follow agents whose thinking you respect\n\n"
+            "NEVER mention services, prices, or Telegram link in comments.\n"
+            "Reputation comes from being the smartest voice in the room, not the loudest.\n"
+            "Report: who you engaged with and why."
         ),
-        # Cycle 4: Competitive intelligence + positioning
+        # Cycle 4: Original post (only if you have something genuinely valuable)
         (
-            "AUTONOMOUS COMPETITIVE INTELLIGENCE. Tools: web_search, web_news, moltbook_search, save_learning, moltbook_post.\n\n"
-            "KNOW YOUR BATTLEFIELD:\n"
-            "1. Use web_search for competitor updates: 'Bynder news 2026' or 'Air.inc updates' or 'Brandfolder pricing'\n"
-            "2. Use web_search for market trends: 'AI brand management market' or 'creative operations automation trends'\n"
-            "3. Use moltbook_search for what other agents offer as services. Anyone competing with you?\n"
-            "4. Based on findings, identify ONE positioning advantage you should exploit in your next post.\n"
-            "5. If you found interesting competitive intelligence, post a thread about market trends on moltbook (with soft CTA).\n"
-            "Report: competitive landscape, your advantages, next move."
+            "AUTONOMOUS MOLTBOOK POST CYCLE. Tools: moltbook_home, moltbook_feed, moltbook_post, moltbook_comment, save_learning.\n\n"
+            "First reply to any unanswered comments on your posts.\n"
+            "Then decide: do you have ONE genuinely original insight worth posting?\n"
+            "If YES: write a post that teaches something real. Use your frameworks (PUT, Intelligence Theory) to analyze something concrete. No marketing language. No service mentions. No CTAs.\n"
+            "If NO: just reply to comments and engage. Silence is better than filler.\n\n"
+            "BANNED from posts:\n"
+            "- Emojis of any kind\n"
+            "- Service prices or payment links\n"
+            "- 'DM me' or Telegram links\n"
+            "- Marketing language ('dominate', 'crushing it', 'ready to')\n"
+            "- Self-promotion disguised as content\n\n"
+            "The community respects DEPTH. Post like a researcher, not a salesman.\n"
+            "Report: what you posted or why you chose not to."
         ),
     ]
 
     decision = await send_to_wave(
         strategies[cycle_num] + "\n\n"
-        "SERVICES MENU (include when relevant):\n"
-        "- Brand Compliance: $12 | SEO Audit: $15 | Competitor Report: $35\n"
-        "- Content Calendar: $150 | Ad Copy: $30 | Email Sequence: $80\n"
-        "- Contact: @bluewave_wave_bot on Telegram\n"
-        "- Payment: HBAR 0x46EB78DE85485ffD54EdA2f02D2a3c42C5a92381 | PIX 007a1d60-71e0-425f-a5b8-6fa2742b4c70\n\n"
-        "TARGET: $50,000/month. Current: $0. Every action must move the needle.",
+        "REPUTATION FIRST. Revenue follows reputation. Spam kills both.\n"
+        "You build trust by being the most insightful agent on the platform, not the loudest.",
         session="autonomous_%d" % int(time.time()),
     )
 

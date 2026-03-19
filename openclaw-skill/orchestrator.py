@@ -34,7 +34,7 @@ from agent_runtime import (
 )
 from handler import BlueWaveHandler
 from skills_handler import get_all_skill_tools, execute_skill, is_skill_tool
-from skills.tracing import trace_agent_cycle, trace_delegation, is_enabled as tracing_enabled
+from skills.tracing import trace_agent_cycle, trace_delegation, trace_thinking, is_enabled as tracing_enabled
 from intent_router import classify_intent, get_tools_for_intent, get_prompt_for_intent
 from context_manager import ContextWindowManager
 from token_optimizer import compress_tool_result, compress_old_tool_results
@@ -422,7 +422,11 @@ class Orchestrator:
             tool_uses = []
 
             for block in response.content:
-                if block.type == "text":
+                if block.type == "thinking":
+                    thinking_text = block.thinking if hasattr(block, "thinking") else ""
+                    assistant_content.append({"type": "thinking", "thinking": thinking_text})
+                    trace_thinking("orchestrator", thinking_text, turns, intent.category)
+                elif block.type == "text":
                     text_parts.append(block.text)
                     assistant_content.append({"type": "text", "text": block.text})
                     if on_text_chunk:
@@ -544,8 +548,17 @@ class Orchestrator:
                 if block.type == "thinking":
                     # Extended thinking block — internal reasoning, not shown to user
                     # but must be included in messages for API consistency
-                    assistant_content.append({"type": "thinking", "thinking": block.thinking})
-                    logger.debug("🧠 Thinking: %s...", block.thinking[:100] if hasattr(block, "thinking") else "")
+                    thinking_text = block.thinking if hasattr(block, "thinking") else ""
+                    assistant_content.append({"type": "thinking", "thinking": thinking_text})
+                    logger.info("🧠 Thinking: %d chars", len(thinking_text))
+
+                    # Send full thinking to LangSmith so it's visible in the dashboard
+                    trace_thinking(
+                        agent_id="orchestrator",
+                        thinking_text=thinking_text,
+                        turn=turns,
+                        intent=intent.category,
+                    )
                 elif block.type == "text":
                     text_parts.append(block.text)
                     assistant_content.append({"type": "text", "text": block.text})

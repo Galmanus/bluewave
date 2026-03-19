@@ -382,7 +382,16 @@ class AgentRuntime:
             tool_uses = []
 
             for block in response.content:
-                if block.type == "text":
+                if block.type == "thinking":
+                    thinking_text = block.thinking if hasattr(block, "thinking") else ""
+                    assistant_content.append({"type": "thinking", "thinking": thinking_text})
+                    # Trace specialist thinking to LangSmith
+                    try:
+                        from skills.tracing import trace_thinking
+                        trace_thinking(self.config.agent_id, thinking_text, turns)
+                    except Exception:
+                        pass
+                elif block.type == "text":
                     text_parts.append(block.text)
                     assistant_content.append({"type": "text", "text": block.text})
                 elif block.type == "tool_use":
