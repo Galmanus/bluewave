@@ -23,15 +23,15 @@ export interface RegionalData {
 const SC_DATA: RegionalData = {
   marketName: "Santa Catarina",
   agencies: "Florianópolis, Joinville e Blumenau concentram mais de 400 agências de design e marketing",
-  painPoint: "O polo têxtil de SC gera milhares de assets de marca por mês — a maioria sem compliance check",
-  stat: "SC é o 6º estado em agências digitais no Brasil",
+  painPoint: "Agências catarinenses gastam em média 12h/semana revisando assets manualmente — a IA faz em segundos",
+  stat: "Feito em Florianópolis para agências que não têm tempo de revisar cada asset",
 };
 
 const BR_DATA: RegionalData = {
   marketName: "Brasil",
   agencies: "O Brasil tem mais de 15.000 agências de marketing e design",
-  painPoint: "Equipes criativas brasileiras gerenciam assets em 5+ ferramentas sem compliance automatizado",
-  stat: "O mercado de DAM no Brasil cresce 18% ao ano",
+  painPoint: "Equipes criativas brasileiras publicam conteúdo off-brand toda semana porque ninguém tem tempo de revisar tudo",
+  stat: "Sua equipe publica conteúdo off-brand toda semana. Esse agente resolve isso.",
 };
 
 // Map of Brazilian state timezones
