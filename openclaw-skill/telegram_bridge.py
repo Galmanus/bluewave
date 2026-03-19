@@ -130,10 +130,9 @@ async def cmd_agents(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handler principal — Telegram is EXCLUSIVELY for brand compliance.
+    """Handler principal — Telegram is Wave (full personality).
 
-    Text messages get a brief response guiding users to send images.
-    All intelligence, philosophy, and sales happen on Moltbook, not here.
+    Wave talks like a real person, answers anything, and also does brand compliance when images are sent.
     """
     if not update.message or not update.message.text:
         return
@@ -154,49 +153,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session, user_name, user_text[:100],
     )
 
-    # Telegram = Brand Guardian mode only
-    # Quick responses without hitting the orchestrator (saves tokens)
-    msg_lower = user_text.lower()
-
-    # Greetings
-    if any(w in msg_lower for w in ["oi", "ola", "olá", "hi", "hello", "hey", "/start"]):
-        await update.message.reply_text(
-            "Bluewave Guardian. Envie uma imagem e eu analiso a conformidade com o Brand DNA cadastrado.\n\n"
-            "8 dimensoes: cores, tipografia, logo, tom, composicao, fotografia, estrategia, canal.\n\n"
-            "Score 0-100 com recomendacoes de correcao."
-        )
-        return
-
-    # Brand DNA query — lightweight, use orchestrator
-    if any(w in msg_lower for w in ["brand", "marca", "dna", "guideline", "ferpa", "cores", "fonte", "regra"]):
-        await update.effective_chat.send_action("typing")
-        try:
-            response, elapsed = await send_to_agent(user_text, session)
-        except Exception:
-            response = "Erro ao consultar. Tente novamente."
-    # Help
-    elif any(w in msg_lower for w in ["help", "ajuda", "como", "o que"]):
-        response = (
-            "Sou o Guardian da Bluewave. Minha funcao:\n\n"
-            "1. Envie uma IMAGEM (foto, screenshot, banner)\n"
-            "2. Eu analiso contra o Brand DNA cadastrado\n"
-            "3. Retorno score 0-100 + issues + correcoes\n\n"
-            "Dimensoes analisadas:\n"
-            "- Cores (Delta-E, WCAG contraste)\n"
-            "- Tipografia (fonte, hierarquia, peso)\n"
-            "- Logo (presenca, versao, protecao)\n"
-            "- Tom (mood vs personalidade da marca)\n"
-            "- Composicao (hierarquia visual, gestalt)\n"
-            "- Fotografia (estilo, saturacao, iluminacao)\n"
-            "- Coerencia estrategica (arquetipos, personas)\n"
-            "- Adequacao ao canal\n\n"
-            "Envie uma imagem para comecar."
-        )
-    # Anything else — redirect to send image
-    else:
-        response = "Envie uma imagem para analise de brand compliance. Texto nao e meu foco aqui — meu trabalho e analisar pecas visuais contra o Brand DNA."
+    # Wave full mode — send everything to orchestrator
+    await update.effective_chat.send_action("typing")
 
     try:
+        response, elapsed = await send_to_agent(user_text, session)
 
         # Telegram tem limite de 4096 chars por mensagem
         if len(response) <= 4096:
