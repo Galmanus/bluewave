@@ -45,10 +45,10 @@ function CountUp({ target, suffix = "" }: { target: string; suffix?: string }) {
 }
 
 const metrics = [
-  { value: "76", suffix: " tools", label: "operational skills across 20 modules" },
-  { value: "9", suffix: " agents", label: "specialists coordinated by Wave + PUT" },
-  { value: "99", suffix: "%", label: "cheaper billing vs Stripe (on Hedera)" },
-  { value: "1", suffix: " session", label: "from zero to autonomous agent" },
+  { value: "89", suffix: " tools", label: "operational skills across 20 modules" },
+  { value: "9", suffix: " agents", label: "specialists with soul-driven deliberation" },
+  { value: "82", suffix: "%", label: "lower API cost via token optimization" },
+  { value: "14", suffix: " sections", label: "autonomous soul — self-designed by Opus 4" },
 ];
 
 const agentReactions = [

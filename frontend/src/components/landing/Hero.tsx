@@ -72,7 +72,7 @@ function HeroTerminal() {
           <div className="ml-2 sm:ml-3 flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
             <Bot className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-400 shrink-0" />
             <span className="text-[10px] sm:text-xs text-white/40 font-mono truncate">wave@bluewave</span>
-            <span className="text-[9px] sm:text-[10px] text-green-400/60 ml-auto font-mono shrink-0 hidden sm:inline">76 tools active</span>
+            <span className="text-[9px] sm:text-[10px] text-green-400/60 ml-auto font-mono shrink-0 hidden sm:inline">89 tools active</span>
           </div>
         </div>
 
@@ -116,10 +116,10 @@ function HeroTerminal() {
           <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
             {[
               { label: "9 agents", color: "text-blue-400" },
-              { label: "76 tools", color: "text-cyan-400" },
-              { label: "PUT framework", color: "text-amber-400" },
+              { label: "89 tools", color: "text-cyan-400" },
+              { label: "Psychometric Utility Theory", color: "text-amber-400" },
               { label: "Hedera", color: "text-purple-400" },
-              { label: "self-evolving", color: "text-green-400" },
+              { label: "soul-driven", color: "text-green-400" },
             ].map((tag) => (
               <span key={tag.label} className={`text-[9px] sm:text-[10px] font-medium ${tag.color}`}>
                 {tag.label}
@@ -334,27 +334,27 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           )}
         </motion.div>
 
-        {/* Social proof strip */}
+        {/* Real credentials strip */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.6 }}
           className="mt-16"
         >
-          <p className="text-xs sm:text-sm text-[#9CA3AF] mb-4 sm:mb-6">
-            Trusted by 500+ creative teams
-          </p>
-          <div className="flex items-center justify-center gap-4 sm:gap-12 opacity-40 flex-wrap">
-            {["Acme Studio", "PixelCo", "MediaFlow", "CreativeHub", "BrandLab"].map(
-              (name) => (
-                <span
-                  key={name}
-                  className="text-sm font-semibold text-white/60 tracking-wide uppercase"
-                >
-                  {name}
-                </span>
-              )
-            )}
+          <div className="flex items-center justify-center gap-3 sm:gap-8 flex-wrap">
+            {[
+              { text: "Hedera Hackathon 2026", color: "text-purple-400/70" },
+              { text: "89 operational tools", color: "text-cyan-400/70" },
+              { text: "9 specialist agents", color: "text-blue-400/70" },
+              { text: "On-chain audit trail", color: "text-green-400/70" },
+            ].map((item) => (
+              <span
+                key={item.text}
+                className={`text-[10px] sm:text-xs font-medium ${item.color} tracking-wide`}
+              >
+                {item.text}
+              </span>
+            ))}
           </div>
         </motion.div>
 
