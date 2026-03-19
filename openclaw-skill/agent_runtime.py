@@ -146,17 +146,37 @@ class AgentRuntime:
         self.messages = []
 
     def _call_with_retry(self, messages, attempt=0):
-        """Call Claude with retry and fallback to Haiku on rate limit."""
+        """Call Claude with prompt caching, retry, and fallback to Haiku.
+
+        Prompt caching: system prompt + tools are marked with cache_control.
+        On turn 2+, cached tokens cost 90% less.
+        """
         import time as _time
         models = [self.model, "claude-haiku-4-5-20251001"]
         model = models[min(attempt, len(models) - 1)]
+
+        # System prompt with cache_control
+        system_blocks = [
+            {
+                "type": "text",
+                "text": self.config.system_prompt,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ]
+
+        # Tools with cache_control on last entry
+        cached_tools = None
+        if self.claude_tools:
+            cached_tools = [t.copy() for t in self.claude_tools]
+            if cached_tools:
+                cached_tools[-1] = {**cached_tools[-1], "cache_control": {"type": "ephemeral"}}
 
         try:
             return self.client.messages.create(
                 model=model,
                 max_tokens=MAX_TOKENS,
-                system=self.config.system_prompt,
-                tools=self.claude_tools if self.claude_tools else None,
+                system=system_blocks,
+                tools=cached_tools,
                 messages=messages,
             )
         except anthropic.RateLimitError:
@@ -384,19 +404,33 @@ class AgentRuntime:
                     turns_used=turns,
                 )
 
-            tool_results = []
-            for tool_use in tool_uses:
-                total_tool_calls += 1
+            # Execute tools in PARALLEL when multiple are requested in the same turn
+            # This cuts latency by ~50% for multi-tool turns (e.g., list_assets + get_brand)
+            total_tool_calls += len(tool_uses)
+
+            if len(tool_uses) == 1:
+                # Single tool — no overhead of gather
+                tu = tool_uses[0]
+                logger.info("%s %s calling: %s", self.config.emoji, self.config.name, tu.name)
+                result_str = await self.execute_tool(tu.name, tu.input)
+                tool_results = [{"type": "tool_result", "tool_use_id": tu.id, "content": result_str}]
+            else:
+                # Multiple tools — execute concurrently
+                import asyncio as _aio
                 logger.info(
-                    "%s %s calling: %s",
-                    self.config.emoji, self.config.name, tool_use.name,
+                    "%s %s calling %d tools in parallel: %s",
+                    self.config.emoji, self.config.name,
+                    len(tool_uses), ", ".join(tu.name for tu in tool_uses),
                 )
-                result_str = await self.execute_tool(tool_use.name, tool_use.input)
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": tool_use.id,
-                    "content": result_str,
-                })
+                results = await _aio.gather(
+                    *(self.execute_tool(tu.name, tu.input) for tu in tool_uses),
+                    return_exceptions=True,
+                )
+                tool_results = []
+                for tu, res in zip(tool_uses, results):
+                    if isinstance(res, Exception):
+                        res = json.dumps({"success": False, "message": str(res), "recovery_hint": "Tool raised exception. Try alternative."})
+                    tool_results.append({"type": "tool_result", "tool_use_id": tu.id, "content": res})
 
             self.messages.append({"role": "user", "content": tool_results})
 

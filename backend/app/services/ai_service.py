@@ -195,12 +195,23 @@ class ClaudeAIService:
 
     @retry(max_retries=3, base_delay=1.0, retryable=(anthropic.RateLimitError, anthropic.InternalServerError, anthropic.APIConnectionError))
     async def _call_claude(self, *, model: str, max_tokens: int, system: str, content: list[dict]) -> anthropic.types.Message:
-        """Retryable Claude API call with exponential backoff."""
+        """Retryable Claude API call with prompt caching + exponential backoff.
+
+        System prompt is cached across calls within the same session.
+        Saves ~90% on repeated system prompt tokens.
+        """
+        system_blocks = [
+            {
+                "type": "text",
+                "text": system,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ]
         return await self._client.messages.create(
             model=model,
             max_tokens=max_tokens,
             messages=[{"role": "user", "content": content}],
-            system=system,
+            system=system_blocks,
         )
 
     # -- caption --------------------------------------------------------

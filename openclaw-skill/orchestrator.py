@@ -327,8 +327,13 @@ class Orchestrator:
 
         return {"passed": True, "reason": ""}
 
-    def _call_claude(self, messages, model=None, system_prompt=None, tools=None, attempt=0):
-        """Call Claude with intent-optimized model/prompt/tools and context management."""
+    def _call_claude(self, messages, model=None, system_prompt=None, tools=None, attempt=0, thinking_budget=0):
+        """Call Claude with prompt caching, extended thinking, and context management.
+
+        Prompt caching: system prompt is cached at 90% discount on turns 2+.
+        Extended thinking: for complex intents, Claude gets a thinking budget
+        to reason internally before responding (improves quality on analysis tasks).
+        """
         import time as _time
 
         use_model = model or self.model
@@ -338,15 +343,37 @@ class Orchestrator:
         # Apply rolling context window to prevent token overflow
         managed_messages = self.context_manager.prepare_messages(messages)
 
+        # Build system prompt with cache_control for prompt caching
+        # The system prompt is static across turns — perfect cache candidate
+        system_blocks = [
+            {
+                "type": "text",
+                "text": use_system,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ]
+
         try:
             kwargs = dict(
                 model=use_model,
                 max_tokens=MAX_TOKENS,
-                system=use_system,
+                system=system_blocks,
                 messages=managed_messages,
             )
             if use_tools:
-                kwargs["tools"] = use_tools
+                # Mark tools with cache_control on the last tool (Anthropic requirement)
+                cached_tools = [t.copy() for t in use_tools]
+                if cached_tools:
+                    cached_tools[-1] = {**cached_tools[-1], "cache_control": {"type": "ephemeral"}}
+                kwargs["tools"] = cached_tools
+
+            # Extended thinking: give Claude a scratchpad for complex reasoning
+            if thinking_budget > 0:
+                kwargs["thinking"] = {"type": "enabled", "budget_tokens": thinking_budget}
+                # Extended thinking requires higher max_tokens
+                kwargs["max_tokens"] = max(MAX_TOKENS, thinking_budget + 4096)
+                logger.info("🧠 Extended thinking enabled: %d token budget", thinking_budget)
+
             return self.client.messages.create(**kwargs)
         except anthropic.RateLimitError as e:
             if attempt < 2:
@@ -487,11 +514,14 @@ class Orchestrator:
             turns += 1
 
             try:
+                # Only use thinking budget on first turn (not tool-result turns)
+                use_thinking = intent.thinking_budget if turns == 1 else 0
                 response = self._call_claude(
                     self.messages,
                     model=routed_model,
                     system_prompt=routed_prompt,
                     tools=routed_tools if routed_tools else None,
+                    thinking_budget=use_thinking,
                 )
             except anthropic.APIError as e:
                 logger.error("Claude API error: %s", e)
@@ -511,7 +541,12 @@ class Orchestrator:
             tool_uses = []
 
             for block in response.content:
-                if block.type == "text":
+                if block.type == "thinking":
+                    # Extended thinking block — internal reasoning, not shown to user
+                    # but must be included in messages for API consistency
+                    assistant_content.append({"type": "thinking", "thinking": block.thinking})
+                    logger.debug("🧠 Thinking: %s...", block.thinking[:100] if hasattr(block, "thinking") else "")
+                elif block.type == "text":
                     text_parts.append(block.text)
                     assistant_content.append({"type": "text", "text": block.text})
                 elif block.type == "tool_use":
@@ -529,28 +564,34 @@ class Orchestrator:
             if not tool_uses:
                 return "\n".join(text_parts)
 
-            # Execute tool calls
-            tool_results = []
-            for tool_use in tool_uses:
-                if tool_use.name == "delegate_to_agent":
-                    # Special: delegate to a specialist agent
-                    agent_id = tool_use.input.get("agent_id", "")
-                    task = tool_use.input.get("task", "")
-                    orig_msg = tool_use.input.get("user_message", user_message)
+            # Execute tool calls — parallel for non-delegation, sequential for delegation
+            import asyncio as _aio
 
-                    result_str = await self._delegate_to_specialist(agent_id, task, orig_msg)
-                else:
-                    # Regular tool call
-                    logger.info("🌊 Wave calling tool: %s", tool_use.name)
-                    result_str = await self._execute_orchestrator_tool(
-                        tool_use.name, tool_use.input
+            async def _exec_one(tu):
+                if tu.name == "delegate_to_agent":
+                    return await self._delegate_to_specialist(
+                        tu.input.get("agent_id", ""),
+                        tu.input.get("task", ""),
+                        tu.input.get("user_message", user_message),
                     )
+                else:
+                    logger.info("🌊 Wave calling tool: %s", tu.name)
+                    return await self._execute_orchestrator_tool(tu.name, tu.input)
 
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": tool_use.id,
-                    "content": result_str,
-                })
+            if len(tool_uses) == 1:
+                result_str = await _exec_one(tool_uses[0])
+                tool_results = [{"type": "tool_result", "tool_use_id": tool_uses[0].id, "content": result_str}]
+            else:
+                # Parallel execution for multiple tools in same turn
+                logger.info("🌊 Executing %d tools in parallel", len(tool_uses))
+                results = await _aio.gather(
+                    *(_exec_one(tu) for tu in tool_uses),
+                    return_exceptions=True,
+                )
+                tool_results = []
+                for tu, res in zip(tool_uses, results):
+                    content = res if isinstance(res, str) else json.dumps({"success": False, "message": str(res)})
+                    tool_results.append({"type": "tool_result", "tool_use_id": tu.id, "content": content})
 
             self.messages.append({"role": "user", "content": tool_results})
 

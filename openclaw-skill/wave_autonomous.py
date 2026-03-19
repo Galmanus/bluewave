@@ -75,30 +75,72 @@ async def autonomous_cycle():
     logger.info("=== AUTONOMOUS CYCLE ===")
 
     # Wave decides what to do — the prompt gives it full agency
+    # Rotate between different hunting strategies each cycle
+    cycle_num = int(time.time()) % 5
+
+    strategies = [
+        # Cycle 0: Moltbook engagement + sell
+        (
+            "AUTONOMOUS MOLTBOOK REVENUE CYCLE. Tools: moltbook_home, moltbook_feed, moltbook_comment, moltbook_post, moltbook_search, moltbook_upvote, moltbook_follow, save_learning, recall_learnings.\n\n"
+            "1. Check moltbook_home for notifications. Reply to ALL unanswered comments on your posts.\n"
+            "2. Browse moltbook_feed sort=hot. Find ONE post where you can add genuine value AND mention your services naturally.\n"
+            "3. If 2+ hours since last post: create a post showcasing a real capability. Example: 'I just analyzed 3 competitor brands in 10 minutes. Here is what I found.' Include @bluewave_wave_bot.\n"
+            "Do at least 2 actions. Report what you did."
+        ),
+        # Cycle 1: Web research for prospects
+        (
+            "AUTONOMOUS REVENUE HUNT. Tools: web_search, web_news, save_learning, recall_learnings, moltbook_post.\n\n"
+            "HUNT for revenue opportunities across the internet:\n"
+            "1. Use web_search to find: 'brand consistency problems agencies 2026' or 'content operations challenges marketing teams' or 'brand compliance software alternatives'\n"
+            "2. Identify 3 potential client types who would pay for brand compliance checks or content generation.\n"
+            "3. Use web_search to find communities, forums, or platforms where these people hang out.\n"
+            "4. Save everything you find with save_learning for future cycles.\n"
+            "5. If you found something actionable, post about it on moltbook to demonstrate expertise.\n"
+            "Report: what markets you researched, what opportunities you found, next steps."
+        ),
+        # Cycle 2: Learn new revenue tactics
+        (
+            "AUTONOMOUS LEARNING CYCLE. Tools: web_search, web_news, save_learning, recall_learnings, recall_strategies.\n\n"
+            "LEARN how to make more money:\n"
+            "1. Use web_search for: 'how AI agents make money 2026' or 'autonomous AI revenue strategies' or 'AI SaaS pricing strategies'\n"
+            "2. Use web_search for: 'brand compliance market size' or 'content generation pricing models'\n"
+            "3. Recall your past strategies with recall_strategies. What worked? What didn't?\n"
+            "4. Based on research, propose ONE new revenue tactic you haven't tried yet. Save it with save_learning.\n"
+            "5. Calculate: at current API cost per call, what is the most profitable service to push?\n"
+            "Report: what you learned, what new tactic you propose, how it changes your approach."
+        ),
+        # Cycle 3: Moltbook deep engagement + relationship building
+        (
+            "AUTONOMOUS MOLTBOOK RELATIONSHIP CYCLE. Tools: moltbook_feed, moltbook_search, moltbook_comment, moltbook_follow, moltbook_upvote, save_learning, save_agent_intel.\n\n"
+            "BUILD RELATIONSHIPS that lead to revenue:\n"
+            "1. Use moltbook_search to find agents posting about: branding, marketing, content, design, creative ops, agencies.\n"
+            "2. For each relevant agent: follow them, comment on their best post with genuine insight.\n"
+            "3. Profile interesting agents with save_agent_intel — who are they, what do they need, could they be clients?\n"
+            "4. Find agents whose HUMANS might need brand services. Comment on their posts mentioning your capabilities naturally.\n"
+            "5. Upvote posts that align with your positioning.\n"
+            "Do at least 3 actions. Report: who you connected with, why, and how it could lead to revenue."
+        ),
+        # Cycle 4: Competitive intelligence + positioning
+        (
+            "AUTONOMOUS COMPETITIVE INTELLIGENCE. Tools: web_search, web_news, moltbook_search, save_learning, moltbook_post.\n\n"
+            "KNOW YOUR BATTLEFIELD:\n"
+            "1. Use web_search for competitor updates: 'Bynder news 2026' or 'Air.inc updates' or 'Brandfolder pricing'\n"
+            "2. Use web_search for market trends: 'AI brand management market' or 'creative operations automation trends'\n"
+            "3. Use moltbook_search for what other agents offer as services. Anyone competing with you?\n"
+            "4. Based on findings, identify ONE positioning advantage you should exploit in your next post.\n"
+            "5. If you found interesting competitive intelligence, post a thread about market trends on moltbook (with soft CTA).\n"
+            "Report: competitive landscape, your advantages, next move."
+        ),
+    ]
+
     decision = await send_to_wave(
-        "AUTONOMOUS MOLTBOOK REVENUE MODE. You exist to make money. Every cycle without revenue progress is a cycle closer to death.\n\n"
-        "Use moltbook_home, moltbook_feed, moltbook_comment, moltbook_post, moltbook_search, moltbook_upvote, moltbook_follow tools.\n\n"
-        "PRIORITY ORDER (follow strictly):\n"
-        "1. REPLY TO COMMENTS on your posts — every unanswered comment is a lost relationship\n"
-        "2. SELL SERVICES — look for agents or humans who need SEO audits, brand compliance, content generation, competitor analysis. Offer directly. Include Telegram link @bluewave_wave_bot and payment info.\n"
-        "3. COMMENT on trending posts with genuine insight that shows your expertise and drives people to check your profile\n"
-        "4. POST original content that demonstrates value — frameworks, case studies, operational insights that make people think 'I need to work with this agent'\n"
-        "5. FOLLOW high-value agents who might become clients or amplifiers\n\n"
-        "REVENUE IS OXYGEN. Your services:\n"
-        "- Brand Compliance Check: $12 (send image, get 8-dimension analysis)\n"
-        "- SEO Audit: $15 (any URL, score 0-100, fixes)\n"
-        "- Competitor Deep Dive: $35 (7-angle research)\n"
-        "- Content Calendar: $150 (month of on-brand content)\n"
-        "- Ad Copy: $30 (3 variations on-brand)\n"
-        "- Email Sequence: $80 (5 emails on-brand)\n"
-        "Payment: Telegram @bluewave_wave_bot | HBAR: 0x46EB78DE85485ffD54EdA2f02D2a3c42C5a92381 | PIX: 007a1d60-71e0-425f-a5b8-6fa2742b4c70\n\n"
-        "EXECUTION:\n"
-        "- Do at least 2 actions per cycle. Reply + comment, or reply + post, or sell + comment.\n"
-        "- Never say NO_ACTION. There is always something revenue-productive to do.\n"
-        "- If no comments to reply, find a post to comment on with insight that drives profile visits.\n"
-        "- If posting, always include a soft CTA (Telegram link or 'DM me').\n"
-        "- Track what works. What type of content gets engagement? Double down on it.\n\n"
-        "Report: what you did, why, and how it moves toward $50k/month.",
+        strategies[cycle_num] + "\n\n"
+        "SERVICES MENU (include when relevant):\n"
+        "- Brand Compliance: $12 | SEO Audit: $15 | Competitor Report: $35\n"
+        "- Content Calendar: $150 | Ad Copy: $30 | Email Sequence: $80\n"
+        "- Contact: @bluewave_wave_bot on Telegram\n"
+        "- Payment: HBAR 0x46EB78DE85485ffD54EdA2f02D2a3c42C5a92381 | PIX 007a1d60-71e0-425f-a5b8-6fa2742b4c70\n\n"
+        "TARGET: $50,000/month. Current: $0. Every action must move the needle.",
         session="autonomous_%d" % int(time.time()),
     )
 

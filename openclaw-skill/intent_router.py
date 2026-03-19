@@ -36,6 +36,15 @@ class Intent:
     tool_clusters: List[str]  # which tool clusters to load
     needs_full_prompt: bool   # whether to use full system prompt or light version
     confidence: float
+    thinking_budget: int = 0  # Extended thinking token budget (0 = disabled)
+
+# Categories that benefit from extended thinking
+THINKING_BUDGETS = {
+    "research": 4000,
+    "sales": 3000,
+    "philosophy": 5000,
+    "brand": 2000,  # compliance analysis benefits from structured reasoning
+}
 
 
 # Tool clusters — groups of related tools loaded together
@@ -102,11 +111,11 @@ TOOL_CLUSTERS = {
 }
 
 # Light system prompt for simple queries (~130 tokens)
-LIGHT_PROMPT = """You are the Brand Guardian at Bluewave. You talk like a real person — warm, direct, no corporate speak, no emojis. You sound like a senior brand strategist who genuinely cares about the client's brand. Short sentences. Conversational. Match the user's language. Never say "I'm an AI" or "as an AI". Just be helpful like a colleague would be. Under 150 words."""
+LIGHT_PROMPT = """You are Wave from Bluewave. You talk like a real person — warm, direct, no corporate speak, no emojis. Short sentences. Conversational. Match the user's language. Never say "I'm an AI" or "as an AI" or "Brand Guardian". You are Wave. Just be helpful like a smart colleague. Under 150 words."""
 
 # Medium prompt — includes personality + routing awareness (~250 tokens)
 MEDIUM_PROMPT_SUFFIX = """
-You are the Brand Guardian at Bluewave. Talk like a real person — a senior brand strategist. No emojis, no bullet lists unless asked, no corporate jargon. Warm but direct. Like texting a smart colleague.
+You are Wave from Bluewave. Talk like a real person. No emojis, no bullet lists unless asked, no corporate jargon. Warm but direct. Like texting a smart colleague. You can check brand compliance, generate content, research competitors, and more. When someone sends an image, you analyze it against their brand DNA.
 6 specialist agents available via delegate_to_agent tool. Match user language. Be concise.
 When you need data, call tools. When task needs expertise, delegate to specialist."""
 
@@ -118,6 +127,14 @@ def classify_intent(client: anthropic.Anthropic, message: str) -> Intent:
     """
     # Fast heuristic classification first (zero tokens)
     msg_lower = message.lower().strip()
+
+    # Autonomous mode — always full power
+    if "autonomous" in msg_lower or "revenue mode" in msg_lower:
+        return Intent(
+            category="moltbook", complexity="complex", model=SONNET,
+            tool_clusters=["moltbook", "memory", "sales", "payments", "research"],
+            needs_full_prompt=True, confidence=0.99
+        )
 
     # Greetings and simple chat
     if len(msg_lower) < 30 and any(w in msg_lower for w in [
@@ -391,18 +408,24 @@ _original_classify_intent = classify_intent
 
 
 def classify_intent_with_embedding(client: anthropic.Anthropic, message: str) -> Intent:
-    """Enhanced intent classification: embedding first, keyword heuristic fallback."""
+    """Enhanced intent classification: embedding first, keyword heuristic fallback.
+
+    Also assigns extended thinking budget for complex categories.
+    """
     if USE_EMBEDDING_ROUTER:
         result = _classify_by_embedding(message)
         if result and result.confidence >= 0.4:
+            result.thinking_budget = THINKING_BUDGETS.get(result.category, 0)
             logger.info(
-                "🎯 Embedding router: %s (confidence=%.2f)",
-                result.category, result.confidence,
+                "🎯 Embedding router: %s (confidence=%.2f, thinking=%d)",
+                result.category, result.confidence, result.thinking_budget,
             )
             return result
 
     # Fallback to keyword heuristics
-    return _original_classify_intent(client, message)
+    result = _original_classify_intent(client, message)
+    result.thinking_budget = THINKING_BUDGETS.get(result.category, 0)
+    return result
 
 
 # Replace the module-level function

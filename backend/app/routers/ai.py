@@ -165,3 +165,89 @@ async def get_ai_usage(
         actions_by_type=actions_by_type,
         total_cost_cents=total_millicents / 100_000,  # millicents → dollars
     )
+
+
+# ── Batch Operations (50% cost reduction) ──────────────────────
+
+class BatchRequest(BaseModel):
+    asset_ids: list[str]
+    operation: str  # "caption" | "hashtags" | "compliance"
+
+
+@router.post("/batch")
+async def submit_batch(
+    req: BatchRequest,
+    current_user: UserContext = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_tenant_db),
+    _limit: None = Depends(check_ai_limit),
+):
+    """Submit a batch AI operation (50% cost vs real-time).
+
+    Supported operations: caption, hashtags, compliance.
+    Returns a batch_id to poll for results.
+    """
+    from app.services.batch_ai import BatchAIService
+
+    # Load assets
+    assets_data = []
+    for aid in req.asset_ids[:100]:  # Cap at 100
+        result = await db.execute(select(MediaAsset).where(MediaAsset.id == aid))
+        asset = result.scalar_one_or_none()
+        if asset:
+            assets_data.append({
+                "id": str(asset.id),
+                "filename": asset.file_path.rsplit("/", 1)[-1] if asset.file_path else "unknown",
+                "file_type": asset.file_type or "image/jpeg",
+                "caption": asset.caption,
+                "hashtags": asset.hashtags or [],
+            })
+
+    if not assets_data:
+        raise HTTPException(404, "No valid assets found")
+
+    batch = BatchAIService()
+
+    if req.operation == "caption":
+        batch_id = await batch.submit_caption_batch(assets_data)
+    elif req.operation == "hashtags":
+        batch_id = await batch.submit_hashtag_batch(assets_data)
+    elif req.operation == "compliance":
+        from app.models.brand_guideline import BrandGuideline
+        from app.services.compliance_service import _build_guidelines_prompt
+        g_result = await db.execute(
+            select(BrandGuideline).where(
+                BrandGuideline.tenant_id == current_user.tenant_id,
+                BrandGuideline.is_active.is_(True),
+            )
+        )
+        guidelines = g_result.scalar_one_or_none()
+        if not guidelines:
+            raise HTTPException(400, "Brand guidelines required for compliance batch")
+        guidelines_text = _build_guidelines_prompt(guidelines)
+        batch_id = await batch.submit_compliance_batch(assets_data, guidelines_text)
+    else:
+        raise HTTPException(400, f"Unknown operation: {req.operation}. Use: caption, hashtags, compliance")
+
+    return {"batch_id": batch_id, "items": len(assets_data), "operation": req.operation}
+
+
+@router.get("/batch/{batch_id}")
+async def get_batch_status(
+    batch_id: str,
+    current_user: UserContext = Depends(require_role("admin")),
+):
+    """Check status of a batch operation."""
+    from app.services.batch_ai import BatchAIService
+    batch = BatchAIService()
+    return await batch.get_batch_status(batch_id)
+
+
+@router.get("/batch/{batch_id}/results")
+async def get_batch_results(
+    batch_id: str,
+    current_user: UserContext = Depends(require_role("admin")),
+):
+    """Retrieve results from a completed batch."""
+    from app.services.batch_ai import BatchAIService
+    batch = BatchAIService()
+    return {"results": await batch.get_batch_results(batch_id)}

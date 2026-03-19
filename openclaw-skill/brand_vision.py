@@ -160,11 +160,24 @@ async def analyze_brand_compliance(image_b64: str, media_type: str = "image/jpeg
         "Respond in the SAME LANGUAGE as the brand rules."
     )
 
+    # Prefill forces Claude to start in the right format — saves ~100 tokens
+    # and ensures consistent report structure
+    prefill = f"COMPLIANCE REPORT — {brand_name}\n\nOverall Score:"
+
+    # System prompt with cache_control for repeated checks
+    system_blocks = [
+        {
+            "type": "text",
+            "text": system_prompt,
+            "cache_control": {"type": "ephemeral"},
+        }
+    ]
+
     try:
         response = client.messages.create(
             model=HAIKU,
             max_tokens=2000,
-            system=system_prompt,
+            system=system_blocks,
             messages=[
                 {
                     "role": "user",
@@ -182,11 +195,15 @@ async def analyze_brand_compliance(image_b64: str, media_type: str = "image/jpeg
                             "text": f"Analyze this image for brand compliance.\n\nBRAND DNA:\n{brand_dna_json[:3000]}\n\nBRAND RULES SUMMARY:\n{brand_rules}",
                         },
                     ],
-                }
+                },
+                {
+                    "role": "assistant",
+                    "content": prefill,
+                },
             ],
         )
 
-        return response.content[0].text
+        return prefill + response.content[0].text
 
     except Exception as e:
         logger.error("Brand vision analysis failed: %s", e)
