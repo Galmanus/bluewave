@@ -11,18 +11,25 @@ import {
   Globe,
   Zap,
   RotateCcw,
+  Wallet,
+  ExternalLink,
+  CheckCircle2,
 } from "lucide-react";
+import { useWallet } from "../hooks/useWallet";
 
 const WAVE_API = import.meta.env.VITE_WAVE_API_URL || "http://localhost:18790";
 
 interface Message {
   id: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system";
   content: string;
   timestamp: Date;
+  txHash?: string;
+  txUrl?: string;
 }
 
 export default function WaveAgentPage() {
+  const wallet = useWallet();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -34,6 +41,7 @@ export default function WaveAgentPage() {
   ]);
   const [input, setInput] = useState("");
   const [sessionId] = useState(() => `web_${Date.now()}`);
+  const [totalSpent, setTotalSpent] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -53,7 +61,8 @@ export default function WaveAgentPage() {
       if (!res.ok) throw new Error("Wave unavailable");
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // Add Wave's response
       setMessages((prev) => [
         ...prev,
         {
@@ -63,6 +72,27 @@ export default function WaveAgentPage() {
           timestamp: new Date(),
         },
       ]);
+
+      // If wallet is connected, charge for the AI action on Hedera
+      if (wallet.address) {
+        try {
+          const tx = await wallet.payForAction("ai_chat");
+          setTotalSpent((prev) => prev + 0.05);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `tx_${Date.now()}`,
+              role: "system",
+              content: `Paid 0.33 HBAR (~$0.05) for this action`,
+              timestamp: new Date(),
+              txHash: tx.txHash,
+              txUrl: tx.explorerUrl,
+            },
+          ]);
+        } catch {
+          // Payment failed silently — don't block the UX
+        }
+      }
     },
     onError: () => {
       setMessages((prev) => [
@@ -139,13 +169,36 @@ export default function WaveAgentPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={handleReset}
-          className="flex items-center gap-2 rounded-md px-3 py-1.5 text-caption text-text-secondary hover:bg-accent-subtle transition-colors"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-          Reset
-        </button>
+        <div className="flex items-center gap-2">
+          {wallet.address ? (
+            <div className="flex items-center gap-2 rounded-lg border border-green-500/20 bg-green-500/5 px-3 py-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-[11px] font-mono text-text-primary">{wallet.shortAddress}</span>
+              <span className="text-[10px] text-text-tertiary">
+                {wallet.balance ? `${parseFloat(wallet.balance).toFixed(1)} HBAR` : ""}
+              </span>
+              {totalSpent > 0 && (
+                <span className="text-[10px] text-amber-400 ml-1">
+                  -${totalSpent.toFixed(2)}
+                </span>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={wallet.connect}
+              className="flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-[11px] font-medium text-purple-400 hover:bg-purple-500/20 transition-colors"
+            >
+              <Wallet className="h-3 w-3" />
+              Connect to pay with HBAR
+            </button>
+          )}
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-caption text-text-secondary hover:bg-accent-subtle transition-colors"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -153,13 +206,31 @@ export default function WaveAgentPage() {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
+            className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""} ${msg.role === "system" ? "justify-center" : ""}`}
           >
+            {msg.role === "system" && (
+              <div className="flex items-center gap-2 rounded-full bg-green-500/10 border border-green-500/20 px-3 py-1.5">
+                <CheckCircle2 className="h-3 w-3 text-green-400" />
+                <span className="text-[11px] text-green-400">{msg.content}</span>
+                {msg.txUrl && (
+                  <a
+                    href={msg.txUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[10px] text-green-300 hover:text-green-200 transition-colors"
+                  >
+                    <ExternalLink className="h-2.5 w-2.5" />
+                    verify
+                  </a>
+                )}
+              </div>
+            )}
             {msg.role === "assistant" && (
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/10 to-cyan-400/10 border border-blue-500/20">
                 <Sparkles className="h-4 w-4 text-blue-500" />
               </div>
             )}
+            {msg.role !== "system" && (
             <div
               className={`max-w-[75%] rounded-xl px-4 py-3 text-body ${
                 msg.role === "user"
@@ -181,6 +252,7 @@ export default function WaveAgentPage() {
                 })}
               </p>
             </div>
+            )}
             {msg.role === "user" && (
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 border border-accent/20">
                 <User className="h-4 w-4 text-accent" />
