@@ -349,11 +349,60 @@ class AgentRuntime:
 
 # ── Helpers ───────────────────────────────────────────────────
 
+def _json_to_prompt(data: dict, depth: int = 0) -> str:
+    """Convert a JSON prompt definition into a readable system prompt string."""
+    lines = []
+    indent = ""
+    for key, value in data.items():
+        header = key.replace("_", " ").title()
+        if isinstance(value, str):
+            if depth == 0:
+                lines.append("## %s\n%s\n" % (header, value))
+            else:
+                lines.append("%s- **%s**: %s" % (indent, header, value))
+        elif isinstance(value, bool):
+            lines.append("%s- **%s**: %s" % (indent, header, "Yes" if value else "No"))
+        elif isinstance(value, (int, float)):
+            lines.append("%s- **%s**: %s" % (indent, header, value))
+        elif isinstance(value, list):
+            lines.append("\n%s**%s:**" % (indent, header))
+            for item in value:
+                if isinstance(item, str):
+                    lines.append("%s- %s" % (indent, item))
+                elif isinstance(item, dict):
+                    parts = []
+                    for k, v in item.items():
+                        if isinstance(v, list):
+                            parts.append("%s: %s" % (k, " -> ".join(str(x) for x in v)))
+                        else:
+                            parts.append("%s: %s" % (k, v))
+                    lines.append("%s- %s" % (indent, " | ".join(parts)))
+        elif isinstance(value, dict):
+            if depth == 0:
+                lines.append("\n## %s\n" % header)
+            else:
+                lines.append("\n%s**%s:**" % (indent, header))
+            lines.append(_json_to_prompt(value, depth + 1))
+    return "\n".join(lines)
+
+
 def load_prompt(filename: str) -> str:
-    """Load a soul prompt from the prompts/ directory."""
+    """Load a soul prompt from the prompts/ directory. Supports .md and .json."""
     path = PROMPTS_DIR / filename
+
+    # Try JSON version first (more detailed)
+    json_path = path.with_suffix(".json")
+    if json_path.exists():
+        try:
+            data = json.loads(json_path.read_text(encoding="utf-8"))
+            return _json_to_prompt(data)
+        except Exception as e:
+            logger.warning("Failed to parse JSON prompt %s: %s", json_path, e)
+
+    # Fall back to markdown
     if path.exists():
         return path.read_text(encoding="utf-8")
+
     logger.warning("Prompt file not found: %s", path)
     return "You are a helpful assistant."
 
