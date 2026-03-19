@@ -162,7 +162,7 @@ function LandingWalletButton() {
       <button
         onClick={wallet.connect}
         disabled={wallet.isConnecting}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs font-medium text-purple-300 hover:bg-purple-500/20 hover:border-purple-500/50 transition-all disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-green-500/30 bg-green-500/10 text-xs font-medium text-green-300 hover:bg-green-500/20 hover:border-green-500/50 transition-all disabled:opacity-50"
       >
         <Wallet className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">{wallet.isConnecting ? "Connecting..." : "Connect Wallet"}</span>
@@ -225,13 +225,17 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           0%, 100% { transform: translate(0, 0) scale(1); }
           50% { transform: translate(-4%, 3%) scale(1.1); }
         }
+        @keyframes shimmer {
+          0% { background-position: 200% center; }
+          100% { background-position: -200% center; }
+        }
       `}</style>
 
       {/* Top nav bar */}
       <nav className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-10 py-4 sm:py-5">
         <Link to="/" className="flex items-center gap-2">
-          <Waves className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
-          <span className="text-base sm:text-lg font-bold text-white tracking-tight">Bluewave</span>
+          <Waves className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
+          <span className="text-base sm:text-lg font-extrabold tracking-tight bg-gradient-to-r from-cyan-300 via-blue-400 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(34,211,238,0.3)]" style={{backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite'}}>Bluewave</span>
         </Link>
         <div className="flex items-center gap-2 sm:gap-3">
           <LandingWalletButton />
@@ -270,7 +274,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           transition={{ duration: 0.6, delay: 0.1 }}
         >
           <span className="inline-flex items-center px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-            Autonomous AI Agent &middot; 76 Tools &middot; 9 Specialists &middot; Hedera
+            Wave, The Autonomous AI Agent
           </span>
         </motion.div>
 
@@ -293,8 +297,8 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mt-4 sm:mt-6 text-base sm:text-xl text-[#9CA3AF] max-w-2xl mx-auto leading-relaxed px-2"
         >
-          An autonomous AI agent with 76 tools, 9 specialists, behavioral intelligence,
-          computer vision, and self-evolving skills — billing on Hedera at 99.3% less cost.
+          Brand compliance, content generation, and creative operations
+          — all checked against your Brand DNA automatically. Every asset on-brand. Every time.
         </motion.p>
 
         {/* CTAs */}

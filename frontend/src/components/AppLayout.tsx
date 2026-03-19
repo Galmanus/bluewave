@@ -95,9 +95,9 @@ export default function AppLayout() {
         {/* Logo */}
         <div className="flex h-14 items-center justify-between border-b border-border-subtle px-4">
           <Link to="/" className="flex items-center gap-2">
-            <Waves className="h-5 w-5 text-accent" />
+            <Waves className="h-5 w-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
             {!collapsed && (
-              <span className="text-subheading text-text-primary">
+              <span className="text-subheading font-extrabold tracking-tight bg-gradient-to-r from-cyan-300 via-blue-400 to-cyan-300 bg-clip-text text-transparent" style={{backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite'}}>
                 Bluewave
               </span>
             )}

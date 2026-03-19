@@ -384,8 +384,10 @@ class AgentRuntime:
             for block in response.content:
                 if block.type == "thinking":
                     thinking_text = block.thinking if hasattr(block, "thinking") else ""
-                    assistant_content.append({"type": "thinking", "thinking": thinking_text})
-                    # Trace specialist thinking to LangSmith
+                    thinking_block = {"type": "thinking", "thinking": thinking_text}
+                    if hasattr(block, "signature") and block.signature:
+                        thinking_block["signature"] = block.signature
+                    assistant_content.append(thinking_block)
                     try:
                         from skills.tracing import trace_thinking
                         trace_thinking(self.config.agent_id, thinking_text, turns)

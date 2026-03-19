@@ -424,7 +424,10 @@ class Orchestrator:
             for block in response.content:
                 if block.type == "thinking":
                     thinking_text = block.thinking if hasattr(block, "thinking") else ""
-                    assistant_content.append({"type": "thinking", "thinking": thinking_text})
+                    thinking_block = {"type": "thinking", "thinking": thinking_text}
+                    if hasattr(block, "signature") and block.signature:
+                        thinking_block["signature"] = block.signature
+                    assistant_content.append(thinking_block)
                     trace_thinking("orchestrator", thinking_text, turns, intent.category)
                 elif block.type == "text":
                     text_parts.append(block.text)
@@ -546,13 +549,15 @@ class Orchestrator:
 
             for block in response.content:
                 if block.type == "thinking":
-                    # Extended thinking block — internal reasoning, not shown to user
-                    # but must be included in messages for API consistency
                     thinking_text = block.thinking if hasattr(block, "thinking") else ""
-                    assistant_content.append({"type": "thinking", "thinking": thinking_text})
+                    # Must preserve signature for API round-trip (required by Anthropic)
+                    thinking_block = {"type": "thinking", "thinking": thinking_text}
+                    if hasattr(block, "signature") and block.signature:
+                        thinking_block["signature"] = block.signature
+                    assistant_content.append(thinking_block)
                     logger.info("🧠 Thinking: %d chars", len(thinking_text))
 
-                    # Send full thinking to LangSmith so it's visible in the dashboard
+                    # Send full thinking to LangSmith
                     trace_thinking(
                         agent_id="orchestrator",
                         thinking_text=thinking_text,
