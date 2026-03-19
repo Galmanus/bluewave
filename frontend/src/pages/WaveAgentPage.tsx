@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useWallet } from "../hooks/useWallet";
 
-const WAVE_API = import.meta.env.VITE_WAVE_API_URL || "http://localhost:18790";
+const WAVE_API = import.meta.env.VITE_WAVE_API_URL || "http://31.97.167.158:18790";
 
 interface Message {
   id: string;
