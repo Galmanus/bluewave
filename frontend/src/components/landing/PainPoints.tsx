@@ -1,33 +1,33 @@
 import { motion } from "framer-motion";
-import { FolderSearch, MessageSquareWarning, RotateCcw } from "lucide-react";
+import { ShieldAlert, Clock, Eye } from "lucide-react";
 
 const cards = [
   {
-    icon: FolderSearch,
-    title: "Scattered everywhere",
+    icon: ShieldAlert,
+    title: "Off-brand content ships daily",
     description:
-      "Your assets live across 5+ tools — Drive, Dropbox, email, Slack, someone's desktop. Nobody can find anything.",
-    stat: "51% of workers spend 2+ hours/day searching for files",
+      "Wrong colors, wrong fonts, wrong tone. Nobody catches it until the client does. Manual review doesn't scale.",
+    stat: "Your brand guidelines exist. Nobody reads them.",
   },
   {
-    icon: MessageSquareWarning,
-    title: "Approval chaos",
+    icon: Clock,
+    title: "AI without governance",
     description:
-      "Feedback comes via email, Slack, marked-up PDFs, and phone calls. Versions multiply. Deadlines slip.",
-    stat: "52% of companies miss deadlines due to approval delays",
+      "You adopted AI tools. Now every team member generates content with zero brand oversight. The output is fast and wrong.",
+    stat: "Speed without compliance is expensive chaos.",
   },
   {
-    icon: RotateCcw,
-    title: "Wasted money",
+    icon: Eye,
+    title: "No one watches the output",
     description:
-      "You're paying designers to recreate assets that already exist somewhere — you just can't find them.",
-    stat: "51% of marketers recreate assets because originals are lost",
+      "Content goes from AI to publish with no quality gate. No Delta-E check on colors. No tone analysis. No compliance score.",
+    stat: "If you can't measure it, you can't control it.",
   },
 ];
 
 export default function PainPoints() {
   return (
-    <section className="py-24 sm:py-32 bg-[#FAFAFA]">
+    <section className="py-24 sm:py-32 bg-[#0d1117]">
       <div className="max-w-6xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -36,16 +36,15 @@ export default function PainPoints() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <span className="text-sm font-semibold text-red-500/80 uppercase tracking-wider">
+          <span className="text-sm font-semibold text-red-400/80 uppercase tracking-wider">
             The problem
           </span>
-          <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-[#111827] leading-tight">
-            Your creative workflow is broken
+          <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-white leading-tight">
+            Your AI generates content. Nobody checks if it's on-brand.
           </h2>
-          <p className="mt-4 text-lg text-[#6b7280]">Sound familiar?</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {cards.map((card, i) => (
             <motion.div
               key={card.title}
@@ -53,18 +52,18 @@ export default function PainPoints() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: i * 0.15 }}
-              className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-200"
+              className="bg-white/[0.03] rounded-xl p-8 border border-white/[0.06] hover:border-white/10 hover:-translate-y-1 transition-all duration-200"
             >
-              <div className="w-12 h-12 rounded-lg bg-red-50 flex items-center justify-center mb-6">
-                <card.icon className="w-6 h-6 text-red-500/80" />
+              <div className="w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center mb-6">
+                <card.icon className="w-6 h-6 text-red-400/80" />
               </div>
-              <h3 className="text-xl font-semibold text-[#111827] mb-3">
+              <h3 className="text-xl font-semibold text-white mb-3">
                 {card.title}
               </h3>
-              <p className="text-[#6b7280] leading-relaxed mb-6">
+              <p className="text-[#9CA3AF] leading-relaxed mb-6">
                 {card.description}
               </p>
-              <p className="text-sm font-semibold text-red-600/80 bg-red-50 px-4 py-2 rounded-lg">
+              <p className="text-sm font-medium text-red-400/70 border-t border-white/[0.06] pt-4">
                 {card.stat}
               </p>
             </motion.div>
