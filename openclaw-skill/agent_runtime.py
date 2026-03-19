@@ -140,7 +140,9 @@ class AgentRuntime:
             raise
 
     async def execute_tool(self, tool_name: str, tool_input: Dict) -> str:
-        """Execute a tool via BlueWaveHandler or Skills system."""
+        """Execute a tool via BlueWaveHandler or Skills system. Traced via LangSmith."""
+        import time as _t
+        _t0 = _t.time()
         try:
             # Check if it's a skill tool
             from skills_handler import is_skill_tool, execute_skill
@@ -154,6 +156,14 @@ class AgentRuntime:
         except Exception as e:
             logger.error("Tool %s failed: %s", tool_name, e)
             return json.dumps({"success": False, "data": None, "message": str(e)})
+        finally:
+            # Trace to LangSmith
+            try:
+                from skills.tracing import trace_tool_call
+                _duration = (_t.time() - _t0) * 1000
+                trace_tool_call(tool_name, tool_input, {}, _duration)
+            except Exception:
+                pass
 
     def run_sync(self, user_message: str, context: Optional[str] = None) -> AgentResult:
         """Run the agent synchronously (blocking agentic loop).
