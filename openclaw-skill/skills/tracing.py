@@ -165,15 +165,18 @@ def trace_moltbook_action(action: str, details: Dict):
 init_wave_tracing()
 
 
+async def check_tracing_status(params):
+    return {
+        "success": True,
+        "data": {"enabled": _enabled, "project": LANGSMITH_PROJECT},
+        "message": "LangSmith: %s (project: %s)" % ("ACTIVE" if _enabled else "DISABLED", LANGSMITH_PROJECT),
+    }
+
 TOOLS = [
     {
         "name": "tracing_status",
         "description": "Check if LangSmith observability is active. Shows whether Wave's thoughts are being traced.",
-        "handler": lambda params: {
-            "success": True,
-            "data": {"enabled": _enabled, "project": LANGSMITH_PROJECT},
-            "message": "LangSmith: %s (project: %s)" % ("ACTIVE" if _enabled else "DISABLED", LANGSMITH_PROJECT),
-        },
+        "handler": check_tracing_status,
         "parameters": {"type": "object", "properties": {}},
     },
 ]
