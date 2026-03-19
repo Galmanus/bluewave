@@ -37,11 +37,15 @@ function WaveCanvas() {
       ctx.lineWidth = lineWidth;
 
       for (let x = 0; x <= canvas.width; x += 2) {
+        // 5-sine harmonic composition for organic, hypnotic movement
+        const t = time * speed;
         const y =
           yBase +
-          Math.sin(x * frequency + time * speed + phase) * amplitude +
-          Math.sin(x * frequency * 0.5 + time * speed * 0.7 + phase * 2) * amplitude * 0.5 +
-          Math.sin(x * frequency * 2 + time * speed * 1.3) * amplitude * 0.2;
+          Math.sin(x * frequency + t + phase) * amplitude +
+          Math.sin(x * frequency * 0.618 + t * 0.809 + phase * 1.5) * amplitude * 0.6 +
+          Math.sin(x * frequency * 1.618 + t * 1.2 + phase * 0.7) * amplitude * 0.25 +
+          Math.sin(x * frequency * 0.3 + t * 0.4 + phase * 3.1) * amplitude * 0.35 +
+          Math.cos(x * frequency * 0.5 + t * 0.6) * amplitude * 0.15;
         if (x === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
@@ -54,37 +58,41 @@ function WaveCanvas() {
       frequency: number,
       speed: number,
       r: number, g: number, b: number,
-      phase: number
+      phase: number,
+      breathe: number
     ) => {
-      // Glow layer (thick, transparent)
-      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},0.03)`, 40, phase);
-      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},0.06)`, 16, phase);
-      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},0.12)`, 6, phase);
-      // Core line (thin, bright)
-      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},0.35)`, 2, phase);
-      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},0.6)`, 1, phase);
+      // Breathing opacity — each wave pulses gently
+      const breath = 0.7 + Math.sin(time * breathe) * 0.3;
+      const a = (o: number) => o * breath;
+
+      // Outer glow (wide, ethereal)
+      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},${a(0.02)})`, 50, phase);
+      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},${a(0.04)})`, 24, phase);
+      // Mid glow
+      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},${a(0.08)})`, 10, phase);
+      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},${a(0.15)})`, 4, phase);
+      // Core
+      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},${a(0.4)})`, 1.5, phase);
     };
 
     const animate = () => {
-      time += 0.008;
+      // Slow, hypnotic time progression
+      time += 0.004;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const h = canvas.height;
+      // Vertical drift — waves slowly breathe up and down
+      const drift = Math.sin(time * 0.3) * 15;
 
-      // Layer 1 — deep background wave (subtle)
-      drawGlowWave(h * 0.3, 60, 0.003, 0.4, 59, 130, 246, 0);        // blue
-
-      // Layer 2 — main wave (hero)
-      drawGlowWave(h * 0.45, 80, 0.004, 0.6, 34, 211, 238, 1);       // cyan
-
-      // Layer 3 — bright crest
-      drawGlowWave(h * 0.55, 50, 0.005, 0.8, 34, 211, 238, 2.5);     // cyan bright
-
-      // Layer 4 — secondary wave
-      drawGlowWave(h * 0.65, 40, 0.006, 0.5, 6, 182, 212, 4);        // teal
-
-      // Layer 5 — low accent
-      drawGlowWave(h * 0.78, 30, 0.004, 0.3, 99, 102, 241, 3);       // indigo
+      // 7 wave layers at different depths, speeds, and phases
+      // Each breathes at a different rate (last param)
+      drawGlowWave(h * 0.22 + drift,     45, 0.0025, 0.25, 59, 130, 246, 0,     0.15);   // deep blue
+      drawGlowWave(h * 0.32 - drift * 0.5, 65, 0.003,  0.35, 34, 211, 238, 0.8, 0.2);    // cyan 1
+      drawGlowWave(h * 0.42 + drift * 0.7, 85, 0.0035, 0.3,  34, 211, 238, 1.6, 0.18);   // cyan main
+      drawGlowWave(h * 0.52 - drift * 0.3, 55, 0.004,  0.45, 6, 182, 212, 2.8,  0.25);   // teal
+      drawGlowWave(h * 0.62 + drift * 0.4, 70, 0.003,  0.28, 34, 211, 238, 4.0, 0.12);   // cyan 2
+      drawGlowWave(h * 0.73 - drift * 0.6, 40, 0.0045, 0.38, 99, 102, 241, 5.2, 0.22);   // indigo
+      drawGlowWave(h * 0.85 + drift * 0.3, 30, 0.005,  0.2,  6, 182, 212, 6.5,  0.16);   // teal floor
 
       animationId = requestAnimationFrame(animate);
     };
