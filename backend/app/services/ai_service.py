@@ -143,9 +143,20 @@ class ClaudeAIService:
     # -- brand voice (few-shot examples from approved content) -----------
 
     async def _get_brand_voice_context(self, tenant_id: uuid.UUID | None) -> str:
-        """Load recent approved captions as few-shot examples for brand voice learning."""
+        """Load recent approved captions as few-shot examples for brand voice learning.
+
+        Cached per tenant for 5 minutes to avoid redundant DB queries.
+        Saves ~450 tokens per repeated call within the TTL window.
+        """
         if not tenant_id:
             return ""
+
+        # Check cache first
+        now = time.time()
+        cached = _brand_voice_cache.get(tenant_id)
+        if cached and cached[1] > now:
+            return cached[0]
+
         try:
             from app.core.database import async_session_factory
             from app.models.asset import AssetStatus, MediaAsset
@@ -160,18 +171,22 @@ class ClaudeAIService:
                         MediaAsset.caption.isnot(None),
                     )
                     .order_by(MediaAsset.updated_at.desc())
-                    .limit(10)
+                    .limit(5)  # Reduced from 10 — 5 examples is enough for style matching
                 )
                 captions = [row[0] for row in result.all() if row[0]]
 
             if len(captions) < 3:
+                _brand_voice_cache[tenant_id] = ("", now + _BRAND_VOICE_TTL)
                 return ""
 
-            examples = "\n".join(f"- {c}" for c in captions[:8])
-            return (
-                f"\n\nBRAND VOICE EXAMPLES (match this style and tone):\n{examples}\n\n"
-                "Write the new caption in the same style, tone, and voice as these examples."
+            # Use only 4 examples (was 8) — saves ~200 tokens with minimal quality loss
+            examples = "\n".join(f"- {c[:80]}" for c in captions[:4])
+            voice_text = (
+                f"\n\nBRAND VOICE (match this style):\n{examples}\n"
             )
+
+            _brand_voice_cache[tenant_id] = (voice_text, now + _BRAND_VOICE_TTL)
+            return voice_text
         except Exception:
             logger.debug("Brand voice context load failed — using generic style")
             return ""

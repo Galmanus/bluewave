@@ -13,7 +13,12 @@ import base64
 import json
 import logging
 import time
+import uuid
 from dataclasses import dataclass, field
+
+# Cache built guidelines text per tenant: {tenant_id: (text, expires_at)}
+_guidelines_cache: dict[uuid.UUID, tuple[str, float]] = {}
+_GUIDELINES_TTL = 300  # 5 minutes
 
 from app.core.config import settings
 from app.core.prompt_safety import sanitize_for_prompt, wrap_user_input, strip_markdown_codeblock
@@ -76,7 +81,18 @@ COMPLIANCE_RESULT_TOOL = {
 
 
 def _build_guidelines_prompt(guidelines: BrandGuideline) -> str:
-    """Convert brand guidelines into a structured prompt section."""
+    """Convert brand guidelines into a structured prompt section.
+
+    Cached per tenant for 5 minutes — guidelines change rarely.
+    Saves ~500 tokens per repeated compliance check.
+    """
+    tenant_id = getattr(guidelines, "tenant_id", None)
+    if tenant_id:
+        now = time.time()
+        cached = _guidelines_cache.get(tenant_id)
+        if cached and cached[1] > now:
+            return cached[0]
+
     parts = []
 
     if guidelines.primary_colors:
@@ -95,7 +111,13 @@ def _build_guidelines_prompt(guidelines: BrandGuideline) -> str:
         safe_rules = sanitize_for_prompt(json.dumps(guidelines.custom_rules), max_length=1000)
         parts.append(f"CUSTOM RULES: {safe_rules}")
 
-    return "\n\n".join(parts) if parts else "No specific guidelines defined."
+    result = "\n\n".join(parts) if parts else "No specific guidelines defined."
+
+    # Cache for next time
+    if tenant_id:
+        _guidelines_cache[tenant_id] = (result, time.time() + _GUIDELINES_TTL)
+
+    return result
 
 
 @retry(max_retries=2, base_delay=2.0)

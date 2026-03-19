@@ -198,6 +198,10 @@ class Orchestrator:
 
         self.system_prompt = self.orchestrator_config.system_prompt + agent_directory + skills_info
 
+        # Lazy-loaded PUT framework addon (~600 tokens, only for complex intents)
+        put_path = Path(__file__).parent / "prompts" / "put_framework.md"
+        self._put_addon = put_path.read_text(encoding="utf-8") if put_path.exists() else ""
+
         logger.info(
             "🌊 Orchestrator initialized: %d specialists, %d orchestrator tools, model=%s",
             len(self.specialists), len(self.orchestrator_tools), self.model,
