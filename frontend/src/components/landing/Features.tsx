@@ -35,20 +35,21 @@ function AssetGridMockup() {
       </div>
       <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
-          { color: "from-blue-400 to-cyan-300", label: "Hero Banner", status: "Approved", statusColor: "bg-emerald-100 text-emerald-700" },
-          { color: "from-purple-400 to-pink-300", label: "Social Post", status: "Pending", statusColor: "bg-amber-100 text-amber-700" },
-          { color: "from-orange-400 to-yellow-300", label: "Campaign", status: "Draft", statusColor: "bg-gray-100 text-gray-500" },
-          { color: "from-emerald-400 to-teal-300", label: "Product Shot", status: "Approved", statusColor: "bg-emerald-100 text-emerald-700" },
-          { color: "from-rose-400 to-red-300", label: "Story Cover", status: "Pending", statusColor: "bg-amber-100 text-amber-700" },
-          { color: "from-indigo-400 to-blue-300", label: "Brand Kit", status: "Approved", statusColor: "bg-emerald-100 text-emerald-700" },
+          { img: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=400&fit=crop", label: "Hero Banner", status: "Approved", statusColor: "bg-emerald-100 text-emerald-700" },
+          { img: "https://images.unsplash.com/photo-1634986666676-ec8fd927c23d?w=400&h=400&fit=crop", label: "Social Post", status: "Pending", statusColor: "bg-amber-100 text-amber-700" },
+          { img: "https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=400&h=400&fit=crop", label: "Campaign", status: "Draft", statusColor: "bg-gray-100 text-gray-500" },
+          { img: "https://images.unsplash.com/photo-1614850715649-1d0106568571?w=400&h=400&fit=crop", label: "Product Shot", status: "Approved", statusColor: "bg-emerald-100 text-emerald-700" },
+          { img: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&h=400&fit=crop", label: "Story Cover", status: "Pending", statusColor: "bg-amber-100 text-amber-700" },
+          { img: "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=400&h=400&fit=crop", label: "Brand Kit", status: "Approved", statusColor: "bg-emerald-100 text-emerald-700" },
         ].map((item, i) => (
           <div
             key={i}
             className="aspect-square rounded-lg relative overflow-hidden group"
           >
-            <div className={`absolute inset-0 bg-gradient-to-br ${item.color}`} />
+            <img src={item.img} alt={item.label} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
             <div className="absolute inset-0 flex flex-col items-start justify-end p-2.5">
-              <span className="text-[10px] font-medium text-white/90 drop-shadow">{item.label}</span>
+              <span className="text-[10px] font-medium text-white drop-shadow-sm">{item.label}</span>
               <span className={`mt-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${item.statusColor}`}>
                 {item.status}
               </span>
@@ -63,8 +64,17 @@ function AssetGridMockup() {
 function AICaptionMockup() {
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden p-5">
-      <div className="aspect-video rounded-lg bg-gradient-to-br from-blue-400 to-cyan-300 mb-4 flex items-center justify-center">
-        <Sparkles className="w-10 h-10 text-white/60" />
+      <div className="aspect-video rounded-lg relative overflow-hidden mb-4">
+        <img
+          src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&h=340&fit=crop"
+          alt="Team workspace"
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+        <div className="absolute top-2 right-2 flex items-center gap-1 bg-blue-600/90 backdrop-blur-sm px-2 py-1 rounded-md">
+          <Sparkles className="w-3 h-3 text-white" />
+          <span className="text-[10px] font-semibold text-white">AI Generated</span>
+        </div>
       </div>
       <div className="space-y-3">
         <div>
@@ -117,23 +127,30 @@ function ApprovalMockup() {
         ))}
       </div>
       <div className="space-y-3">
-        {["brand-guidelines-v3.pdf", "hero-banner-final.png", "social-pack.zip"].map(
-          (file, i) => (
+        {[
+          { file: "brand-guidelines-v3.pdf", thumb: "https://images.unsplash.com/photo-1626785774573-4b799315345d?w=80&h=80&fit=crop", step: 2 },
+          { file: "hero-banner-final.png", thumb: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=80&h=80&fit=crop", step: 1 },
+          { file: "social-pack.zip", thumb: "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=80&h=80&fit=crop", step: 0 },
+        ].map(
+          (item, i) => (
             <div
-              key={file}
+              key={item.file}
               className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50"
             >
-              <span className="text-sm text-gray-600">{file}</span>
+              <div className="flex items-center gap-3">
+                <img src={item.thumb} alt="" className="w-8 h-8 rounded object-cover" loading="lazy" />
+                <span className="text-sm text-gray-600">{item.file}</span>
+              </div>
               <span
                 className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                  i === 0
+                  item.step === 2
                     ? "bg-emerald-100 text-emerald-700"
-                    : i === 1
+                    : item.step === 1
                     ? "bg-amber-100 text-amber-700"
                     : "bg-gray-100 text-gray-500"
                 }`}
               >
-                {steps[i === 0 ? 2 : i === 1 ? 1 : 0].label}
+                {steps[item.step].label}
               </span>
             </div>
           )
@@ -145,9 +162,9 @@ function ApprovalMockup() {
 
 function TeamMockup() {
   const members = [
-    { name: "Sarah K.", role: "Admin", color: "bg-blue-100 text-blue-700" },
-    { name: "James L.", role: "Editor", color: "bg-emerald-100 text-emerald-700" },
-    { name: "Maria R.", role: "Viewer", color: "bg-gray-100 text-gray-600" },
+    { name: "Sarah K.", role: "Admin", color: "bg-blue-100 text-blue-700", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&crop=face" },
+    { name: "James L.", role: "Editor", color: "bg-emerald-100 text-emerald-700", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face" },
+    { name: "Maria R.", role: "Viewer", color: "bg-gray-100 text-gray-600", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop&crop=face" },
   ];
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden p-5">
@@ -158,9 +175,7 @@ function TeamMockup() {
             className="flex items-center justify-between px-3 py-3 rounded-lg bg-gray-50"
           >
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
-                {m.name.charAt(0)}
-              </div>
+              <img src={m.avatar} alt={m.name} className="w-8 h-8 rounded-full object-cover" loading="lazy" />
               <span className="text-sm font-medium text-gray-700">
                 {m.name}
               </span>
