@@ -18,7 +18,9 @@ from datetime import datetime, timedelta, timezone
 import httpx
 
 from app.core.config import settings
+from app.core.prompt_safety import sanitize_for_prompt, wrap_user_input, strip_markdown_codeblock
 from app.core.retry import retry
+from app.core.tracing import trace_llm_call
 
 logger = logging.getLogger("bluewave.trends")
 
@@ -216,10 +218,13 @@ async def analyze_trends_with_ai(
 
     existing_tags = ", ".join(existing_hashtags[:20]) if existing_hashtags else "none available"
 
+    safe_niche = sanitize_for_prompt(tenant_niche, max_length=200)
+    safe_tags = sanitize_for_prompt(existing_tags, max_length=500)
+
     prompt = f"""You are a trend intelligence analyst for a creative marketing team.
 
-TENANT NICHE: {tenant_niche}
-EXISTING HASHTAGS IN USE: {existing_tags}
+{wrap_user_input('tenant_niche', safe_niche)}
+{wrap_user_input('existing_hashtags', safe_tags)}
 
 CURRENT TRENDING TOPICS:
 {trend_list}
@@ -239,19 +244,28 @@ Return ONLY the JSON array, no other text."""
     try:
         import json as json_mod
 
-        resp = await ai_service._client.messages.create(
-            model=ai_service._model,
-            max_tokens=2000,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        raw = resp.content[0].text.strip()
-        # Handle markdown code blocks
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
-        analyzed = json_mod.loads(raw)
-        if isinstance(analyzed, list):
-            logger.info("AI analyzed %d relevant trends", len(analyzed))
-            return analyzed
+        async with trace_llm_call(
+            "bluewave.analyze_trends",
+            inputs={"trend_count": len(trends), "tenant_niche": tenant_niche},
+            metadata={"model": ai_service._model},
+            tags=["trends", "json-output"],
+        ) as run:
+            resp = await ai_service._client.messages.create(
+                model=ai_service._model,
+                max_tokens=2000,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = strip_markdown_codeblock(resp.content[0].text)
+            analyzed = json_mod.loads(raw)
+            usage = resp.usage if hasattr(resp, "usage") else None
+            run.log_output({
+                "analyzed_count": len(analyzed) if isinstance(analyzed, list) else 0,
+                "input_tokens": getattr(usage, "input_tokens", 0) if usage else 0,
+                "output_tokens": getattr(usage, "output_tokens", 0) if usage else 0,
+            })
+            if isinstance(analyzed, list):
+                logger.info("AI analyzed %d relevant trends", len(analyzed))
+                return analyzed
     except Exception:
         logger.exception("AI trend analysis failed")
 

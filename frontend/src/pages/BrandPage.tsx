@@ -289,7 +289,7 @@ function ComplianceChecker({ brandName }: { brandName: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: `Analyze this image for brand compliance against ${brandName} guidelines. Check colors, typography, tone, and all brand rules. Return a score 0-100 and specific issues. Image data (base64): ${base64.substring(0, 500)}...`,
+          message: `Analyze this image for brand compliance. Check colors, typography, tone, and all brand rules. Return a score 0-100 and specific issues.\n<brand_name>${brandName.replace(/[<>]/g, "")}</brand_name>\n<image_data>${base64.substring(0, 500)}</image_data>`,
           session_id: "compliance_check_" + Date.now(),
         }),
       });

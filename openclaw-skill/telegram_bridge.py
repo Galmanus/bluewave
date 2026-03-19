@@ -200,7 +200,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle photo messages — download and send to Wave for vision analysis."""
+    """Handle photo messages — direct brand compliance analysis via Claude Vision.
+
+    Bypasses the orchestrator for speed and cost efficiency.
+    Cost: ~$0.005 per image (Haiku Vision).
+    """
     if not update.message:
         return
     if not is_allowed(update.effective_user.id):
@@ -223,33 +227,22 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo_bytes = await file.download_as_bytearray()
     b64_data = base64.standard_b64encode(bytes(photo_bytes)).decode("utf-8")
 
-    # Build the message for Wave
     caption = update.message.caption or ""
-    user_prompt = caption if caption else "Analyze this image. What do you see?"
 
-    # Send to Wave with instruction to use vision
-    vision_message = (
-        "The user sent an image via Telegram. Use the analyze_image tool with this base64 data to see it.\n\n"
-        "image_base64: %s\n"
-        "media_type: image/jpeg\n"
-        "User's message: %s\n\n"
-        "Analyze the image and respond to what the user asked. If they just sent it without context, "
-        "describe what you see and suggest what you could do with it (brand analysis, OCR, etc)."
-    ) % (b64_data[:100] + "...[truncated for prompt, use the full base64 in the tool call]", user_prompt)
+    await update.effective_chat.send_action("typing")
+    await update.message.reply_text("Analyzing image against brand DNA...")
 
-    # Actually we need to pass the full base64 to the agent. Let's save it temporarily.
-    import tempfile, os, json
-    tmp = os.path.join(tempfile.gettempdir(), "wave_img_%s.json" % file.file_id[:16])
-    with open(tmp, "w") as f:
-        json.dump({"base64": b64_data, "media_type": "image/jpeg"}, f)
-
-    vision_message = (
-        "The user sent an image via Telegram. Analyze it using the analyze_image tool.\n"
-        "Pass image_base64 from this file: %s\n"
-        "Or use this image_base64 directly (it's the full data): %s\n"
-        "media_type: image/jpeg\n\n"
-        "User's message: %s"
-    ) % (tmp, b64_data, user_prompt)
+    # Direct brand compliance analysis — bypasses orchestrator, saves tokens
+    try:
+        from brand_vision import analyze_brand_compliance
+        import time as _time
+        t0 = _time.time()
+        result = await analyze_brand_compliance(b64_data, "image/jpeg")
+        elapsed = _time.time() - t0
+        logger.info("[%s] Brand compliance analysis completed in %.1fs", session, elapsed)
+    except Exception as e:
+        logger.error("Brand vision failed: %s", e)
+        result = "Analysis failed: %s" % str(e)[:200]
 
     await update.effective_chat.send_action("typing")
 

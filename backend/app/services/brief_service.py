@@ -13,7 +13,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.prompt_safety import sanitize_for_prompt, wrap_user_input, strip_markdown_codeblock
+from app.core.retry import retry
 from app.core.tracing import trace_llm_call
+from app.prompts import load_prompt
 
 logger = logging.getLogger("bluewave.briefs")
 
@@ -33,6 +36,15 @@ async def generate_brief(
     from app.services.ai_usage import log_ai_usage
 
     import anthropic
+
+    @retry(max_retries=3, base_delay=2.0, retryable=(anthropic.RateLimitError, anthropic.InternalServerError, anthropic.APIConnectionError))
+    async def _call_claude_for_brief(client, model, system_prompt, user_message):
+        return await client.messages.create(
+            model=model,
+            max_tokens=2000,
+            messages=[{"role": "user", "content": user_message}],
+            system=system_prompt,
+        )
 
     async with async_session_factory() as db:
         # Load brief record
@@ -84,20 +96,11 @@ async def generate_brief(
                 voice_context = f"\nRecent approved captions (match this style):\n{examples}"
 
             # Generate brief with Claude
-            system_prompt = (
-                "You are a creative strategist for a digital asset management platform. "
-                "Given the brief request and brand context, generate a comprehensive content brief. "
-                "Return a JSON object with: "
-                '{"campaign_overview": "...", '
-                '"content_pieces": [{"title": "...", "caption_draft": "...", "visual_direction": "...", "channel": "..."}], '
-                '"hashtag_strategy": ["#...", ...], '
-                '"timeline_suggestion": "...", '
-                '"key_messages": ["...", ...]}'
-            )
+            system_prompt = load_prompt("brief_system")
 
-            user_message = f"BRIEF REQUEST: {prompt}"
+            user_message = f"BRIEF REQUEST:\n{wrap_user_input('user_prompt', prompt, max_length=2000)}"
             if brand_context:
-                user_message += f"\n\nBRAND CONTEXT:\n{brand_context}"
+                user_message += f"\n\nBRAND CONTEXT:\n{sanitize_for_prompt(brand_context, max_length=2000)}"
             if voice_context:
                 user_message += f"\n\n{voice_context}"
 
@@ -108,18 +111,8 @@ async def generate_brief(
                 tags=["content-brief", "json-output"],
             ) as run:
                 client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
-                resp = await client.messages.create(
-                    model=settings.AI_MODEL,
-                    max_tokens=2000,
-                    messages=[{"role": "user", "content": user_message}],
-                    system=system_prompt,
-                )
-                raw = resp.content[0].text.strip()
-
-                # Parse JSON (handle markdown code blocks)
-                if raw.startswith("```"):
-                    raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
-
+                resp = await _call_claude_for_brief(client, settings.AI_MODEL, system_prompt, user_message)
+                raw = strip_markdown_codeblock(resp.content[0].text)
                 brief_content = json.loads(raw)
                 run.log_output({"brief_content": brief_content})
 

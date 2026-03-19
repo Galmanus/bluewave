@@ -40,7 +40,7 @@ export default function WaveAgentPage() {
     },
   ]);
   const [input, setInput] = useState("");
-  const [sessionId] = useState(() => `web_${Date.now()}`);
+  const [sessionId] = useState(() => `web_${crypto.randomUUID()}`);
   const [totalSpent, setTotalSpent] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -53,25 +53,79 @@ export default function WaveAgentPage() {
 
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
-      const res = await fetch(`${WAVE_API}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, session_id: sessionId }),
-      });
-      if (!res.ok) throw new Error("Wave unavailable");
-      return res.json();
+      // Try SSE streaming first, fall back to regular POST
+      try {
+        const res = await fetch(`${WAVE_API}/chat/stream`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, session_id: sessionId }),
+        });
+
+        if (!res.ok || !res.body) throw new Error("Stream unavailable");
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = "";
+        const msgId = `assistant_${Date.now()}`;
+
+        // Add placeholder message
+        setMessages((prev) => [
+          ...prev,
+          { id: msgId, role: "assistant", content: "", timestamp: new Date() },
+        ]);
+
+        let buffer = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const event = JSON.parse(line.slice(6));
+              if (event.type === "chunk") {
+                fullResponse += event.text;
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === msgId ? { ...m, content: fullResponse } : m))
+                );
+              } else if (event.type === "done") {
+                fullResponse = event.response;
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === msgId ? { ...m, content: fullResponse } : m))
+                );
+              } else if (event.type === "error") {
+                throw new Error(event.message);
+              }
+            } catch { /* ignore parse errors for incomplete chunks */ }
+          }
+        }
+
+        return { response: fullResponse };
+      } catch {
+        // Fallback to regular POST
+        const res = await fetch(`${WAVE_API}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, session_id: sessionId }),
+        });
+        if (!res.ok) throw new Error("Wave unavailable");
+        return res.json();
+      }
     },
     onSuccess: async (data) => {
-      // Add Wave's response
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `assistant_${Date.now()}`,
-          role: "assistant",
-          content: data.response,
-          timestamp: new Date(),
-        },
-      ]);
+      // Only add message if we used the non-streaming fallback (no placeholder yet)
+      setMessages((prev) => {
+        const hasPlaceholder = prev.some((m) => m.role === "assistant" && m.content === data.response);
+        if (hasPlaceholder) return prev;
+        return [
+          ...prev,
+          { id: `assistant_${Date.now()}`, role: "assistant", content: data.response, timestamp: new Date() },
+        ];
+      });
 
       // If wallet is connected, charge for the AI action on Hedera
       if (wallet.address) {

@@ -33,7 +33,9 @@ from agent_runtime import (
 )
 from handler import BlueWaveHandler
 from skills_handler import get_all_skill_tools, execute_skill, is_skill_tool
+from skills.tracing import trace_agent_cycle, trace_delegation, is_enabled as tracing_enabled
 from intent_router import classify_intent, get_tools_for_intent, get_prompt_for_intent
+from context_manager import ContextWindowManager
 
 logger = logging.getLogger("openclaw.orchestrator")
 
@@ -104,6 +106,7 @@ class Orchestrator:
         self.handler = handler or BlueWaveHandler()
         self.all_tools = load_all_tools()
         self.messages = []  # type: List[Dict]
+        self.context_manager = ContextWindowManager()
 
         # Load agent configs from agents.json
         agents_path = Path(__file__).parent / "agents.json"
@@ -216,6 +219,7 @@ class Orchestrator:
     def reset(self):
         """Reset all conversation state."""
         self.messages = []
+        self.context_manager = ContextWindowManager()
         for rt in self._specialist_runtimes.values():
             rt.reset()
 
@@ -235,7 +239,9 @@ class Orchestrator:
             return json.dumps({"success": False, "data": None, "message": str(e)})
 
     async def _delegate_to_specialist(self, agent_id: str, task: str, user_message: str = "") -> str:
-        """Run a specialist agent and return its response."""
+        """Run a specialist agent and return its response. Traced via LangSmith."""
+        import time as _time
+
         if agent_id not in self.specialists:
             return json.dumps({
                 "success": False,
@@ -251,13 +257,21 @@ class Orchestrator:
             config.emoji, config.name, task[:100],
         )
 
-        # The specialist gets the original user message as input
+        t0 = _time.time()
         message = user_message if user_message else task
         result = await specialist.run(message, context=task)
+        duration_ms = (_time.time() - t0) * 1000
 
         logger.info(
-            "  <- %s %s responded (%d tool calls, %d turns)",
-            config.emoji, config.name, result.tool_calls_made, result.turns_used,
+            "  <- %s %s responded (%d tool calls, %d turns, %.1fms)",
+            config.emoji, config.name, result.tool_calls_made, result.turns_used, duration_ms,
+        )
+
+        # Trace delegation to LangSmith
+        trace_delegation(
+            "orchestrator", agent_id, task,
+            result.text[:500] if result.text else "",
+            duration_ms,
         )
 
         return json.dumps({
@@ -269,19 +283,22 @@ class Orchestrator:
         }, ensure_ascii=False)
 
     def _call_claude(self, messages, model=None, system_prompt=None, tools=None, attempt=0):
-        """Call Claude with intent-optimized model/prompt/tools."""
+        """Call Claude with intent-optimized model/prompt/tools and context management."""
         import time as _time
 
         use_model = model or self.model
         use_system = system_prompt or self.system_prompt
         use_tools = tools if tools is not None else self.orchestrator_tools
 
+        # Apply rolling context window to prevent token overflow
+        managed_messages = self.context_manager.prepare_messages(messages)
+
         try:
             kwargs = dict(
                 model=use_model,
                 max_tokens=MAX_TOKENS,
                 system=use_system,
-                messages=messages,
+                messages=managed_messages,
             )
             if use_tools:
                 kwargs["tools"] = use_tools
@@ -297,29 +314,17 @@ class Orchestrator:
                                          tools=use_tools, attempt=attempt + 1)
             raise
 
-    async def chat(self, user_message: str) -> str:
-        """Send a message to Wave and get a response.
+    async def chat_streaming(self, user_message: str, on_text_chunk=None, on_tool_start=None, on_tool_end=None) -> str:
+        """Streaming-aware chat — calls callbacks for progressive UI updates.
 
-        Uses intent routing to minimize token usage:
-        - Simple queries (greetings): Haiku, no tools, light prompt (~2k tokens)
-        - Medium queries (brand, assets): Haiku, relevant tools only (~8k tokens)
-        - Complex queries (research, sales): Sonnet, full prompt + tools (~28k tokens)
+        Falls back to regular chat() but adds hook points for SSE integration.
+        Currently uses the synchronous Claude SDK, so text arrives as full blocks
+        per turn. Full streaming (token-by-token) requires the async streaming API.
         """
-        # Classify intent (zero tokens — heuristic-based)
         intent = classify_intent(self.client, user_message)
-
-        # Select tools and prompt based on intent
         routed_tools = get_tools_for_intent(intent, self.orchestrator_tools)
         routed_prompt = get_prompt_for_intent(intent, self.system_prompt)
         routed_model = intent.model
-
-        est_tokens = len(routed_prompt) // 4 + len(routed_tools) * 200
-        logger.info(
-            "🧭 Intent: %s/%s → model=%s, tools=%d, ~%dk tokens (was ~28k)",
-            intent.category, intent.complexity,
-            routed_model.split("-")[1] if "-" in routed_model else routed_model,
-            len(routed_tools), est_tokens // 1000,
-        )
 
         self.messages.append({"role": "user", "content": user_message})
 
@@ -339,6 +344,121 @@ class Orchestrator:
             except anthropic.APIError as e:
                 logger.error("Claude API error: %s", e)
                 return "Tô sobrecarregado agora, tenta de novo em 1 minuto."
+
+            assistant_content = []
+            text_parts = []
+            tool_uses = []
+
+            for block in response.content:
+                if block.type == "text":
+                    text_parts.append(block.text)
+                    assistant_content.append({"type": "text", "text": block.text})
+                    if on_text_chunk:
+                        on_text_chunk(block.text)
+                elif block.type == "tool_use":
+                    tool_uses.append(block)
+                    assistant_content.append({
+                        "type": "tool_use",
+                        "id": block.id,
+                        "name": block.name,
+                        "input": block.input,
+                    })
+
+            self.messages.append({"role": "assistant", "content": assistant_content})
+
+            if not tool_uses:
+                return "\n".join(text_parts)
+
+            tool_results = []
+            for tool_use in tool_uses:
+                if on_tool_start:
+                    on_tool_start(tool_use.name)
+
+                if tool_use.name == "delegate_to_agent":
+                    agent_id = tool_use.input.get("agent_id", "")
+                    task = tool_use.input.get("task", "")
+                    orig_msg = tool_use.input.get("user_message", user_message)
+                    result_str = await self._delegate_to_specialist(agent_id, task, orig_msg)
+                else:
+                    result_str = await self._execute_orchestrator_tool(tool_use.name, tool_use.input)
+
+                if on_tool_end:
+                    on_tool_end(tool_use.name)
+
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tool_use.id,
+                    "content": result_str,
+                })
+
+            self.messages.append({"role": "user", "content": tool_results})
+
+        return "\n".join(text_parts) if text_parts else "(Limite de turnos atingido)"
+
+    async def chat(self, user_message: str) -> str:
+        """Send a message to Wave and get a response.
+
+        Uses intent routing to minimize token usage:
+        - Simple queries (greetings): Haiku, no tools, light prompt (~2k tokens)
+        - Medium queries (brand, assets): Haiku, relevant tools only (~8k tokens)
+        - Complex queries (research, sales): Sonnet, full prompt + tools (~28k tokens)
+        """
+        import time as _time
+        _t0 = _time.time()
+
+        # Classify intent (zero tokens — heuristic-based)
+        intent = classify_intent(self.client, user_message)
+
+        # Select tools and prompt based on intent
+        routed_tools = get_tools_for_intent(intent, self.orchestrator_tools)
+        routed_prompt = get_prompt_for_intent(intent, self.system_prompt)
+        routed_model = intent.model
+
+        est_tokens = len(routed_prompt) // 4 + len(routed_tools) * 200
+        logger.info(
+            "🧭 Intent: %s/%s → model=%s, tools=%d, ~%dk tokens (was ~28k)",
+            intent.category, intent.complexity,
+            routed_model.split("-")[1] if "-" in routed_model else routed_model,
+            len(routed_tools), est_tokens // 1000,
+        )
+
+        # Trace the overall chat cycle
+        trace_agent_cycle("chat", "orchestrator", {
+            "intent": intent.category,
+            "complexity": intent.complexity,
+            "model": routed_model,
+            "tools_count": len(routed_tools),
+            "est_tokens": est_tokens,
+            "message_preview": user_message[:200],
+            "context_stats": self.context_manager.get_stats(),
+        })
+
+        self.messages.append({"role": "user", "content": user_message})
+
+        turns = 0
+        text_parts = []
+
+        while turns < MAX_TURNS:
+            turns += 1
+
+            try:
+                response = self._call_claude(
+                    self.messages,
+                    model=routed_model,
+                    system_prompt=routed_prompt,
+                    tools=routed_tools if routed_tools else None,
+                )
+            except anthropic.APIError as e:
+                logger.error("Claude API error: %s", e)
+                return "Tô sobrecarregado agora, tenta de novo em 1 minuto."
+
+            # Track token usage for cost awareness
+            usage = response.usage if hasattr(response, "usage") else None
+            if usage:
+                self.context_manager.track_usage(
+                    input_tokens=getattr(usage, "input_tokens", 0),
+                    output_tokens=getattr(usage, "output_tokens", 0),
+                )
 
             # Parse response
             assistant_content = []

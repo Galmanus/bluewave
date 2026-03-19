@@ -18,7 +18,10 @@ from typing import Protocol
 import anthropic
 
 from app.core.config import settings
+from app.core.retry import retry
+from app.core.prompt_safety import sanitize_for_prompt, wrap_user_input, strip_markdown_codeblock
 from app.core.tracing import trace_llm_call
+from app.prompts import load_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +172,18 @@ class ClaudeAIService:
             logger.debug("Brand voice context load failed — using generic style")
             return ""
 
+    # -- internal retryable call ----------------------------------------
+
+    @retry(max_retries=3, base_delay=1.0, retryable=(anthropic.RateLimitError, anthropic.InternalServerError, anthropic.APIConnectionError))
+    async def _call_claude(self, *, model: str, max_tokens: int, system: str, content: list[dict]) -> anthropic.types.Message:
+        """Retryable Claude API call with exponential backoff."""
+        return await self._client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": content}],
+            system=system,
+        )
+
     # -- caption --------------------------------------------------------
 
     async def generate_caption(
@@ -181,14 +196,7 @@ class ClaudeAIService:
         has_image = file_path is not None and file_type in _VISION_TYPES
         brand_voice_count = brand_voice.count("- ") if brand_voice else 0
 
-        system_prompt = (
-            "You are a creative marketing copywriter for a digital asset "
-            "management platform. Generate a single concise, engaging caption "
-            "for the media asset described. The caption should be professional, "
-            "brand-friendly, and suitable for social media or internal use. "
-            "Reply ONLY with the caption text, no quotes or extra formatting."
-            + brand_voice
-        )
+        system_prompt = load_prompt("caption_system") + brand_voice
 
         trace_inputs = {
             "system_prompt": system_prompt,
@@ -216,11 +224,11 @@ class ClaudeAIService:
         ) as run:
             t0 = time.perf_counter()
             try:
-                resp = await self._client.messages.create(
+                resp = await self._call_claude(
                     model=self._model,
                     max_tokens=300,
-                    messages=[{"role": "user", "content": content}],
                     system=system_prompt,
+                    content=content,
                 )
                 duration_ms = round((time.perf_counter() - t0) * 1000, 1)
                 usage = resp.usage if hasattr(resp, "usage") else None
@@ -267,12 +275,7 @@ class ClaudeAIService:
         content = self._build_hashtag_content(filename, file_type, file_path)
         has_image = file_path is not None and file_type in _VISION_TYPES
 
-        system_prompt = (
-            "You are a social media strategist. Generate 6-10 relevant hashtags "
-            "for the media asset described. Return ONLY a JSON array of strings, "
-            "each starting with #. Example: [\"#branding\", \"#design\"]. "
-            "No other text."
-        )
+        system_prompt = load_prompt("hashtags_system")
 
         async with trace_llm_call(
             "bluewave.generate_hashtags",
@@ -281,11 +284,11 @@ class ClaudeAIService:
             tags=["hashtags", "json-output", "vision" if has_image else "text-only"],
         ) as run:
             try:
-                resp = await self._client.messages.create(
+                resp = await self._call_claude(
                     model=self._model,
                     max_tokens=200,
-                    messages=[{"role": "user", "content": content}],
                     system=system_prompt,
+                    content=content,
                 )
                 raw = resp.content[0].text.strip()
                 json_parse_ok = False
@@ -336,6 +339,9 @@ class ClaudeAIService:
         if file_path and file_type in _VISION_TYPES:
             image_data = _read_image_as_base64(file_path, file_type)
 
+        safe_filename = sanitize_for_prompt(filename, max_length=200)
+        safe_type = sanitize_for_prompt(file_type, max_length=50)
+
         if image_data:
             b64, media = image_data
             blocks.append({
@@ -345,7 +351,9 @@ class ClaudeAIService:
             blocks.append({
                 "type": "text",
                 "text": (
-                    f"This image file is named \"{filename}\" (type: {file_type}). "
+                    f"This image file metadata:\n"
+                    f"{wrap_user_input('filename', safe_filename)}\n"
+                    f"{wrap_user_input('file_type', safe_type)}\n"
                     "Write a compelling, concise caption for this asset."
                 ),
             })
@@ -354,8 +362,10 @@ class ClaudeAIService:
             blocks.append({
                 "type": "text",
                 "text": (
-                    f"Generate a caption for a {media_kind} asset named \"{filename}\" "
-                    f"(type: {file_type}). Infer the likely content from the filename "
+                    f"Generate a caption for a {media_kind} asset.\n"
+                    f"{wrap_user_input('filename', safe_filename)}\n"
+                    f"{wrap_user_input('file_type', safe_type)}\n"
+                    "Infer the likely content from the filename "
                     "and write a compelling, concise caption."
                 ),
             })
@@ -370,6 +380,9 @@ class ClaudeAIService:
         if file_path and file_type in _VISION_TYPES:
             image_data = _read_image_as_base64(file_path, file_type)
 
+        safe_filename = sanitize_for_prompt(filename, max_length=200)
+        safe_type = sanitize_for_prompt(file_type, max_length=50)
+
         if image_data:
             b64, media = image_data
             blocks.append({
@@ -379,7 +392,9 @@ class ClaudeAIService:
             blocks.append({
                 "type": "text",
                 "text": (
-                    f"This image file is named \"{filename}\" (type: {file_type}). "
+                    f"This image file metadata:\n"
+                    f"{wrap_user_input('filename', safe_filename)}\n"
+                    f"{wrap_user_input('file_type', safe_type)}\n"
                     "Generate relevant hashtags for this asset."
                 ),
             })
@@ -388,8 +403,10 @@ class ClaudeAIService:
             blocks.append({
                 "type": "text",
                 "text": (
-                    f"Generate hashtags for a {media_kind} asset named \"{filename}\" "
-                    f"(type: {file_type}). Infer the likely content from the filename."
+                    f"Generate hashtags for a {media_kind} asset.\n"
+                    f"{wrap_user_input('filename', safe_filename)}\n"
+                    f"{wrap_user_input('file_type', safe_type)}\n"
+                    "Infer the likely content from the filename."
                 ),
             })
         return blocks
@@ -416,19 +433,17 @@ class ClaudeAIService:
             tags=["caption", "multilang"],
         ) as run:
             try:
-                resp = await self._client.messages.create(
+                resp = await self._call_claude(
                     model=self._model,
                     max_tokens=1000,
-                    messages=[{"role": "user", "content": content}],
+                    content=content,
                     system=(
                         f"Generate a concise, engaging caption for this asset in each of these languages: {lang_list}. "
                         'Return ONLY a JSON object mapping language codes to captions. '
                         'Example: {"en": "...", "pt": "...", "es": "..."}. No other text.'
                     ),
                 )
-                raw = resp.content[0].text.strip()
-                if raw.startswith("```"):
-                    raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
+                raw = strip_markdown_codeblock(resp.content[0].text)
                 result = json.loads(raw)
                 if isinstance(result, dict):
                     run.log_output({"captions": result, "language_count": len(result)})

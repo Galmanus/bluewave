@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import UserContext, get_current_user, require_role
+from app.core.plan_limits import check_ai_limit
 from app.core.tenant import get_tenant_db
 from app.models.asset import MediaAsset
 from app.models.ai_usage import AIActionType, AIUsageLog
@@ -30,6 +31,7 @@ async def regenerate_caption(
     asset_id: uuid.UUID,
     current_user: UserContext = Depends(require_role("admin", "editor")),
     db: AsyncSession = Depends(get_tenant_db),
+    _limit: None = Depends(check_ai_limit),
 ):
     result = await db.execute(
         select(MediaAsset).where(MediaAsset.id == asset_id)
@@ -61,6 +63,7 @@ async def regenerate_hashtags(
     asset_id: uuid.UUID,
     current_user: UserContext = Depends(require_role("admin", "editor")),
     db: AsyncSession = Depends(get_tenant_db),
+    _limit: None = Depends(check_ai_limit),
 ):
     result = await db.execute(
         select(MediaAsset).where(MediaAsset.id == asset_id)
@@ -93,6 +96,7 @@ async def translate_caption(
     languages: str = Query("pt,es,fr", description="Comma-separated language codes"),
     current_user: UserContext = Depends(require_role("admin", "editor")),
     db: AsyncSession = Depends(get_tenant_db),
+    _limit: None = Depends(check_ai_limit),
 ):
     """Generate captions in multiple languages for an asset."""
     result = await db.execute(select(MediaAsset).where(MediaAsset.id == asset_id))
@@ -100,9 +104,11 @@ async def translate_caption(
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
 
-    lang_list = [l.strip() for l in languages.split(",") if l.strip()]
+    VALID_LANGS = {"en", "pt", "es", "fr", "de", "it", "nl", "ja", "ko", "zh", "ar", "ru", "hi", "pl", "sv", "da", "no", "fi"}
+    lang_list = [l.strip().lower()[:5] for l in languages.split(",") if l.strip()]
+    lang_list = [l for l in lang_list if l in VALID_LANGS]
     if not lang_list:
-        raise HTTPException(400, "At least one language required")
+        raise HTTPException(400, "At least one valid language code required (e.g., en, pt, es)")
 
     filename = asset.file_path.rsplit("/", 1)[-1]
     captions = await ai_service.generate_caption_multilang(

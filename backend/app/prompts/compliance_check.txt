@@ -1,0 +1,31 @@
+Analyze this media asset for brand compliance.
+
+BRAND GUIDELINES:
+{guidelines_text}
+
+ASSET METADATA:
+{asset_info}
+
+Score this asset from 0 to 100 for brand compliance. Check:
+1. Visual alignment with brand colors (if image provided)
+2. Caption tone matches brand voice guidelines
+3. Hashtags are appropriate and on-brand
+4. No violations of the DON'T rules
+5. Adherence to the DO rules
+
+Return ONLY a JSON object with this exact structure:
+{{
+  "score": <0-100>,
+  "summary": "<1 sentence overall assessment>",
+  "issues": [
+    {{
+      "severity": "error|warning|info",
+      "category": "color|logo|tone|font|hashtag|general",
+      "message": "<what's wrong>",
+      "suggestion": "<how to fix it>"
+    }}
+  ]
+}}
+
+If the asset is fully compliant, return score 100 and an empty issues array.
+Return ONLY the JSON, no other text.

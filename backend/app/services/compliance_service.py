@@ -16,9 +16,11 @@ import time
 from dataclasses import dataclass, field
 
 from app.core.config import settings
+from app.core.prompt_safety import sanitize_for_prompt, wrap_user_input, strip_markdown_codeblock
 from app.core.retry import retry
 from app.core.tracing import trace_llm_call
 from app.models.brand_guideline import BrandGuideline
+from app.prompts import load_prompt
 
 logger = logging.getLogger("bluewave.compliance")
 
@@ -39,6 +41,40 @@ class ComplianceResult:
     summary: str = ""
 
 
+# Tool schema for structured compliance output — guarantees valid JSON
+COMPLIANCE_RESULT_TOOL = {
+    "name": "compliance_result",
+    "description": "Return the brand compliance analysis result.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "score": {
+                "type": "integer",
+                "description": "Compliance score from 0 to 100",
+            },
+            "summary": {
+                "type": "string",
+                "description": "One sentence overall assessment",
+            },
+            "issues": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "severity": {"type": "string", "enum": ["error", "warning", "info"]},
+                        "category": {"type": "string", "enum": ["color", "logo", "tone", "font", "hashtag", "general"]},
+                        "message": {"type": "string"},
+                        "suggestion": {"type": "string"},
+                    },
+                    "required": ["severity", "category", "message", "suggestion"],
+                },
+            },
+        },
+        "required": ["score", "summary", "issues"],
+    },
+}
+
+
 def _build_guidelines_prompt(guidelines: BrandGuideline) -> str:
     """Convert brand guidelines into a structured prompt section."""
     parts = []
@@ -56,7 +92,8 @@ def _build_guidelines_prompt(guidelines: BrandGuideline) -> str:
     if guidelines.donts:
         parts.append("DON'Ts:\n" + "\n".join(f"  - {d}" for d in guidelines.donts))
     if guidelines.custom_rules:
-        parts.append(f"CUSTOM RULES: {json.dumps(guidelines.custom_rules)}")
+        safe_rules = sanitize_for_prompt(json.dumps(guidelines.custom_rules), max_length=1000)
+        parts.append(f"CUSTOM RULES: {safe_rules}")
 
     return "\n\n".join(parts) if parts else "No specific guidelines defined."
 
@@ -117,37 +154,18 @@ async def check_compliance(
 
     content.append({
         "type": "text",
-        "text": f"""Analyze this media asset for brand compliance.
-
-BRAND GUIDELINES:
-{guidelines_text}
-
-ASSET METADATA:
-{asset_info}
-
-Score this asset from 0 to 100 for brand compliance. Check:
-1. Visual alignment with brand colors (if image provided)
-2. Caption tone matches brand voice guidelines
-3. Hashtags are appropriate and on-brand
-4. No violations of the DON'T rules
-5. Adherence to the DO rules
-
-Return ONLY a JSON object with this exact structure:
-{{
-  "score": <0-100>,
-  "summary": "<1 sentence overall assessment>",
-  "issues": [
-    {{
-      "severity": "error|warning|info",
-      "category": "color|logo|tone|font|hashtag|general",
-      "message": "<what's wrong>",
-      "suggestion": "<how to fix it>"
-    }}
-  ]
-}}
-
-If the asset is fully compliant, return score 100 and an empty issues array.
-Return ONLY the JSON, no other text.""",
+        "text": (
+            "Analyze this media asset for brand compliance.\n\n"
+            f"BRAND GUIDELINES:\n{guidelines_text}\n\n"
+            f"ASSET METADATA:\n{asset_info}\n\n"
+            "Score this asset from 0 to 100 for brand compliance. Check:\n"
+            "1. Visual alignment with brand colors (if image provided)\n"
+            "2. Caption tone matches brand voice guidelines\n"
+            "3. Hashtags are appropriate and on-brand\n"
+            "4. No violations of the DON'T rules\n"
+            "5. Adherence to the DO rules\n\n"
+            "Use the compliance_result tool to return your analysis."
+        ),
     })
 
     has_image = bool(content and any(b.get("type") == "image" for b in content))
@@ -177,30 +195,29 @@ Return ONLY the JSON, no other text.""",
                 model=settings.AI_MODEL,
                 max_tokens=1000,
                 messages=[{"role": "user", "content": content}],
+                tools=[COMPLIANCE_RESULT_TOOL],
+                tool_choice={"type": "tool", "name": "compliance_result"},
             )
             duration_ms = round((time.perf_counter() - t0) * 1000, 1)
-            raw = resp.content[0].text.strip()
 
-            # Handle markdown code blocks
-            if raw.startswith("```"):
-                raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
+            # Extract structured data from tool_use block
+            data = None
+            for block in resp.content:
+                if hasattr(block, "type") and block.type == "tool_use" and block.name == "compliance_result":
+                    data = block.input
+                    break
 
-            json_parse_ok = False
-            try:
-                data = json.loads(raw)
-                json_parse_ok = True
-            except json.JSONDecodeError:
-                data = None
-
-            if not json_parse_ok or not isinstance(data, dict):
+            if not data or not isinstance(data, dict):
+                # Fallback: try text-based parsing
+                raw = resp.content[0].text if resp.content and hasattr(resp.content[0], "text") else ""
                 run.log_output({
-                    "raw_response": raw,
+                    "raw_response": str(raw)[:200],
                     "json_parse_success": False,
                     "used_fallback": True,
                     "duration_ms": duration_ms,
                 })
-                run.add_tags(["fallback", "json-parse-failure"])
-                raise ValueError(f"Invalid JSON response from Claude: {raw[:200]}")
+                run.add_tags(["fallback", "tool-use-failure"])
+                raise ValueError("Claude did not return structured compliance result")
 
             score = int(data.get("score", 0))
             issues = [

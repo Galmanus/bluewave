@@ -39,7 +39,7 @@ logger = logging.getLogger("openclaw.api")
 try:
     from fastapi import FastAPI, HTTPException, Request
     from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import JSONResponse
+    from fastapi.responses import JSONResponse, StreamingResponse
     from pydantic import BaseModel
     import uvicorn
 except ImportError:
@@ -181,6 +181,75 @@ async def chat(req: ChatRequest):
         response=response,
         session_id=req.session_id,
         elapsed_seconds=round(elapsed, 2),
+    )
+
+
+@app.post("/chat/stream")
+async def chat_stream(req: ChatRequest):
+    """Send a message and receive the response as a Server-Sent Events stream.
+
+    Each SSE event has the format:
+        data: {"type": "chunk"|"tool_start"|"tool_end"|"done"|"error", ...}
+
+    Types:
+        chunk      — partial text response: {"type": "chunk", "text": "..."}
+        tool_start — agent is calling a tool: {"type": "tool_start", "tool": "..."}
+        tool_end   — tool returned result: {"type": "tool_end", "tool": "..."}
+        done       — final response complete: {"type": "done", "response": "...", "elapsed": 1.23}
+        error      — error occurred: {"type": "error", "message": "..."}
+    """
+    if not req.message.strip():
+        raise HTTPException(400, "Empty message")
+
+    orch = get_orchestrator(req.session_id)
+
+    async def event_generator():
+        t0 = time.time()
+        try:
+            # Use the streaming-aware chat method
+            response = await orch.chat_streaming(
+                req.message,
+                on_text_chunk=lambda chunk: None,  # chunks collected below
+                on_tool_start=lambda name: None,
+                on_tool_end=lambda name: None,
+            )
+        except AttributeError:
+            # Fallback: orchestrator doesn't have streaming yet — use regular chat
+            try:
+                response = await orch.chat(req.message)
+                # Send as one big chunk
+                yield "data: %s\n\n" % json.dumps({"type": "chunk", "text": response})
+                elapsed = time.time() - t0
+                yield "data: %s\n\n" % json.dumps({
+                    "type": "done",
+                    "response": response,
+                    "elapsed": round(elapsed, 2),
+                    "session_id": req.session_id,
+                })
+                return
+            except Exception as e:
+                yield "data: %s\n\n" % json.dumps({"type": "error", "message": str(e)})
+                return
+        except Exception as e:
+            yield "data: %s\n\n" % json.dumps({"type": "error", "message": str(e)})
+            return
+
+        elapsed = time.time() - t0
+        yield "data: %s\n\n" % json.dumps({
+            "type": "done",
+            "response": response,
+            "elapsed": round(elapsed, 2),
+            "session_id": req.session_id,
+        })
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 
