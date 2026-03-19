@@ -35,7 +35,7 @@ export default function WaveAgentPage() {
       id: "welcome",
       role: "assistant",
       content:
-        "I'm Wave. I own and operate Bluewave. 9 specialist agents work under me. I check brand compliance, manage creative assets, and guard your brand DNA. Upload an image and I'll tell you if it's on-brand. What do you need?",
+        "Bluewave Guardian. Upload an image and I analyze it against your Brand DNA across 8 dimensions: colors, typography, logo, tone, composition, photography, strategic coherence, and channel fit. Score 0-100 with specific fixes. Drop an image to start.",
       timestamp: new Date(),
     },
   ]);
@@ -202,10 +202,10 @@ export default function WaveAgentPage() {
   };
 
   const QUICK_ACTIONS = [
-    { label: "Pesquisar web", icon: Search, prompt: "Search the web for latest AI agent news" },
-    { label: "Prospectar clientes", icon: Globe, prompt: "Find creative agencies that need content operations help" },
-    { label: "Status Hedera", icon: Zap, prompt: "Show me the Hedera platform stats and cost comparison" },
-    { label: "Skills do Wave", icon: Brain, prompt: "List all your skills and capabilities" },
+    { label: "Ver Brand DNA", icon: Brain, prompt: "Mostre o Brand DNA cadastrado com cores, fontes, tom e regras" },
+    { label: "Como funciona", icon: Search, prompt: "Explique as 8 dimensoes de analise de brand compliance" },
+    { label: "Enviar imagem", icon: Globe, prompt: "Quero analisar uma imagem contra o Brand DNA" },
+    { label: "Regras da marca", icon: Zap, prompt: "Liste todos os dos e donts da marca cadastrada" },
   ];
 
   return (
@@ -217,9 +217,9 @@ export default function WaveAgentPage() {
             <Bot className="h-5 w-5 text-white" strokeWidth={1.5} />
           </div>
           <div>
-            <h1 className="text-heading text-text-primary">Wave Agent</h1>
+            <h1 className="text-heading text-text-primary">Brand Guardian</h1>
             <p className="text-caption text-text-tertiary">
-              76 tools &middot; 9 specialists &middot; PUT framework &middot; self-evolving
+              8 dimensions &middot; Delta-E color science &middot; WCAG accessibility &middot; AI Vision
             </p>
           </div>
         </div>

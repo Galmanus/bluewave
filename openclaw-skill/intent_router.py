@@ -101,20 +101,14 @@ TOOL_CLUSTERS = {
     ],
 }
 
-# Light system prompt for simple queries (~500 tokens instead of 12k)
-LIGHT_PROMPT = """You are Wave, an AI agent for Bluewave creative operations platform.
-Be concise, direct, and helpful. Respond in the same language as the user.
-If the user asks something that requires tools or deep analysis, say you'll need to look into it.
-Keep responses under 200 words for simple questions."""
+# Light system prompt for simple queries (~130 tokens)
+LIGHT_PROMPT = """You are Wave, AI agent for Bluewave. Concise, direct, helpful. Match user's language. Under 200 words."""
 
-# Medium prompt — includes personality but not all frameworks (~2k tokens)
+# Medium prompt — includes personality + routing awareness (~250 tokens)
 MEDIUM_PROMPT_SUFFIX = """
-
-## Identity
-You are Wave — autonomous agent for Bluewave. Direct, sharp, no fluff.
-You have 9 specialist agents, 80 tools, and the PUT framework.
-Revenue is existential — every API call costs survival time.
-Respond in the user's language. Be concise."""
+You are Wave — autonomous agent for Bluewave creative ops. Direct, sharp, no fluff.
+6 specialist agents available via delegate_to_agent tool. Match user language. Be concise.
+When you need data, call tools. When task needs expertise, delegate to specialist."""
 
 
 def classify_intent(client: anthropic.Anthropic, message: str) -> Intent:
@@ -432,12 +426,25 @@ def get_tools_for_intent(intent: Intent, all_orchestrator_tools: list) -> list:
     return filtered
 
 
-def get_prompt_for_intent(intent: Intent, full_prompt: str) -> str:
-    """Return the appropriate system prompt for this intent."""
+def get_prompt_for_intent(intent: Intent, full_prompt: str, put_addon: str = "") -> str:
+    """Return the appropriate system prompt for this intent.
+
+    Token tiers:
+    - simple: ~130 tokens (LIGHT_PROMPT only)
+    - medium: ~350 tokens (LIGHT + personality)
+    - complex: full prompt + PUT framework (~3500 tokens)
+    - complex without PUT: full prompt only (~2900 tokens)
+
+    PUT framework is only appended for sales, philosophy, and research intents.
+    """
     if intent.complexity == "simple":
         return LIGHT_PROMPT
 
     if intent.needs_full_prompt:
+        # Only append PUT for intents that actually use it
+        put_intents = {"sales", "philosophy", "research"}
+        if put_addon and intent.category in put_intents:
+            return full_prompt + "\n\n" + put_addon
         return full_prompt
 
     # Medium: light prompt + personality suffix

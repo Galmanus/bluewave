@@ -34,7 +34,7 @@ import WalletButton from "./WalletButton";
 const NAV_ITEMS = [
   { to: "/assets", label: "Assets", icon: Images, minRole: "viewer" },
   { to: "/assets/upload", label: "Upload", icon: Upload, minRole: "editor" },
-  { to: "/wave", label: "Wave Agent", icon: Bot, minRole: "editor" },
+  { to: "/wave", label: "Guardian", icon: Bot, minRole: "editor" },
   { to: "/trends", label: "Trends", icon: TrendingUp, minRole: "editor" },
   { to: "/calendar", label: "Calendar", icon: Calendar, minRole: "editor" },
   { to: "/brand", label: "Brand", icon: Palette, minRole: "admin" },

@@ -46,12 +46,7 @@ MODEL = os.environ.get("OPENCLAW_MODEL", "claude-haiku-4-5-20251001")
 
 DELEGATE_TOOL = {
     "name": "delegate_to_agent",
-    "description": (
-        "Delegate a task to a specialist agent. Use this when the user's request "
-        "requires domain expertise. Pass the specialist ID and a clear task description. "
-        "The specialist will execute the task autonomously (including calling tools) "
-        "and return their response."
-    ),
+    "description": "Delegate a task to a specialist agent for domain-specific execution.",
     "input_schema": {
         "type": "object",
         "properties": {
@@ -64,22 +59,12 @@ DELEGATE_TOOL = {
                     "analytics-strategist",
                     "creative-strategist",
                     "ops-admin",
-                    "legal-strategist",
-                    "security-auditor",
-                    "blockchain-specialist",
                 ],
-                "description": "ID of the specialist agent to delegate to.",
+                "description": "Specialist ID.",
             },
             "task": {
                 "type": "string",
-                "description": (
-                    "Clear description of what the specialist should do. "
-                    "Include all relevant context from the user's message."
-                ),
-            },
-            "user_message": {
-                "type": "string",
-                "description": "The original user message, verbatim.",
+                "description": "What the specialist should do, with context.",
             },
         },
         "required": ["agent_id", "task"],
@@ -147,10 +132,17 @@ class Orchestrator:
         ]
         self.orchestrator_tools.append(DELEGATE_TOOL)
 
-        # Add all skill tools (web search, X/Twitter, email, intelligence, etc.)
+        # Only add essential skill tools to orchestrator (web_search, memory).
+        # Other skill tools are loaded per-specialist via _skill_tool_names_by_agent.
+        # This saves ~1800 tokens per orchestrator call.
         self.skill_tools = get_all_skill_tools()
+        _orch_skill_allowlist = {
+            "web_search", "web_news", "save_learning", "recall_learnings",
+            "create_skill", "list_skills", "tracing_status",
+        }
         for skill_tool in self.skill_tools:
-            self.orchestrator_tools.append(convert_tool_to_claude_schema(skill_tool))
+            if skill_tool["name"] in _orch_skill_allowlist:
+                self.orchestrator_tools.append(convert_tool_to_claude_schema(skill_tool))
 
         # Also add skill tools to relevant specialists
         self._skill_tool_names_by_agent = {
@@ -174,27 +166,14 @@ class Orchestrator:
         # Pre-create specialist runtimes (lazy — created on first delegation)
         self._specialist_runtimes = {}  # type: Dict[str, AgentRuntime]
 
-        # Enhance system prompt with agent directory
-        agent_directory = "\n\n## Agentes Disponíveis\n\n"
+        # Compact agent directory (saves ~200 tokens vs. full descriptions)
+        agent_directory = "\n\n## Agentes\n"
         for sid, cfg in self.specialists.items():
-            agent_directory += "- **%s %s** (`%s`): %s\n" % (cfg.emoji, cfg.name, sid, cfg.description)
+            # Only include short name + ID, not full PhD description
+            agent_directory += "- %s `%s`\n" % (cfg.emoji, sid)
 
-        # Add skills directory to system prompt
-        skills_info = "\n\n## Capacidades Diretas (Skills)\n\n"
-        skills_info += "Além de delegar para especialistas, você tem acesso direto a:\n"
-        skills_info += "- **web_search** / **web_news** — pesquisa web e noticias em tempo real\n"
-        skills_info += "- **scrape_url** — extrair conteudo de qualquer URL\n"
-        skills_info += "- **x_search** / **x_trending** — inteligencia do X/Twitter\n"
-        skills_info += "- **x_profile_research** — pesquisa de perfis do X\n"
-        skills_info += "- **social_monitor** — monitoramento de mencoes em redes sociais\n"
-        skills_info += "- **competitor_analysis** — analise competitiva profunda\n"
-        skills_info += "- **market_research** — pesquisa de mercado\n"
-        skills_info += "- **seo_analysis** — auditoria SEO de qualquer URL\n"
-        skills_info += "- **lead_finder** — encontrar prospects e leads\n"
-        skills_info += "- **draft_cold_email** — gerar emails de outreach\n"
-        skills_info += "- **send_email** — enviar emails\n"
-        skills_info += "- **directory_submission** — pacote de submissao para diretorios\n"
-        skills_info += "- **google_trends** — tendencias de busca\n"
+        # Compact skills directory (saves ~500 tokens vs. full listing)
+        skills_info = "\n\n## Skills Diretas\nweb_search, web_news, save/recall_learnings, create_skill. Demais skills via especialistas.\n"
 
         self.system_prompt = self.orchestrator_config.system_prompt + agent_directory + skills_info
 
@@ -333,7 +312,7 @@ class Orchestrator:
         """
         intent = classify_intent(self.client, user_message)
         routed_tools = get_tools_for_intent(intent, self.orchestrator_tools)
-        routed_prompt = get_prompt_for_intent(intent, self.system_prompt)
+        routed_prompt = get_prompt_for_intent(intent, self.system_prompt, self._put_addon)
         routed_model = intent.model
 
         self.messages.append({"role": "user", "content": user_message})
@@ -421,7 +400,7 @@ class Orchestrator:
 
         # Select tools and prompt based on intent
         routed_tools = get_tools_for_intent(intent, self.orchestrator_tools)
-        routed_prompt = get_prompt_for_intent(intent, self.system_prompt)
+        routed_prompt = get_prompt_for_intent(intent, self.system_prompt, self._put_addon)
         routed_model = intent.model
 
         est_tokens = len(routed_prompt) // 4 + len(routed_tools) * 200
