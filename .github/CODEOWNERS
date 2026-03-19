@@ -1,0 +1,6 @@
+# Security-sensitive code requires review
+backend/app/core/*          @bluewave/security
+backend/app/models/*        @bluewave/backend
+docker-compose*.yml         @bluewave/infra
+.github/workflows/*         @bluewave/infra
+nginx/*                     @bluewave/infra

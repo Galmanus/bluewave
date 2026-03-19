@@ -1,0 +1,114 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - bluewave_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    ports:
+      - "8300:8000"
+    environment:
+      ENV: ${ENV:-development}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL_SYNC: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-bluewave}
+      LANGSMITH_TRACING_ENABLED: ${LANGSMITH_TRACING_ENABLED:-true}
+      LANGCHAIN_TRACING_V2: ${LANGSMITH_TRACING_ENABLED:-true}
+      LANGCHAIN_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGCHAIN_PROJECT: ${LANGSMITH_PROJECT:-bluewave}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@bluewave.app}
+      APP_URL: ${APP_URL:-http://localhost:5174}
+      # Social publishing (optional)
+      TWITTER_API_KEY: ${TWITTER_API_KEY:-}
+      TWITTER_API_SECRET: ${TWITTER_API_SECRET:-}
+      TWITTER_ACCESS_TOKEN: ${TWITTER_ACCESS_TOKEN:-}
+      TWITTER_ACCESS_SECRET: ${TWITTER_ACCESS_SECRET:-}
+      LINKEDIN_CLIENT_ID: ${LINKEDIN_CLIENT_ID:-}
+      LINKEDIN_CLIENT_SECRET: ${LINKEDIN_CLIENT_SECRET:-}
+      # S3/CDN storage (optional)
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_BUCKET: ${S3_BUCKET:-bluewave-assets}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_PUBLIC_URL: ${S3_PUBLIC_URL:-}
+    volumes:
+      - ./backend:/app
+      - backend_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/api/v1/health\")'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bluewave_network
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - bluewave_network
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    ports:
+      - "5174:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:5173/', r => r.statusCode === 200 ? process.exit(0) : process.exit(1)).on('error', () => process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      - backend
+    networks:
+      - bluewave_network
+
+volumes:
+  pgdata:
+  backend_uploads:
+
+networks:
+  bluewave_network:
+    driver: bridge

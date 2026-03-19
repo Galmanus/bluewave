@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #fafafa;
+    --surface: #ffffff;
+    --surface-elevated: #ffffff;
+    --border: #e5e7eb;
+    --border-subtle: #f3f4f6;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-tertiary: #9ca3af;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-subtle: #eff6ff;
+    --success: #059669;
+    --success-subtle: #ecfdf5;
+    --warning: #d97706;
+    --warning-subtle: #fffbeb;
+    --danger: #dc2626;
+    --danger-subtle: #fef2f2;
+  }
+
+  [data-theme="dark"] {
+    --background: #09090b;
+    --surface: #18181b;
+    --surface-elevated: #27272a;
+    --border: #27272a;
+    --border-subtle: #1f1f23;
+    --text-primary: #fafafa;
+    --text-secondary: #a1a1aa;
+    --text-tertiary: #71717a;
+    --accent: #3b82f6;
+    --accent-hover: #60a5fa;
+    --accent-subtle: #172554;
+    --success: #34d399;
+    --success-subtle: #064e3b;
+    --warning: #fbbf24;
+    --warning-subtle: #78350f;
+    --danger: #f87171;
+    --danger-subtle: #7f1d1d;
+  }
+
+  body {
+    @apply bg-background text-text-primary antialiased;
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  * {
+    @apply border-border;
+  }
+}
+
+@layer utilities {
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+}
+
+/* Respect prefers-reduced-motion globally */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

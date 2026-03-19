@@ -1,0 +1,25 @@
+# Docker Compose overlay for OpenClaw integration.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.openclaw.yml up -d
+services:
+  openclaw-skill:
+    build:
+      context: ./openclaw-skill
+    restart: unless-stopped
+    ports:
+      - "18790:18790"
+    environment:
+      BLUEWAVE_API_URL: http://backend:8000/api/v1
+      BLUEWAVE_API_KEY: ${BLUEWAVE_API_KEY:-}
+      BLUEWAVE_SKILL_PORT: "18790"
+      OPENCLAW_HOOK_TOKEN: ${OPENCLAW_HOOK_TOKEN:-}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:18790/health\")'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - bluewave_network

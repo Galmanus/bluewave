@@ -1,0 +1,78 @@
+"""Unified Skills Handler — aggregates all skill modules into one dispatch table.
+
+Registers skills as additional tools available to the agent system.
+Each skill module exports a TOOLS list with name, description, handler, and parameters.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger("openclaw.skills")
+
+# Import all skill modules
+from skills import web_search, x_twitter, email_skill, intelligence, self_evolve, moltbook_skill, notify, vision, learning, power_skills, prospecting
+
+
+# Collect all tools from all modules
+ALL_SKILL_MODULES = [
+    web_search,
+    x_twitter,
+    email_skill,
+    intelligence,
+    self_evolve,
+    moltbook_skill,
+    notify,
+    vision,
+    learning,
+    power_skills,
+    prospecting,
+]
+
+# Build dispatch table: tool_name -> handler_function
+_DISPATCH = {}
+# Build tool definitions for Claude API registration
+_TOOL_DEFS = []
+
+for module in ALL_SKILL_MODULES:
+    for tool in module.TOOLS:
+        name = tool["name"]
+        _DISPATCH[name] = tool["handler"]
+        _TOOL_DEFS.append({
+            "name": name,
+            "description": tool["description"],
+            "parameters": tool["parameters"],
+        })
+        logger.debug("Registered skill tool: %s", name)
+
+logger.info("Skills loaded: %d tools from %d modules", len(_DISPATCH), len(ALL_SKILL_MODULES))
+
+
+def get_all_skill_tools() -> List[Dict]:
+    """Return all skill tool definitions (for tools.json-style registration)."""
+    return _TOOL_DEFS
+
+
+def get_skill_tool_names() -> List[str]:
+    """Return all skill tool names."""
+    return list(_DISPATCH.keys())
+
+
+async def execute_skill(tool_name: str, params: Dict[str, Any]) -> Dict:
+    """Execute a skill tool by name. Returns dict with success, data, message."""
+    handler = _DISPATCH.get(tool_name)
+    if not handler:
+        return {"success": False, "data": None, "message": "Unknown skill: %s" % tool_name}
+
+    try:
+        return await handler(params)
+    except Exception as e:
+        logger.error("Skill %s failed: %s", tool_name, e, exc_info=True)
+        return {"success": False, "data": None, "message": "Skill error: %s" % str(e)}
+
+
+def is_skill_tool(tool_name: str) -> bool:
+    """Check if a tool name belongs to the skills system."""
+    return tool_name in _DISPATCH

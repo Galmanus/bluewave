@@ -1,0 +1,726 @@
+{
+  "project": {
+    "name": "Bluewave",
+    "tagline": "AI Creative Operations Agent",
+    "one_liner": "The AI agent that sees your media, writes your copy, enforces your brand, and ships your content — on autopilot.",
+    "description": "AI-native creative operations agent for marketing agencies, AV teams, and production companies. Combines DAM + AI content generation (Claude Vision) + brand compliance + approval workflows + multi-channel distribution in a single autonomous agent that learns your brand over time.",
+    "category": "AI Creative Operations Agent",
+    "version": "0.2.0",
+    "created": "2026-03-17",
+    "positioning": {
+      "from": "DAM tool that stores files ($12/user)",
+      "to": "AI agent that runs creative operations ($29-149/user + $0.05/action)",
+      "competitive_set": ["Bynder", "Air.inc", "Jasper", "Copy.ai", "Buffer", "Frontify"],
+      "differentiator": "Agent learns your brand voice from approved content — switching cost grows every month (data moat)"
+    }
+  },
+
+  "tech_stack": {
+    "backend": {
+      "language": "Python 3.11",
+      "framework": "FastAPI 0.110.0",
+      "orm": "SQLAlchemy 2.0.27 (async)",
+      "migrations": "Alembic 1.13.1",
+      "auth": "python-jose (HS256 JWT) + passlib (bcrypt)",
+      "server": "Uvicorn 0.27.1"
+    },
+    "frontend": {
+      "language": "TypeScript 5.5",
+      "framework": "React 18.3",
+      "bundler": "Vite 5.4",
+      "styling": "Tailwind CSS 3.4",
+      "state_management": "TanStack React Query 5.45",
+      "routing": "React Router DOM 6.23",
+      "http_client": "Axios 1.7 (exponential backoff retry)"
+    },
+    "database": {
+      "engine": "PostgreSQL 16",
+      "strategy": "Row-level multi-tenant isolation via tenant_id"
+    },
+    "infrastructure": {
+      "orchestration": "Docker Compose",
+      "network": "bluewave_network (bridge)",
+      "services": ["postgres", "backend", "frontend"]
+    }
+  },
+
+  "architecture": {
+    "multi_tenancy": {
+      "strategy": "row_level_isolation",
+      "mechanism": "SQLAlchemy session event auto-injects WHERE tenant_id = :tid on every SELECT/UPDATE/DELETE",
+      "enforcement": "TenantMixin base class adds non-nullable tenant_id UUID FK to all tenant-scoped models",
+      "indexes": "Composite (tenant_id, id) on users and media_assets tables"
+    },
+    "authentication": {
+      "method": "JWT (HS256)",
+      "access_token": { "ttl_minutes": 30, "transport": "Authorization Bearer header" },
+      "refresh_token": { "ttl_days": 7, "transport": "httpOnly Secure SameSite=Strict cookie" },
+      "jwt_payload": {
+        "sub": "user_id (UUID)",
+        "tenant_id": "tenant_id (UUID)",
+        "role": "admin | editor | viewer",
+        "exp": "unix_timestamp",
+        "type": "access | refresh"
+      }
+    },
+    "authorization": {
+      "roles": {
+        "admin": "Full access: CRUD users, CRUD assets, approve/reject workflow",
+        "editor": "Upload assets, edit captions/hashtags, submit for approval",
+        "viewer": "Read-only access to assets and own profile"
+      },
+      "enforcement": "FastAPI Depends() — get_current_user() + require_role()"
+    },
+    "approval_workflow": {
+      "states": ["draft", "pending_approval", "approved"],
+      "transitions": {
+        "submit": { "from": "draft", "to": "pending_approval", "allowed_roles": ["editor", "admin"] },
+        "approve": { "from": "pending_approval", "to": "approved", "allowed_roles": ["admin"] },
+        "reject": { "from": "pending_approval", "to": "draft", "allowed_roles": ["admin"], "requires_comment": true }
+      }
+    },
+    "ai_integration": {
+      "current": "ClaudeAIService (real Anthropic Claude API with vision) + StubAIService fallback",
+      "provider": "Anthropic Claude API (claude-sonnet-4-20250514)",
+      "features": ["Vision-based image analysis for captions/hashtags", "Filename inference for non-image media", "Graceful fallback to stubs when no API key"],
+      "trigger": "Background task auto-runs after file upload",
+      "outputs": ["caption (AI-generated from image content or filename)", "hashtags (AI-generated JSON array)"],
+      "usage_tracking": "ai_usage_logs table records every AI action for metered billing",
+      "pricing": { "per_action": "$0.05", "brand_voice": "$0.25", "content_brief": "$1.00" }
+    },
+    "file_storage": {
+      "current": "Local Docker volume at /app/uploads/{tenant_id}/{uuid}_{filename}",
+      "validation": { "allowed_mime": ["image/*", "video/*"], "max_size_mb": 50 },
+      "swap_strategy": "Replace storage adapter for S3/MinIO — API contract unchanged"
+    },
+    "resilience": {
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "exponential_backoff",
+        "base_delay_ms": 500,
+        "delays": ["500ms", "1000ms", "2000ms"],
+        "jitter": "±20%",
+        "retryable_codes": [408, 429, 500, 502, 503, 504],
+        "retryable_conditions": ["network_error", "timeout", "dns_failure"]
+      }
+    }
+  },
+
+  "database_schema": {
+    "tables": {
+      "tenants": {
+        "columns": {
+          "id": "UUID PRIMARY KEY DEFAULT uuid4",
+          "name": "VARCHAR(255) NOT NULL",
+          "created_at": "TIMESTAMP NOT NULL DEFAULT now()"
+        },
+        "relationships": ["has_many users", "has_many media_assets"]
+      },
+      "users": {
+        "columns": {
+          "id": "UUID PRIMARY KEY DEFAULT uuid4",
+          "tenant_id": "UUID NOT NULL FK → tenants.id",
+          "email": "VARCHAR(320) NOT NULL UNIQUE",
+          "hashed_password": "VARCHAR(128) NOT NULL",
+          "full_name": "VARCHAR(255) NOT NULL",
+          "role": "ENUM(admin, editor, viewer) NOT NULL",
+          "created_at": "TIMESTAMP NOT NULL DEFAULT now()"
+        },
+        "indexes": ["ix_users_tenant_id", "ix_users_tenant_id_id (composite)"],
+        "relationships": ["belongs_to tenant", "has_many media_assets"]
+      },
+      "media_assets": {
+        "columns": {
+          "id": "UUID PRIMARY KEY DEFAULT uuid4",
+          "tenant_id": "UUID NOT NULL FK → tenants.id",
+          "uploaded_by": "UUID NOT NULL FK → users.id",
+          "file_path": "VARCHAR(512) NOT NULL",
+          "file_type": "VARCHAR(100) NOT NULL",
+          "file_size": "BIGINT NOT NULL",
+          "caption": "TEXT NULLABLE",
+          "hashtags": "VARCHAR[] NULLABLE (PostgreSQL ARRAY)",
+          "status": "ENUM(draft, pending_approval, approved) NOT NULL",
+          "rejection_comment": "TEXT NULLABLE",
+          "created_at": "TIMESTAMPTZ NOT NULL DEFAULT now()",
+          "updated_at": "TIMESTAMPTZ NOT NULL DEFAULT now() ON UPDATE now()"
+        },
+        "indexes": ["ix_media_assets_tenant_id", "ix_media_assets_tenant_id_id (composite)"],
+        "relationships": ["belongs_to tenant", "belongs_to user (uploaded_by)"]
+      },
+      "ai_usage_logs": {
+        "columns": {
+          "id": "UUID PRIMARY KEY DEFAULT uuid4",
+          "tenant_id": "UUID NOT NULL FK → tenants.id",
+          "user_id": "UUID NOT NULL FK → users.id",
+          "asset_id": "UUID NULLABLE FK → media_assets.id ON DELETE SET NULL",
+          "action_type": "ENUM(caption, hashtags, compliance_check, auto_tag, brand_voice, content_brief, resize) NOT NULL",
+          "model_used": "VARCHAR(100) NOT NULL",
+          "input_tokens": "INTEGER NOT NULL DEFAULT 0",
+          "output_tokens": "INTEGER NOT NULL DEFAULT 0",
+          "cost_millicents": "BIGINT NOT NULL DEFAULT 0 (1/1000 cent precision)",
+          "created_at": "TIMESTAMPTZ NOT NULL DEFAULT now()"
+        },
+        "indexes": ["ix_ai_usage_tenant_created (tenant_id, created_at)", "ix_ai_usage_tenant_action (tenant_id, action_type)"],
+        "purpose": "Metered billing, usage analytics, rate limiting"
+      }
+    }
+  },
+
+  "api_endpoints": {
+    "prefix": "/api/v1",
+    "groups": {
+      "health": [
+        { "method": "GET", "path": "/health", "auth": false, "description": "Service health check" }
+      ],
+      "auth": [
+        { "method": "POST", "path": "/auth/register", "auth": false, "description": "Create tenant + admin user", "request": "{ tenant_name, email, password, full_name }", "response": "{ tenant_id, user_id, message }" },
+        { "method": "POST", "path": "/auth/login", "auth": false, "description": "Authenticate and get tokens", "request": "{ email, password }", "response": "{ access_token, token_type } + Set-Cookie: refresh_token" },
+        { "method": "POST", "path": "/auth/refresh", "auth": "cookie", "description": "Rotate refresh token, get new access token", "response": "{ access_token, token_type }" },
+        { "method": "POST", "path": "/auth/logout", "auth": true, "description": "Invalidate refresh token cookie" }
+      ],
+      "users": [
+        { "method": "GET", "path": "/users/me", "auth": true, "min_role": "viewer", "description": "Current user profile" },
+        { "method": "GET", "path": "/users", "auth": true, "min_role": "admin", "description": "List tenant users (auto-filtered by tenant_id)" },
+        { "method": "POST", "path": "/users", "auth": true, "min_role": "admin", "description": "Invite user to tenant", "request": "{ email, password, full_name, role }" },
+        { "method": "PATCH", "path": "/users/{id}", "auth": true, "min_role": "admin", "description": "Update user role", "request": "{ role }" },
+        { "method": "DELETE", "path": "/users/{id}", "auth": true, "min_role": "admin", "description": "Remove user (cannot self-delete)" }
+      ],
+      "assets": [
+        { "method": "GET", "path": "/assets", "auth": true, "min_role": "viewer", "description": "List assets (paginated + filterable)", "query_params": "?status=draft|pending_approval|approved&page=1&size=20" },
+        { "method": "GET", "path": "/assets/{id}", "auth": true, "min_role": "viewer", "description": "Single asset with AI metadata" },
+        { "method": "POST", "path": "/assets", "auth": true, "min_role": "editor", "description": "Upload file (multipart/form-data)", "response_code": 202, "side_effect": "Background task: AI caption + hashtag generation" },
+        { "method": "PATCH", "path": "/assets/{id}", "auth": true, "min_role": "editor", "description": "Update caption/hashtags", "request": "{ caption?, hashtags? }" },
+        { "method": "DELETE", "path": "/assets/{id}", "auth": true, "min_role": "admin", "description": "Delete asset" }
+      ],
+      "workflow": [
+        { "method": "POST", "path": "/assets/{id}/submit", "auth": true, "min_role": "editor", "description": "draft → pending_approval (owner or admin only)" },
+        { "method": "POST", "path": "/assets/{id}/approve", "auth": true, "min_role": "admin", "description": "pending_approval → approved" },
+        { "method": "POST", "path": "/assets/{id}/reject", "auth": true, "min_role": "admin", "description": "pending_approval → draft (with comment)", "request": "{ comment }" }
+      ],
+      "ai": [
+        { "method": "POST", "path": "/ai/caption/{id}", "auth": true, "min_role": "editor", "description": "Regenerate caption for asset (real Claude API with vision)" },
+        { "method": "POST", "path": "/ai/hashtags/{id}", "auth": true, "min_role": "editor", "description": "Regenerate hashtags for asset (real Claude API with vision)" },
+        { "method": "GET", "path": "/ai/usage?days=30", "auth": true, "min_role": "admin", "description": "AI usage summary with action counts and cost breakdown" }
+      ],
+      "webhooks": [
+        { "method": "GET", "path": "/webhooks", "auth": true, "min_role": "admin", "description": "List tenant webhooks" },
+        { "method": "POST", "path": "/webhooks", "auth": true, "min_role": "admin", "description": "Create webhook (name, url, secret, events)" },
+        { "method": "PATCH", "path": "/webhooks/{id}", "auth": true, "min_role": "admin", "description": "Update webhook settings" },
+        { "method": "DELETE", "path": "/webhooks/{id}", "auth": true, "min_role": "admin", "description": "Delete webhook" }
+      ],
+      "api_keys": [
+        { "method": "GET", "path": "/api-keys", "auth": true, "min_role": "admin", "description": "List API keys (prefix only, not full key)" },
+        { "method": "POST", "path": "/api-keys", "auth": true, "min_role": "admin", "description": "Create API key (full key shown once)" },
+        { "method": "DELETE", "path": "/api-keys/{id}", "auth": true, "min_role": "admin", "description": "Revoke API key" }
+      ]
+    }
+  },
+
+  "frontend_routes": [
+    { "path": "/login", "component": "LoginPage", "auth": false, "description": "Email + password login form" },
+    { "path": "/register", "component": "RegisterPage", "auth": false, "description": "Tenant + admin user registration" },
+    { "path": "/", "component": "Navigate → /assets", "auth": true, "description": "Dashboard redirect" },
+    { "path": "/assets", "component": "AssetListPage", "auth": true, "min_role": "viewer", "description": "Grid view with status filter tabs + pagination" },
+    { "path": "/assets/:id", "component": "AssetDetailPage", "auth": true, "min_role": "viewer", "description": "Preview, editable metadata, approval actions" },
+    { "path": "/assets/upload", "component": "UploadPage", "auth": true, "min_role": "editor", "description": "Drag-and-drop upload with progress" },
+    { "path": "/team", "component": "TeamPage", "auth": true, "min_role": "admin", "description": "User table, invite form, role management" }
+  ],
+
+  "execution_phases": {
+    "dependency_graph": "Phase1 → Phase2 → Phase3 → [Phase4, Phase5] → Phase6 → Phase7 → Phase8 → Phase9 → Phase10 → Phase10.5 → Phase11 → Phase12 → Phase13 → [Phase14→17, Phase15→16]",
+    "phases": [
+      {
+        "id": 1,
+        "name": "Docker & Infrastructure",
+        "status": "completed",
+        "goal": "One command (docker compose up) spins up the full dev environment",
+        "depends_on": [],
+        "deliverables": ["docker-compose.yml", "backend/Dockerfile", "frontend/Dockerfile", ".env.example"],
+        "tasks": [
+          { "id": "1.1", "task": "Create project root structure: backend/, frontend/, docker/", "status": "done" },
+          { "id": "1.2", "task": "Write backend/Dockerfile (Python 3.11-slim, pip install, uvicorn)", "status": "done" },
+          { "id": "1.3", "task": "Write frontend/Dockerfile (Node 20-alpine, npm install, vite dev)", "status": "done" },
+          { "id": "1.4", "task": "Write docker-compose.yml with postgres, backend, frontend services", "status": "done" },
+          { "id": "1.5", "task": "Define bluewave_network bridge, ensure postgres is internal-only", "status": "done" },
+          { "id": "1.6", "task": "Create .env.example with all required vars", "status": "done" },
+          { "id": "1.7", "task": "CHECKPOINT: docker compose up — all 3 containers healthy", "status": "done" }
+        ]
+      },
+      {
+        "id": 2,
+        "name": "Database Models & Alembic Migrations",
+        "status": "completed",
+        "goal": "All core tables exist and are version-controlled via Alembic",
+        "depends_on": [1],
+        "deliverables": ["backend/models/", "backend/alembic/", "initial migration file"],
+        "tasks": [
+          { "id": "2.1", "task": "Init FastAPI project structure (main.py, core/, models/, routers/, schemas/, services/)", "status": "done" },
+          { "id": "2.2", "task": "Configure SQLAlchemy async engine + session factory in core/database.py", "status": "done" },
+          { "id": "2.3", "task": "Create models/base.py with TenantMixin (tenant_id UUID FK)", "status": "done" },
+          { "id": "2.4", "task": "Create models/tenant.py — tenants table", "status": "done" },
+          { "id": "2.5", "task": "Create models/user.py — users table (with role enum)", "status": "done" },
+          { "id": "2.6", "task": "Create models/asset.py — media_assets table (with status enum)", "status": "done" },
+          { "id": "2.7", "task": "Init Alembic, generate initial migration", "status": "done" },
+          { "id": "2.8", "task": "CHECKPOINT: migration runs inside Docker, tables visible in psql", "status": "done" }
+        ]
+      },
+      {
+        "id": 3,
+        "name": "JWT Auth System (Backend)",
+        "status": "completed",
+        "goal": "Users can register a tenant, log in, and receive JWT tokens",
+        "depends_on": [2],
+        "deliverables": ["Auth router", "security utilities", "tenant middleware"],
+        "tasks": [
+          { "id": "3.1", "task": "core/security.py — JWT encode/decode (HS256), bcrypt password hash/verify", "status": "done" },
+          { "id": "3.2", "task": "core/config.py — Pydantic Settings class reading from env", "status": "done" },
+          { "id": "3.3", "task": "schemas/auth.py — LoginRequest, RegisterRequest, TokenResponse", "status": "done" },
+          { "id": "3.4", "task": "routers/auth.py — POST /register (creates tenant + admin user)", "status": "done" },
+          { "id": "3.5", "task": "routers/auth.py — POST /login (returns access token, sets refresh cookie)", "status": "done" },
+          { "id": "3.6", "task": "routers/auth.py — POST /refresh, POST /logout", "status": "done" },
+          { "id": "3.7", "task": "core/deps.py — get_current_user dependency (decodes JWT, returns UserContext)", "status": "done" },
+          { "id": "3.8", "task": "core/deps.py — require_role('admin') dependency", "status": "done" },
+          { "id": "3.9", "task": "Tenant-scoped SQLAlchemy session event (auto-filter by tenant_id)", "status": "done" },
+          { "id": "3.10", "task": "CHECKPOINT: register → login → hit protected endpoint → success; wrong tenant → 403", "status": "done" }
+        ]
+      },
+      {
+        "id": 4,
+        "name": "Core Business Routes (Backend)",
+        "status": "completed",
+        "goal": "Full CRUD for assets and approval workflow operational",
+        "depends_on": [3],
+        "deliverables": ["Users, Assets, Workflow, AI routers + services"],
+        "tasks": [
+          { "id": "4.1", "task": "schemas/user.py, schemas/asset.py — request/response Pydantic models", "status": "done" },
+          { "id": "4.2", "task": "routers/users.py — GET /users/me, GET /users, POST /users, PATCH, DELETE", "status": "done" },
+          { "id": "4.3", "task": "routers/assets.py — GET list (paginated + filtered), GET single, POST upload, PATCH, DELETE", "status": "done" },
+          { "id": "4.4", "task": "File upload logic: MIME validation, size check, save to uploads/{tenant_id}/", "status": "done" },
+          { "id": "4.5", "task": "services/ai_service.py — stub generate_caption(), generate_hashtags()", "status": "done" },
+          { "id": "4.6", "task": "Background task: after upload, auto-run AI stubs and update asset record", "status": "done" },
+          { "id": "4.7", "task": "routers/workflow.py — POST submit, approve, reject with state machine validation", "status": "done" },
+          { "id": "4.8", "task": "CHECKPOINT: full API lifecycle via curl: upload → AI fills metadata → submit → approve", "status": "done" }
+        ]
+      },
+      {
+        "id": 5,
+        "name": "Frontend Setup & Auth UI",
+        "status": "completed",
+        "goal": "React app scaffolded with auth flow fully working",
+        "depends_on": [3],
+        "deliverables": ["Frontend scaffold", "auth pages", "route guards"],
+        "tasks": [
+          { "id": "5.1", "task": "Init Vite + React + TypeScript project in frontend/", "status": "done" },
+          { "id": "5.2", "task": "Install & configure Tailwind CSS", "status": "done" },
+          { "id": "5.3", "task": "lib/api.ts — Axios instance with base URL, JWT interceptor, refresh logic", "status": "done" },
+          { "id": "5.4", "task": "contexts/AuthContext.tsx — stores token, exposes login/logout/user", "status": "done" },
+          { "id": "5.5", "task": "pages/LoginPage.tsx — email + password form", "status": "done" },
+          { "id": "5.6", "task": "pages/RegisterPage.tsx — tenant name + admin user form", "status": "done" },
+          { "id": "5.7", "task": "components/AuthGuard.tsx — redirects unauthenticated users to /login", "status": "done" },
+          { "id": "5.8", "task": "components/RoleGuard.tsx — redirects insufficient roles to /", "status": "done" },
+          { "id": "5.9", "task": "Wire up React Router with guards", "status": "done" },
+          { "id": "5.10", "task": "CHECKPOINT: register → login → see empty dashboard shell → logout → redirect", "status": "done" }
+        ]
+      },
+      {
+        "id": 6,
+        "name": "Frontend Dashboard & Asset Management",
+        "status": "completed",
+        "goal": "Users can view, upload, and manage media assets through the UI",
+        "depends_on": [4, 5],
+        "deliverables": ["All page components", "React Query hooks", "layout shell"],
+        "tasks": [
+          { "id": "6.1", "task": "components/AppLayout.tsx — sidebar nav + header (tenant name, user, logout)", "status": "done" },
+          { "id": "6.2", "task": "hooks/useAssets.ts — React Query hooks for asset CRUD", "status": "done" },
+          { "id": "6.3", "task": "pages/AssetListPage.tsx — grid view + status filter tabs", "status": "done" },
+          { "id": "6.4", "task": "pages/AssetDetailPage.tsx — preview, caption/hashtags edit, approval buttons", "status": "done" },
+          { "id": "6.5", "task": "pages/UploadPage.tsx — drag-and-drop zone + progress bar", "status": "done" },
+          { "id": "6.6", "task": "Approval action buttons with role-based visibility (submit/approve/reject)", "status": "done" },
+          { "id": "6.7", "task": "pages/TeamPage.tsx — user list + invite form (admin only)", "status": "done" },
+          { "id": "6.8", "task": "CHECKPOINT: full E2E flow through the browser UI", "status": "done" }
+        ]
+      },
+      {
+        "id": 7,
+        "name": "Polish & Integration",
+        "status": "completed",
+        "goal": "The MVP is demo-ready",
+        "depends_on": [6],
+        "deliverables": ["Polished, testable MVP"],
+        "tasks": [
+          { "id": "7.1", "task": "Toast notifications for API errors (react-hot-toast)", "status": "done" },
+          { "id": "7.2", "task": "Skeleton loaders on data-fetching pages", "status": "done" },
+          { "id": "7.3", "task": "Responsive layout (desktop-first, mobile sidebar toggle)", "status": "done" },
+          { "id": "7.4", "task": "Docker Compose healthchecks for all services", "status": "done" },
+          { "id": "7.5", "task": "Retry with exponential backoff on API client (500ms → 1s → 2s + jitter)", "status": "done" },
+          { "id": "7.6", "task": "Full E2E manual test: register → upload → AI → submit → approve", "status": "done" },
+          { "id": "7.7", "task": "README.md with setup instructions", "status": "done" },
+          { "id": "7.8", "task": "CHECKPOINT: demo-ready MVP", "status": "done" }
+        ]
+      },
+      {
+        "id": 8,
+        "name": "UX/UI Premium Redesign",
+        "status": "completed",
+        "goal": "Elevate frontend to world-class SaaS standards (Linear / Vercel / Notion tier)",
+        "depends_on": [7],
+        "design_brief": "docs/ux_ui_design_brief.md",
+        "design_references": ["Linear", "Vercel Dashboard", "Notion", "Stripe Dashboard", "Figma", "Frame.io"],
+        "deliverables": ["Design token system", "Component library (src/components/ui/)", "Redesigned pages", "Dark mode", "Animation layer", "Accessibility compliance"],
+        "sub_phases": {
+          "8A": {
+            "name": "Design System & Component Library",
+            "tasks": [
+              { "id": "8A.1", "task": "Extend tailwind.config.js with full design token system (colors, typography, spacing, shadows, radii for light + dark)", "status": "done" },
+              { "id": "8A.2", "task": "Install Radix UI Primitives, Framer Motion, Lucide React, cmdk, react-dropzone, sonner", "status": "done" },
+              { "id": "8A.3", "task": "Create src/components/ui/Button.tsx — Primary, Secondary, Ghost, Danger variants with loading/disabled states", "status": "done" },
+              { "id": "8A.4", "task": "Create src/components/ui/Input.tsx — Text input with label, error state, focus ring (shadow-focus)", "status": "done" },
+              { "id": "8A.5", "task": "Create src/components/ui/Select.tsx — Custom dropdown via Radix (replace native <select>)", "status": "done" },
+              { "id": "8A.6", "task": "Create src/components/ui/Badge.tsx — Status badges with dot indicator and semantic colors", "status": "done" },
+              { "id": "8A.7", "task": "Create src/components/ui/Card.tsx — Surface container with elevation variants", "status": "done" },
+              { "id": "8A.8", "task": "Create src/components/ui/Dialog.tsx — Confirmation dialog via Radix (replace native confirm())", "status": "done" },
+              { "id": "8A.9", "task": "Create src/components/ui/Avatar.tsx — Initials-based with role-coded colors", "status": "done" },
+              { "id": "8A.10", "task": "Create src/components/ui/Tabs.tsx — Animated underline tabs via Radix", "status": "done" },
+              { "id": "8A.11", "task": "Create src/components/ui/Table.tsx — Clean borderless table with hover rows", "status": "done" },
+              { "id": "8A.12", "task": "Create src/components/ui/Tooltip.tsx — Accessible tooltip via Radix", "status": "done" },
+              { "id": "8A.13", "task": "Create src/components/ui/CommandPalette.tsx — ⌘K quick navigation via cmdk", "status": "done" },
+              { "id": "8A.14", "task": "Create src/components/ui/DropZone.tsx — Styled drag-and-drop via react-dropzone", "status": "done" },
+              { "id": "8A.15", "task": "Replace react-hot-toast with sonner (bottom-right, accent border, progress bar)", "status": "done" }
+            ]
+          },
+          "8B": {
+            "name": "Dark Mode",
+            "tasks": [
+              { "id": "8B.1", "task": "Implement CSS variable system for light/dark tokens", "status": "done" },
+              { "id": "8B.2", "task": "Add data-theme toggle on <html> with localStorage persistence", "status": "done" },
+              { "id": "8B.3", "task": "Respect prefers-color-scheme on first visit", "status": "done" },
+              { "id": "8B.4", "task": "Add theme toggle control in sidebar user area", "status": "done" },
+              { "id": "8B.5", "task": "Audit every page for dark mode visual correctness", "status": "done" }
+            ]
+          },
+          "8C": {
+            "name": "Page Redesigns",
+            "tasks": [
+              { "id": "8C.1", "task": "Redesign LoginPage — gradient bg, logo mark, forgot password link", "status": "done" },
+              { "id": "8C.2", "task": "Redesign RegisterPage — same layout, password strength indicator bar", "status": "done" },
+              { "id": "8C.3", "task": "Redesign AppLayout — collapsible sidebar (240→64px), breadcrumb header, ⌘K trigger, user avatar dropdown", "status": "done" },
+              { "id": "8C.4", "task": "Redesign AssetListPage — display typography, count badges on tabs, grid/list toggle, stagger fade-in", "status": "done" },
+              { "id": "8C.5", "task": "Redesign AssetDetailPage — 2-panel 60/40, real image preview, tag-input chips for hashtags, sticky action bar, collapsible file info", "status": "done" },
+              { "id": "8C.6", "task": "Redesign UploadPage — large drop zone (70vh), animated drag-over border, progress bar, success checkmark SVG animation", "status": "done" },
+              { "id": "8C.7", "task": "Redesign TeamPage — initials avatars, slide-down invite panel, inline role edit, '(you)' label", "status": "done" }
+            ]
+          },
+          "8D": {
+            "name": "Animations & Micro-interactions",
+            "tasks": [
+              { "id": "8D.1", "task": "Framer Motion page transitions (fade + 8px translate-y, 200ms ease-out)", "status": "done" },
+              { "id": "8D.2", "task": "Card hover animation (translate-y -2px + shadow elevation, 200ms ease)", "status": "done" },
+              { "id": "8D.3", "task": "Button press effect (scale 0.98, 100ms ease)", "status": "done" },
+              { "id": "8D.4", "task": "Tab switch underline slide (250ms spring)", "status": "done" },
+              { "id": "8D.5", "task": "Sidebar collapse/expand (width + icon rotation, 200ms ease-in-out)", "status": "done" },
+              { "id": "8D.6", "task": "Toast enter/exit (slide-in from right 300ms / fade-out 200ms)", "status": "done" },
+              { "id": "8D.7", "task": "Modal open/close (opacity + scale spring 200ms / ease-in 150ms)", "status": "done" },
+              { "id": "8D.8", "task": "Status badge color cross-fade (300ms ease)", "status": "done" },
+              { "id": "8D.9", "task": "Success checkmark SVG path draw (400ms ease-out)", "status": "done" },
+              { "id": "8D.10", "task": "Respect prefers-reduced-motion (disable all animations when set)", "status": "done" }
+            ]
+          },
+          "8E": {
+            "name": "Accessibility & Quality",
+            "tasks": [
+              { "id": "8E.1", "task": "Keyboard navigation on every interactive element (focus rings via shadow-focus)", "status": "done" },
+              { "id": "8E.2", "task": "Screen reader labels (aria-label) on icon buttons and status badges", "status": "done" },
+              { "id": "8E.3", "task": "WCAG 2.1 AA contrast ratios verified (≥ 4.5:1 for all text)", "status": "done" },
+              { "id": "8E.4", "task": "Responsive tested at 375px, 768px, 1024px, 1440px — no horizontal scroll", "status": "done" },
+              { "id": "8E.5", "task": "Toast stack limited to 3 visible", "status": "done" },
+              { "id": "8E.6", "task": "Every list/grid has empty state with icon + CTA", "status": "done" },
+              { "id": "8E.7", "task": "CHECKPOINT: every page pixel-perfect in light + dark mode, all animations smooth, fully accessible", "status": "done" }
+            ]
+          }
+        }
+      },
+      {
+        "id": 10,
+        "name": "Real AI Integration (Claude API)",
+        "status": "completed",
+        "goal": "Replace AI stubs with real Anthropic Claude API — vision for images, filename inference for videos — with usage tracking for metered billing",
+        "depends_on": [8],
+        "deliverables": ["ClaudeAIService with vision", "AI usage tracking model + migration", "Usage summary endpoint", "Async AI protocol"],
+        "tasks": [
+          { "id": "10.1", "task": "Add anthropic SDK to requirements.txt", "status": "done" },
+          { "id": "10.2", "task": "Add ANTHROPIC_API_KEY + AI_MODEL to Settings, .env, docker-compose.yml", "status": "done" },
+          { "id": "10.3", "task": "Implement ClaudeAIService with vision support (base64 image → Claude API)", "status": "done" },
+          { "id": "10.4", "task": "Make AIServiceProtocol async (generate_caption, generate_hashtags)", "status": "done" },
+          { "id": "10.5", "task": "Auto-select ClaudeAIService when API key present, StubAIService otherwise", "status": "done" },
+          { "id": "10.6", "task": "Create AIUsageLog model (tenant, user, asset, action_type, tokens, cost_millicents)", "status": "done" },
+          { "id": "10.7", "task": "Create Alembic migration for ai_usage_logs table", "status": "done" },
+          { "id": "10.8", "task": "Create ai_usage.py helper with cost table ($0.05/action, $0.25/brand-voice, $1.00/brief)", "status": "done" },
+          { "id": "10.9", "task": "Update assets router: async AI calls, pass file_path for vision, log usage", "status": "done" },
+          { "id": "10.10", "task": "Update AI router: async calls, log usage on regenerate caption/hashtags", "status": "done" },
+          { "id": "10.11", "task": "Add GET /ai/usage endpoint — admin-only usage summary with cost breakdown", "status": "done" },
+          { "id": "10.12", "task": "CHECKPOINT: upload image → real Claude vision caption + hashtags; usage logged in ai_usage_logs", "status": "done" }
+        ]
+      }
+    ]
+  },
+
+  "file_manifest": {
+    "root": [
+      "bluewave/docker-compose.yml",
+      "bluewave/.env",
+      "bluewave/.env.example",
+      "bluewave/README.md",
+      "bluewave/workflow.json"
+    ],
+    "backend": {
+      "config": [
+        "bluewave/backend/Dockerfile",
+        "bluewave/backend/requirements.txt",
+        "bluewave/backend/alembic.ini"
+      ],
+      "app": [
+        "bluewave/backend/app/__init__.py",
+        "bluewave/backend/app/main.py"
+      ],
+      "core": [
+        "bluewave/backend/app/core/__init__.py",
+        "bluewave/backend/app/core/config.py",
+        "bluewave/backend/app/core/database.py",
+        "bluewave/backend/app/core/security.py",
+        "bluewave/backend/app/core/deps.py",
+        "bluewave/backend/app/core/tenant.py"
+      ],
+      "models": [
+        "bluewave/backend/app/models/__init__.py",
+        "bluewave/backend/app/models/base.py",
+        "bluewave/backend/app/models/tenant.py",
+        "bluewave/backend/app/models/user.py",
+        "bluewave/backend/app/models/asset.py",
+        "bluewave/backend/app/models/ai_usage.py",
+        "bluewave/backend/app/models/webhook.py",
+        "bluewave/backend/app/models/api_key.py"
+      ],
+      "schemas": [
+        "bluewave/backend/app/schemas/__init__.py",
+        "bluewave/backend/app/schemas/auth.py",
+        "bluewave/backend/app/schemas/user.py",
+        "bluewave/backend/app/schemas/asset.py"
+      ],
+      "routers": [
+        "bluewave/backend/app/routers/__init__.py",
+        "bluewave/backend/app/routers/auth.py",
+        "bluewave/backend/app/routers/users.py",
+        "bluewave/backend/app/routers/assets.py",
+        "bluewave/backend/app/routers/workflow.py",
+        "bluewave/backend/app/routers/ai.py",
+        "bluewave/backend/app/routers/webhooks.py",
+        "bluewave/backend/app/routers/api_keys.py"
+      ],
+      "services": [
+        "bluewave/backend/app/services/__init__.py",
+        "bluewave/backend/app/services/ai_service.py",
+        "bluewave/backend/app/services/ai_usage.py",
+        "bluewave/backend/app/services/webhook_service.py"
+      ],
+      "migrations": [
+        "bluewave/backend/alembic/env.py",
+        "bluewave/backend/alembic/script.py.mako",
+        "bluewave/backend/alembic/versions/f933fe3e13ea_initial_tables.py",
+        "bluewave/backend/alembic/versions/a1b2c3d4e5f6_add_ai_usage_logs.py"
+      ]
+    },
+    "frontend": {
+      "config": [
+        "bluewave/frontend/Dockerfile",
+        "bluewave/frontend/package.json",
+        "bluewave/frontend/tsconfig.json",
+        "bluewave/frontend/vite.config.ts",
+        "bluewave/frontend/tailwind.config.js",
+        "bluewave/frontend/postcss.config.js",
+        "bluewave/frontend/index.html"
+      ],
+      "src": [
+        "bluewave/frontend/src/main.tsx",
+        "bluewave/frontend/src/App.tsx",
+        "bluewave/frontend/src/index.css",
+        "bluewave/frontend/src/vite-env.d.ts"
+      ],
+      "lib": [
+        "bluewave/frontend/src/lib/api.ts"
+      ],
+      "contexts": [
+        "bluewave/frontend/src/contexts/AuthContext.tsx"
+      ],
+      "hooks": [
+        "bluewave/frontend/src/hooks/useAssets.ts",
+        "bluewave/frontend/src/hooks/useUsers.ts"
+      ],
+      "components": [
+        "bluewave/frontend/src/components/AppLayout.tsx",
+        "bluewave/frontend/src/components/AuthGuard.tsx",
+        "bluewave/frontend/src/components/RoleGuard.tsx"
+      ],
+      "pages": [
+        "bluewave/frontend/src/pages/LoginPage.tsx",
+        "bluewave/frontend/src/pages/RegisterPage.tsx",
+        "bluewave/frontend/src/pages/DashboardPage.tsx",
+        "bluewave/frontend/src/pages/AssetListPage.tsx",
+        "bluewave/frontend/src/pages/AssetDetailPage.tsx",
+        "bluewave/frontend/src/pages/UploadPage.tsx",
+        "bluewave/frontend/src/pages/TeamPage.tsx"
+      ]
+    },
+    "documentation": [
+      "docs/architecture_and_decisions.md",
+      "docs/routing_and_workflows.md",
+      "docs/ux_ui_design_brief.md",
+      "docs/landing_page_prompt.md",
+      "docs/market_research.md",
+      "docs/10x_strategy.md",
+      "docs/10x_implementation_prompt.json",
+      "task_phases.md",
+      "roadmap/execution_plan.md"
+    ]
+  },
+
+  "runtime": {
+    "ports": {
+      "frontend": { "host": 5174, "container": 5173 },
+      "backend": { "host": 8300, "container": 8000 },
+      "postgres": { "host": "not_exposed", "container": 5432 }
+    },
+    "urls": {
+      "frontend": "http://localhost:5174",
+      "backend_api": "http://localhost:8300",
+      "swagger_docs": "http://localhost:8300/docs",
+      "api_prefix": "/api/v1"
+    },
+    "commands": {
+      "start": "docker compose up -d --build",
+      "stop": "docker compose down",
+      "logs": "docker compose logs -f",
+      "migrate": "docker compose exec backend alembic upgrade head",
+      "new_migration": "docker compose exec backend alembic revision --autogenerate -m 'description'",
+      "psql": "docker compose exec postgres psql -U bluewave -d bluewave"
+    },
+    "test_accounts": [
+      { "email": "admin@agencyx.com", "password": "Test1234", "tenant": "Agency X", "role": "admin" },
+      { "email": "demo@test.com", "password": "demo1234", "tenant": "Demo Agency", "role": "admin" },
+      { "email": "e2e@test.com", "password": "e2epass123", "tenant": "E2E Agency", "role": "admin" }
+    ]
+  },
+
+  "design_system": {
+    "brief": "docs/ux_ui_design_brief.md",
+    "philosophy": "Scandinavian minimalism meets Silicon Valley polish. Professional yet approachable. White space is a feature.",
+    "references": ["Linear", "Vercel Dashboard", "Notion", "Stripe Dashboard", "Figma", "Frame.io"],
+    "color_tokens": {
+      "light": {
+        "background": "#FAFAFA",
+        "surface": "#FFFFFF",
+        "surface_elevated": "#FFFFFF (with shadow)",
+        "border": "#E5E7EB",
+        "border_subtle": "#F3F4F6",
+        "text_primary": "#111827",
+        "text_secondary": "#6B7280",
+        "text_tertiary": "#9CA3AF",
+        "accent": "#2563EB",
+        "accent_hover": "#1D4ED8",
+        "accent_subtle": "#EFF6FF",
+        "success": "#059669",
+        "success_subtle": "#ECFDF5",
+        "warning": "#D97706",
+        "warning_subtle": "#FFFBEB",
+        "danger": "#DC2626",
+        "danger_subtle": "#FEF2F2"
+      },
+      "dark": {
+        "background": "#09090B",
+        "surface": "#18181B",
+        "surface_elevated": "#27272A",
+        "border": "#27272A",
+        "border_subtle": "#1F1F23",
+        "text_primary": "#FAFAFA",
+        "text_secondary": "#A1A1AA",
+        "text_tertiary": "#71717A",
+        "accent": "#3B82F6",
+        "accent_hover": "#60A5FA",
+        "accent_subtle": "#172554"
+      }
+    },
+    "typography": {
+      "font_family": "Inter, system-ui, -apple-system, Segoe UI, sans-serif",
+      "scale": {
+        "display": { "size": "28px", "weight": 700, "line_height": 1.2 },
+        "heading": { "size": "20px", "weight": 600, "line_height": 1.3 },
+        "subheading": { "size": "16px", "weight": 600, "line_height": 1.4 },
+        "body": { "size": "14px", "weight": 400, "line_height": 1.5 },
+        "body_medium": { "size": "14px", "weight": 500, "line_height": 1.5 },
+        "caption": { "size": "12px", "weight": 400, "line_height": 1.4 },
+        "mono": { "size": "13px", "weight": 400, "line_height": 1.5 }
+      }
+    },
+    "spacing_base": "4px",
+    "spacing_tokens": { "xs": "4px", "sm": "8px", "md": "12px", "lg": "16px", "xl": "24px", "2xl": "32px", "3xl": "48px" },
+    "border_radius": { "sm": "6px", "md": "8px", "lg": "12px", "xl": "16px", "full": "9999px" },
+    "shadows": {
+      "xs": "0 1px 2px rgba(0,0,0,0.05)",
+      "sm": "0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)",
+      "md": "0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06)",
+      "lg": "0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05)",
+      "focus": "0 0 0 2px var(--accent), 0 0 0 4px rgba(37,99,235,0.2)"
+    },
+    "animations": {
+      "easing": "cubic-bezier(0.4, 0, 0.2, 1)",
+      "duration_fast": "100ms",
+      "duration_normal": "200ms",
+      "duration_slow": "300ms",
+      "respect_reduced_motion": true
+    },
+    "component_library": {
+      "path": "src/components/ui/",
+      "base": "Radix UI Primitives (accessible, unstyled)",
+      "styling": "Tailwind CSS with design tokens",
+      "animation": "Framer Motion",
+      "icons": "Lucide React (1.5px stroke)",
+      "components": [
+        "Button (Primary/Secondary/Ghost/Danger, loading, disabled)",
+        "Input (label, error, focus ring)",
+        "Select (Radix dropdown, not native)",
+        "Badge (dot indicator, semantic colors)",
+        "Card (elevation variants)",
+        "Dialog (replace native confirm())",
+        "Avatar (initials, role-coded colors)",
+        "Tabs (animated underline)",
+        "Table (borderless, hover rows)",
+        "Tooltip (Radix accessible)",
+        "CommandPalette (⌘K via cmdk)",
+        "DropZone (react-dropzone)"
+      ]
+    },
+    "accessibility": {
+      "standard": "WCAG 2.1 AA",
+      "contrast_ratio": "≥ 4.5:1 for text",
+      "focus_rings": "shadow-focus token on all interactive elements",
+      "keyboard_nav": "Full tab/enter/escape support",
+      "screen_readers": "aria-label on icon buttons, badges, and status indicators",
+      "reduced_motion": "prefers-reduced-motion disables all animations"
+    }
+  },
+
+  "e2e_test_flow": {
+    "description": "Complete lifecycle validation",
+    "steps": [
+      { "step": 1, "action": "POST /auth/register", "input": "{ tenant_name, email, password, full_name }", "expected": "201 — tenant + admin created" },
+      { "step": 2, "action": "POST /auth/login", "input": "{ email, password }", "expected": "200 — access_token + refresh cookie" },
+      { "step": 3, "action": "GET /users/me", "expected": "200 — user profile with role and tenant_id" },
+      { "step": 4, "action": "POST /assets (multipart)", "input": "image/png file", "expected": "202 — asset created with status=draft" },
+      { "step": 5, "action": "GET /assets/{id}", "expected": "200 — caption and hashtags populated by AI stub" },
+      { "step": 6, "action": "POST /assets/{id}/submit", "expected": "200 — status=pending_approval" },
+      { "step": 7, "action": "POST /assets/{id}/approve", "expected": "200 — status=approved" },
+      { "step": 8, "action": "GET /assets?status=approved", "expected": "200 — total >= 1" },
+      { "step": 9, "action": "POST /users (invite editor)", "expected": "201 — new user created" },
+      { "step": 10, "action": "GET /users", "expected": "200 — list includes both admin and editor" }
+    ]
+  }
+}

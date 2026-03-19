@@ -1,0 +1,191 @@
+import { motion } from "framer-motion";
+import { Waves, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+
+interface HeroProps {
+  isAuthenticated?: boolean;
+}
+
+export default function Hero({ isAuthenticated }: HeroProps) {
+  return (
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#0a0a1a] to-[#111827]">
+      {/* Animated gradient mesh */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-1/2 -left-1/2 w-full h-full rounded-full bg-blue-500/10 blur-[120px] animate-pulse" />
+        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full rounded-full bg-indigo-500/8 blur-[120px] animate-pulse [animation-delay:2s]" />
+        <div className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full bg-cyan-500/5 blur-[100px] animate-pulse [animation-delay:4s]" />
+      </div>
+
+      {/* Top nav bar */}
+      <nav className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 sm:px-10 py-5">
+        <Link to="/" className="flex items-center gap-2">
+          <Waves className="w-6 h-6 text-blue-500" />
+          <span className="text-lg font-bold text-white tracking-tight">Bluewave</span>
+        </Link>
+        <div className="flex items-center gap-3">
+          {isAuthenticated ? (
+            <Link
+              to="/assets"
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-all duration-150"
+            >
+              Go to Dashboard
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors"
+              >
+                Sign in
+              </Link>
+              <Link
+                to="/register"
+                className="inline-flex items-center px-5 py-2 rounded-lg bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-all duration-150"
+              >
+                Start free
+              </Link>
+            </>
+          )}
+        </div>
+      </nav>
+
+      <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
+        {/* Eyebrow */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          <span className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            AI Creative Operations Agent
+          </span>
+        </motion.div>
+
+        {/* Headline */}
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mt-8 text-4xl sm:text-5xl lg:text-[56px] font-bold text-[#F9FAFB] leading-tight tracking-tight"
+        >
+          You upload.
+          <br />
+          The agent does the rest.
+        </motion.h1>
+
+        {/* Subheadline */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mt-6 text-lg sm:text-xl text-[#9CA3AF] max-w-2xl mx-auto leading-relaxed"
+        >
+          An AI agent that sees your media, writes captions in your brand voice,
+          checks compliance, routes approvals, and publishes — on autopilot.
+        </motion.p>
+
+        {/* CTAs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
+        >
+          {isAuthenticated ? (
+            <Link
+              to="/assets"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition-all duration-150 hover:scale-[1.02] hover:shadow-[0_0_24px_rgba(37,99,235,0.4)]"
+            >
+              Open Dashboard
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+          ) : (
+            <>
+              <Link
+                to="/register"
+                className="inline-flex items-center px-8 py-3.5 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition-all duration-150 hover:scale-[1.02] hover:shadow-[0_0_24px_rgba(37,99,235,0.4)]"
+              >
+                Start free
+              </Link>
+              <a
+                href="#features"
+                className="inline-flex items-center px-8 py-3.5 rounded-lg border border-white/20 text-white font-semibold text-lg hover:bg-white/5 transition-all duration-150"
+              >
+                Watch demo
+              </a>
+            </>
+          )}
+        </motion.div>
+
+        {/* Social proof strip */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.6 }}
+          className="mt-16"
+        >
+          <p className="text-sm text-[#9CA3AF] mb-6">
+            Trusted by 500+ creative teams
+          </p>
+          <div className="flex items-center justify-center gap-8 sm:gap-12 opacity-40">
+            {["Acme Studio", "PixelCo", "MediaFlow", "CreativeHub", "BrandLab"].map(
+              (name) => (
+                <span
+                  key={name}
+                  className="text-sm font-semibold text-white/60 tracking-wide uppercase"
+                >
+                  {name}
+                </span>
+              )
+            )}
+          </div>
+        </motion.div>
+
+        {/* Hero visual — app mockup */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.7 }}
+          className="mt-16 mx-auto max-w-3xl"
+        >
+          <div className="relative rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm shadow-2xl overflow-hidden">
+            {/* Browser chrome */}
+            <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10">
+              <div className="w-3 h-3 rounded-full bg-red-500/60" />
+              <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
+              <div className="w-3 h-3 rounded-full bg-green-500/60" />
+              <div className="ml-4 flex-1 h-6 rounded bg-white/5" />
+            </div>
+            {/* Mock content */}
+            <div className="p-4 sm:p-6 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+              {[
+                { status: "Approved", color: "bg-emerald-500/20 text-emerald-400" },
+                { status: "Pending", color: "bg-amber-500/20 text-amber-400" },
+                { status: "Draft", color: "bg-zinc-500/20 text-zinc-400" },
+                { status: "Approved", color: "bg-emerald-500/20 text-emerald-400" },
+                { status: "Pending", color: "bg-amber-500/20 text-amber-400" },
+                { status: "Approved", color: "bg-emerald-500/20 text-emerald-400" },
+              ].map((item, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4, delay: 0.9 + i * 0.1 }}
+                  className="aspect-square rounded-lg bg-white/5 border border-white/10 flex flex-col items-start justify-end p-3"
+                >
+                  <div className="w-full h-2 rounded bg-white/10 mb-2" />
+                  <span
+                    className={`text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-full ${item.color}`}
+                  >
+                    {item.status}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}

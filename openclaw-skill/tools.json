@@ -1,0 +1,697 @@
+{
+  "name": "bluewave",
+  "version": "1.0.0",
+  "description": "Bluewave AI Creative Operations Agent — manage assets, AI captions, approvals, and team via chat.",
+  "requires": {
+    "env": ["BLUEWAVE_API_URL", "BLUEWAVE_API_KEY"]
+  },
+  "tools": [
+    {
+      "name": "bluewave_list_assets",
+      "description": "List media assets in Bluewave. Supports filtering by status (draft, pending_approval, approved) and pagination.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["draft", "pending_approval", "approved"],
+            "description": "Filter by asset status. Omit to show all."
+          },
+          "page": {
+            "type": "integer",
+            "default": 1,
+            "description": "Page number for pagination."
+          },
+          "size": {
+            "type": "integer",
+            "default": 10,
+            "description": "Number of assets per page (max 100)."
+          }
+        }
+      }
+    },
+    {
+      "name": "bluewave_get_asset",
+      "description": "Get detailed information about a specific asset including caption, hashtags, status, compliance score, and file metadata.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "description": "UUID of the asset."
+          }
+        },
+        "required": ["asset_id"]
+      }
+    },
+    {
+      "name": "bluewave_upload_asset",
+      "description": "Upload a media file (image or video) to Bluewave. The AI agent will automatically generate a caption and hashtags using Claude Vision. Use this when the user sends an image or video attachment.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_url": {
+            "type": "string",
+            "description": "URL of the file to download and upload to Bluewave."
+          },
+          "filename": {
+            "type": "string",
+            "description": "Original filename (e.g., 'campaign-hero.jpg')."
+          }
+        },
+        "required": ["file_url", "filename"]
+      }
+    },
+    {
+      "name": "bluewave_update_asset",
+      "description": "Update an asset's caption or hashtags.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "description": "UUID of the asset."
+          },
+          "caption": {
+            "type": "string",
+            "description": "New caption text."
+          },
+          "hashtags": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "New hashtags array (e.g., [\"#branding\", \"#design\"])."
+          }
+        },
+        "required": ["asset_id"]
+      }
+    },
+    {
+      "name": "bluewave_delete_asset",
+      "description": "Permanently delete an asset. Requires admin role. Always confirm with the user before executing.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "description": "UUID of the asset to delete."
+          }
+        },
+        "required": ["asset_id"]
+      }
+    },
+    {
+      "name": "bluewave_submit_for_approval",
+      "description": "Submit a draft asset for approval. Changes status from 'draft' to 'pending_approval'.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "description": "UUID of the draft asset."
+          }
+        },
+        "required": ["asset_id"]
+      }
+    },
+    {
+      "name": "bluewave_approve_asset",
+      "description": "Approve a pending asset. Changes status from 'pending_approval' to 'approved'. Requires admin role.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "description": "UUID of the pending asset."
+          }
+        },
+        "required": ["asset_id"]
+      }
+    },
+    {
+      "name": "bluewave_reject_asset",
+      "description": "Reject a pending asset with a comment. Changes status from 'pending_approval' back to 'draft'. Requires admin role.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "description": "UUID of the pending asset."
+          },
+          "comment": {
+            "type": "string",
+            "description": "Reason for rejection (e.g., 'Image too dark, needs better lighting')."
+          }
+        },
+        "required": ["asset_id", "comment"]
+      }
+    },
+    {
+      "name": "bluewave_regenerate_caption",
+      "description": "Regenerate AI caption for an asset using Claude Vision. The AI will re-analyze the image and produce a new contextual caption.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "description": "UUID of the asset."
+          }
+        },
+        "required": ["asset_id"]
+      }
+    },
+    {
+      "name": "bluewave_regenerate_hashtags",
+      "description": "Regenerate AI hashtags for an asset using Claude Vision. The AI will produce fresh, relevant hashtags based on the image content.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "description": "UUID of the asset."
+          }
+        },
+        "required": ["asset_id"]
+      }
+    },
+    {
+      "name": "bluewave_check_compliance",
+      "description": "Run a brand compliance check on an asset. Returns a score (0-100) and specific issues found against the tenant's brand guidelines.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "description": "UUID of the asset to check."
+          }
+        },
+        "required": ["asset_id"]
+      }
+    },
+    {
+      "name": "bluewave_ai_usage",
+      "description": "Get AI usage summary for the current tenant. Shows total actions, breakdown by type, and total cost for the specified period.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "integer",
+            "default": 30,
+            "description": "Number of days to look back (1-365)."
+          }
+        }
+      }
+    },
+    {
+      "name": "bluewave_list_team",
+      "description": "List all team members in the current tenant with their roles and join dates.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "bluewave_get_profile",
+      "description": "Get the current user's profile (name, email, role, tenant).",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "bluewave_invite_user",
+      "description": "Invite a new team member to the Bluewave workspace. Requires admin role.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email address of the new user."
+          },
+          "full_name": {
+            "type": "string",
+            "description": "Full name of the new user."
+          },
+          "role": {
+            "type": "string",
+            "enum": ["admin", "editor", "viewer"],
+            "description": "Role to assign."
+          },
+          "password": {
+            "type": "string",
+            "description": "Temporary password for the new user."
+          }
+        },
+        "required": ["email", "full_name", "role", "password"]
+      }
+    },
+    {
+      "name": "bluewave_get_brand_guidelines",
+      "description": "Get the active brand guidelines for the current tenant, including colors, fonts, tone, dos/don'ts.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "bluewave_search_assets",
+      "description": "Full-text search across assets by caption, hashtags, or filename. Use this when the user wants to find specific assets by keyword instead of browsing by status.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query to match against caption, hashtags, and filename."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "pending_approval", "approved"],
+            "description": "Optionally narrow results to a specific status."
+          },
+          "file_type": {
+            "type": "string",
+            "enum": ["image", "video"],
+            "description": "Optionally filter by media type."
+          },
+          "limit": {
+            "type": "integer",
+            "default": 10,
+            "description": "Maximum number of results to return."
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "bluewave_bulk_export",
+      "description": "Export multiple assets as a single ZIP download. Use this when the user wants to download several assets at once for offline use or sharing.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Array of asset UUIDs to include in the ZIP export."
+          }
+        },
+        "required": ["asset_ids"]
+      }
+    },
+    {
+      "name": "bluewave_asset_variants",
+      "description": "List all resize variants (thumbnails, social-media crops, etc.) generated for an asset. Use this when the user needs a specific size or wants to see available formats.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "description": "UUID of the asset."
+          }
+        },
+        "required": ["asset_id"]
+      }
+    },
+    {
+      "name": "bluewave_batch_approve",
+      "description": "Approve multiple pending assets in a single operation. Use this when the user wants to approve several assets at once instead of one by one. Requires admin role.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Array of pending asset UUIDs to approve."
+          },
+          "comment": {
+            "type": "string",
+            "description": "Optional approval comment applied to all assets."
+          }
+        },
+        "required": ["asset_ids"]
+      }
+    },
+    {
+      "name": "bluewave_workflow_stats",
+      "description": "Get workflow performance metrics including average approval time, rejection rate per reviewer, and asset count by status. Use this to understand bottlenecks in the approval pipeline.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "integer",
+            "default": 30,
+            "description": "Number of days to look back for metrics."
+          }
+        }
+      }
+    },
+    {
+      "name": "bluewave_auto_approve_by_score",
+      "description": "Automatically approve all pending assets whose brand compliance score meets or exceeds a minimum threshold. Use this to fast-track high-quality content that already passes brand checks.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "min_score": {
+            "type": "integer",
+            "default": 90,
+            "description": "Minimum compliance score (0-100) required for auto-approval."
+          }
+        }
+      }
+    },
+    {
+      "name": "bluewave_update_brand_guidelines",
+      "description": "Update the tenant's brand guidelines (colors, fonts, tone, dos/don'ts, custom rules). Use this when the user wants to modify what the compliance checker enforces. Requires admin role.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "colors": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Brand color palette as hex codes (e.g., [\"#FF5733\", \"#2E86C1\"])."
+          },
+          "fonts": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Approved font families (e.g., [\"Inter\", \"Roboto\"])."
+          },
+          "tone": {
+            "type": "string",
+            "description": "Brand voice/tone description (e.g., 'Professional yet approachable')."
+          },
+          "dos": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of brand dos — things content should include or follow."
+          },
+          "donts": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of brand don'ts — things content must avoid."
+          },
+          "custom_rules": {
+            "type": "string",
+            "description": "Free-text custom rules for the AI compliance checker to enforce."
+          }
+        }
+      }
+    },
+    {
+      "name": "bluewave_compliance_report",
+      "description": "Generate an aggregated brand compliance report showing average scores, most common issues, and score trends over time. Use this for periodic brand health reviews.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "integer",
+            "default": 30,
+            "description": "Number of days to include in the report."
+          }
+        }
+      }
+    },
+    {
+      "name": "bluewave_check_external_image",
+      "description": "Check brand compliance of an external image by URL without uploading it as an asset. Use this for quick pre-flight checks before committing to an upload, or to evaluate third-party content.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "image_url": {
+            "type": "string",
+            "description": "Public URL of the image to check."
+          },
+          "check_types": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["colors", "logo", "tone", "fonts"]
+            },
+            "description": "Specific compliance checks to run. Omit to run all checks."
+          }
+        },
+        "required": ["image_url"]
+      }
+    },
+    {
+      "name": "bluewave_dashboard_metrics",
+      "description": "Get main dashboard KPIs: upload volume, average approval speed, workflow efficiency, and estimated cost savings. Use this when the user asks for an overview or summary of platform performance.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "integer",
+            "default": 30,
+            "description": "Number of days to calculate metrics over."
+          },
+          "compare": {
+            "type": "boolean",
+            "default": false,
+            "description": "When true, includes a comparison with the previous period of equal length."
+          }
+        }
+      }
+    },
+    {
+      "name": "bluewave_roi_report",
+      "description": "Generate a detailed ROI calculation comparing time saved by AI automation against platform costs. Use this when the user wants to justify the platform investment or see cost-benefit analysis.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "hourly_rate": {
+            "type": "number",
+            "default": 50,
+            "description": "Team's average hourly rate in USD, used to calculate dollar value of time saved."
+          }
+        }
+      }
+    },
+    {
+      "name": "bluewave_trend_analysis",
+      "description": "Run AI-powered trend analysis on a chosen metric, revealing content patterns, seasonality, and forward-looking predictions. Use this when the user wants to understand how a metric is evolving over time.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "metric": {
+            "type": "string",
+            "enum": ["uploads", "approvals", "compliance", "ai_usage"],
+            "description": "The metric to analyze for trends."
+          },
+          "days": {
+            "type": "integer",
+            "default": 90,
+            "description": "Number of historical days to include in the analysis."
+          }
+        },
+        "required": ["metric"]
+      }
+    },
+    {
+      "name": "bluewave_team_productivity",
+      "description": "Get per-member productivity metrics including uploads, approvals, average response time, and rejection rate. Use this to evaluate team performance or identify who might need support.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "integer",
+            "default": 30,
+            "description": "Number of days to measure productivity over."
+          }
+        }
+      }
+    },
+    {
+      "name": "bluewave_generate_brief",
+      "description": "Generate a complete creative brief using AI, including objectives, target audience, key messages, and deliverables. Use this when the user needs to kick off a new campaign or content initiative.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "Description of the campaign or content need (e.g., 'Summer sale campaign for Gen Z on Instagram')."
+          },
+          "channels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Target distribution channels (e.g., [\"instagram\", \"tiktok\", \"email\"])."
+          },
+          "tone": {
+            "type": "string",
+            "description": "Desired tone for the brief (e.g., 'playful', 'corporate', 'inspirational')."
+          }
+        },
+        "required": ["prompt"]
+      }
+    },
+    {
+      "name": "bluewave_caption_variants",
+      "description": "Generate three caption variants for an asset, each written in a different tone. Use this when the user wants options to choose from or wants to A/B test different messaging styles.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "description": "UUID of the asset to generate caption variants for."
+          },
+          "tones": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Desired tones for the variants (e.g., [\"professional\", \"casual\", \"storytelling\"]). Defaults to three balanced tones if omitted."
+          }
+        },
+        "required": ["asset_id"]
+      }
+    },
+    {
+      "name": "bluewave_translate_caption",
+      "description": "Translate an asset's caption into one or more target languages. Use this when the user needs localized versions of content for international audiences.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "description": "UUID of the asset whose caption should be translated."
+          },
+          "languages": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "ISO 639-1 language codes to translate into (e.g., [\"pt\", \"es\", \"fr\"])."
+          }
+        },
+        "required": ["asset_id", "languages"]
+      }
+    },
+    {
+      "name": "bluewave_content_calendar",
+      "description": "View the editorial content calendar for a date range, showing scheduled and published posts. Use this when the user wants to see what is planned or find open slots.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "description": "Start date in YYYY-MM-DD format."
+          },
+          "end": {
+            "type": "string",
+            "description": "End date in YYYY-MM-DD format."
+          }
+        },
+        "required": ["start", "end"]
+      }
+    },
+    {
+      "name": "bluewave_schedule_post",
+      "description": "Schedule an approved asset for publication on a specific channel at a given date and time. Use this when the user wants to plan when and where content goes live.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "description": "UUID of the approved asset to schedule."
+          },
+          "scheduled_at": {
+            "type": "string",
+            "description": "ISO 8601 datetime for publication (e.g., '2026-04-01T14:00:00Z')."
+          },
+          "channel": {
+            "type": "string",
+            "enum": ["instagram", "twitter", "linkedin"],
+            "description": "Social media channel to publish on."
+          },
+          "caption_override": {
+            "type": "string",
+            "description": "Optional custom caption for this specific post, overriding the asset's default caption."
+          }
+        },
+        "required": ["asset_id", "scheduled_at", "channel"]
+      }
+    },
+    {
+      "name": "bluewave_remove_user",
+      "description": "Remove a team member from the workspace. Returns an impact summary (assets owned, pending approvals) before confirming. Requires admin role. Always confirm with the user before executing.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "UUID of the team member to remove."
+          }
+        },
+        "required": ["user_id"]
+      }
+    },
+    {
+      "name": "bluewave_update_user_role",
+      "description": "Change a team member's role (admin, editor, or viewer). Use this when the user wants to promote, demote, or adjust permissions for a colleague. Requires admin role.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "UUID of the team member."
+          },
+          "new_role": {
+            "type": "string",
+            "enum": ["admin", "editor", "viewer"],
+            "description": "The new role to assign."
+          }
+        },
+        "required": ["user_id", "new_role"]
+      }
+    },
+    {
+      "name": "bluewave_billing_summary",
+      "description": "Get the billing summary for the current tenant including current plan, usage against limits, invoice history, and projected cost for the current cycle. Use this when the user asks about pricing, invoices, or account limits.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "bluewave_create_api_key",
+      "description": "Create a new API key for external integrations (webhooks, CI/CD, third-party tools). Use this when the user wants to connect Bluewave to another system programmatically. Requires admin role.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Human-readable label for the API key (e.g., 'Zapier integration')."
+          },
+          "permissions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Scoped permissions for the key (e.g., [\"assets:read\", \"assets:write\"]). Omit for full access."
+          }
+        },
+        "required": ["name"]
+      }
+    },
+    {
+      "name": "bluewave_audit_log",
+      "description": "Query the audit log to see who performed which actions and when. Use this for accountability, debugging, or security investigations.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "integer",
+            "default": 7,
+            "description": "Number of days to look back."
+          },
+          "user_id": {
+            "type": "string",
+            "description": "Filter to actions by a specific user UUID."
+          },
+          "action": {
+            "type": "string",
+            "description": "Filter by action type (e.g., 'upload', 'approve', 'delete', 'login')."
+          }
+        }
+      }
+    },
+    {
+      "name": "bluewave_storage_usage",
+      "description": "Get storage usage breakdown showing total space consumed, usage by file type (image vs video), and month-over-month growth. Use this when the user asks about disk space, storage limits, or file distribution.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ]
+}
