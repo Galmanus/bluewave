@@ -10,6 +10,12 @@ import {
   Hexagon,
   BarChart3,
   Shield,
+  ArrowUpDown,
+  Palette,
+  Settings,
+  Scale,
+  Lock,
+  Link2,
 } from "lucide-react";
 
 const ASSETS = [
@@ -196,15 +202,15 @@ export default function Features() {
             </p>
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: "HBAR Transfer", sublabel: "$0.0001 per tx", icon: "💸", color: "from-green-500/10 to-emerald-500/10 border-green-500/20" },
-                { label: "HCS Audit Trail", sublabel: "Immutable log", icon: "🛡️", color: "from-blue-500/10 to-cyan-500/10 border-blue-500/20" },
-                { label: "WAVE Token", sublabel: "Earn rewards", icon: "🪙", color: "from-purple-500/10 to-pink-500/10 border-purple-500/20" },
+                { label: "HBAR Transfer", sublabel: "$0.0001 per tx", Icon: ArrowUpDown, color: "from-green-500/10 to-emerald-500/10 border-green-500/20", iconColor: "text-green-400" },
+                { label: "HCS Audit Trail", sublabel: "Immutable log", Icon: Shield, color: "from-blue-500/10 to-cyan-500/10 border-blue-500/20", iconColor: "text-blue-400" },
+                { label: "WAVE Token", sublabel: "Earn rewards", Icon: Hexagon, color: "from-purple-500/10 to-pink-500/10 border-purple-500/20", iconColor: "text-purple-400" },
               ].map((item) => (
                 <div
                   key={item.label}
                   className={`rounded-xl bg-gradient-to-br ${item.color} border p-4 text-center`}
                 >
-                  <span className="text-2xl">{item.icon}</span>
+                  <item.Icon className={`w-6 h-6 mx-auto ${item.iconColor}`} strokeWidth={1.5} />
                   <p className="text-xs font-medium text-white mt-2">{item.label}</p>
                   <p className="text-[10px] text-white/40 mt-0.5">{item.sublabel}</p>
                 </div>
@@ -222,24 +228,25 @@ export default function Features() {
           >
             <div className="flex items-center gap-2 mb-4">
               <Bot className="w-5 h-5 text-blue-400" />
-              <h3 className="text-lg font-semibold text-white">8 Specialists</h3>
+              <h3 className="text-lg font-semibold text-white">9 Specialists</h3>
             </div>
             <p className="text-sm text-white/50 mb-5">
               Wave delegates to domain experts. Each has tools, personality, and PUT framework.
             </p>
             <div className="space-y-2">
               {[
-                { emoji: "🎨", name: "Curator", domain: "Asset management", tools: 10 },
-                { emoji: "✅", name: "Director", domain: "Approval workflow", tools: 9 },
-                { emoji: "🛡️", name: "Guardian", domain: "Brand compliance", tools: 6 },
-                { emoji: "📊", name: "Strategist", domain: "Analytics + PUT", tools: 6 },
-                { emoji: "✍️", name: "Creative", domain: "Content + Vectors", tools: 10 },
-                { emoji: "⚙️", name: "Admin", domain: "Platform ops", tools: 10 },
-                { emoji: "⚖️", name: "Legal", domain: "Compliance + IP", tools: 5 },
-                { emoji: "🔒", name: "Security", domain: "OWASP + ATT&CK", tools: 5 },
+                { Icon: Palette, name: "Curator", domain: "Asset management", tools: 10, color: "text-pink-400" },
+                { Icon: CheckCircle2, name: "Director", domain: "Approval workflow", tools: 9, color: "text-emerald-400" },
+                { Icon: Shield, name: "Guardian", domain: "Brand compliance", tools: 6, color: "text-blue-400" },
+                { Icon: BarChart3, name: "Strategist", domain: "Analytics + PUT", tools: 6, color: "text-amber-400" },
+                { Icon: Sparkles, name: "Creative", domain: "Content + Vectors", tools: 10, color: "text-cyan-400" },
+                { Icon: Settings, name: "Admin", domain: "Platform ops", tools: 10, color: "text-gray-400" },
+                { Icon: Scale, name: "Legal", domain: "Compliance + IP", tools: 5, color: "text-indigo-400" },
+                { Icon: Lock, name: "Security", domain: "OWASP + ATT&CK", tools: 5, color: "text-red-400" },
+                { Icon: Link2, name: "Blockchain", domain: "Solidity + Foundry", tools: 9, color: "text-purple-400" },
               ].map((agent) => (
                 <div key={agent.name} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                  <span className="text-sm">{agent.emoji}</span>
+                  <agent.Icon className={`w-3.5 h-3.5 ${agent.color} shrink-0`} strokeWidth={1.5} />
                   <span className="text-xs font-medium text-white flex-1">{agent.name}</span>
                   <span className="text-[10px] text-white/30">{agent.tools} tools</span>
                 </div>
