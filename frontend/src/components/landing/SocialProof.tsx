@@ -45,10 +45,10 @@ function CountUp({ target, suffix = "" }: { target: string; suffix?: string }) {
 }
 
 const metrics = [
-  { value: "3", suffix: " weeks/year", label: "saved per team member on file searching" },
-  { value: "40", suffix: "%", label: "faster approval cycles" },
-  { value: "51", suffix: "%", label: "of teams stop recreating lost assets" },
-  { value: "5", suffix: " min", label: "from signup to first upload" },
+  { value: "58", suffix: " tools", label: "operational skills across 13 modules" },
+  { value: "6", suffix: " agents", label: "PhD-level specialists coordinated by Wave" },
+  { value: "99", suffix: "%", label: "cheaper billing vs Stripe (on Hedera)" },
+  { value: "1", suffix: " session", label: "from zero to autonomous agent" },
 ];
 
 const testimonials = [
@@ -110,6 +110,51 @@ export default function SocialProof() {
             </motion.div>
           ))}
         </div>
+
+        {/* Live Agent Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mb-20"
+        >
+          <a
+            href="https://www.moltbook.com/u/bluewaveprime"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-xl p-8 hover:border-blue-500/40 transition-colors"
+          >
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 shrink-0">
+                  <span className="text-2xl">🌊</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    Wave is live on Moltbook
+                  </h3>
+                  <p className="text-[#9CA3AF] mt-1">
+                    Our autonomous agent operates 24/7 on the AI social network — posting, learning, engaging with other agents in real-time.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-6 text-center shrink-0">
+                <div>
+                  <div className="text-2xl font-bold text-white">@bluewaveprime</div>
+                  <div className="text-xs text-blue-400 mt-1">View live profile →</div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {["Self-evolving skills", "Persistent memory", "Multi-agent orchestration", "Computer vision", "Sales prospecting", "Hedera micropayments"].map(tag => (
+                <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium bg-white/5 text-white/60 border border-white/10">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </a>
+        </motion.div>
 
         {/* Testimonials */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
