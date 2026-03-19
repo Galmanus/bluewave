@@ -1,6 +1,145 @@
 import { motion } from "framer-motion";
-import { Waves, ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Waves, ArrowRight, Bot, Search, Eye, Shield, BarChart3, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
+
+const TERMINAL_LINES = [
+  { type: "input", text: "wave, find me creative agencies struggling with content ops" },
+  { type: "status", text: "Searching web + LinkedIn + X/Twitter...", icon: "search" },
+  { type: "status", text: "Delegating to Strategist for market analysis...", icon: "agent" },
+  { type: "output", text: "Found 5 prospects. Top match:" },
+  { type: "result", text: "Yard NYC — Score: 95/100 (AdAge Small Agency of the Year)" },
+  { type: "result", text: "CEO: Ruth Bernstein | 96 employees | Clients: Tanqueray, Walmart" },
+  { type: "result", text: "Pain signal: content ops bottleneck with tier-1 clients" },
+  { type: "status", text: "Generating 4-touch outreach sequence...", icon: "zap" },
+  { type: "output", text: "Outreach ready. Day 1: Email, Day 2: LinkedIn, Day 5: Follow-up, Day 10: Close" },
+  { type: "divider", text: "" },
+  { type: "input", text: "analyze this image for brand compliance" },
+  { type: "status", text: "Claude Vision analyzing image...", icon: "eye" },
+  { type: "result", text: "Compliance: 87/100 — Colors match, typography off-brand" },
+  { type: "result", text: "Issue: Using Helvetica instead of Inter (x-height differs 7%)" },
+  { type: "result", text: "Suggestion: Switch to Inter with fallback system-ui" },
+  { type: "divider", text: "" },
+  { type: "input", text: "I need a Hacker News monitor" },
+  { type: "status", text: "Creating skill: hacker_news_monitor.py...", icon: "zap" },
+  { type: "output", text: "Skill created! 4 new tools: hn_top, hn_search, hn_comments, hn_monitor" },
+  { type: "result", text: "9KB of Python generated, validated, registered. Available now." },
+  { type: "divider", text: "" },
+  { type: "input", text: "what's our Hedera billing status?" },
+  { type: "status", text: "Querying Hedera Mirror Node...", icon: "chain" },
+  { type: "result", text: "1,247 AI actions this month — $62.35 revenue" },
+  { type: "result", text: "Hedera tx fees: $0.12 total (vs $18.14 on Stripe)" },
+  { type: "result", text: "Savings: $18.02 (99.3% cheaper)" },
+];
+
+function HeroTerminal() {
+  const [visibleLines, setVisibleLines] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setVisibleLines((prev) => {
+        if (prev >= TERMINAL_LINES.length) {
+          // Reset after showing all
+          setTimeout(() => setVisibleLines(0), 3000);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 600);
+    return () => clearInterval(timer);
+  }, []);
+
+  const iconMap: Record<string, React.ReactNode> = {
+    search: <Search className="w-3 h-3" />,
+    agent: <Bot className="w-3 h-3" />,
+    eye: <Eye className="w-3 h-3" />,
+    zap: <Zap className="w-3 h-3" />,
+    shield: <Shield className="w-3 h-3" />,
+    chain: <BarChart3 className="w-3 h-3" />,
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, delay: 0.7 }}
+      className="mt-16 mx-auto max-w-3xl"
+    >
+      <div className="relative rounded-xl border border-white/10 bg-[#0d1117] shadow-2xl shadow-blue-500/5 overflow-hidden">
+        {/* Terminal chrome */}
+        <div className="flex items-center gap-2 px-4 py-3 bg-[#161b22] border-b border-white/5">
+          <div className="w-3 h-3 rounded-full bg-red-500/70" />
+          <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
+          <div className="w-3 h-3 rounded-full bg-green-500/70" />
+          <div className="ml-3 flex items-center gap-2 flex-1">
+            <Bot className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="text-xs text-white/40 font-mono">wave@bluewave</span>
+            <span className="text-[10px] text-green-400/60 ml-auto font-mono">58 tools active</span>
+          </div>
+        </div>
+
+        {/* Terminal content */}
+        <div className="p-4 sm:p-5 font-mono text-[12px] sm:text-[13px] leading-relaxed h-[340px] overflow-hidden">
+          {TERMINAL_LINES.slice(0, visibleLines).map((line, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2 }}
+              className={`${line.type === "divider" ? "my-3 border-t border-white/5" : "mb-1"}`}
+            >
+              {line.type === "input" && (
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400 shrink-0">{">"}</span>
+                  <span className="text-white/90">{line.text}</span>
+                </div>
+              )}
+              {line.type === "status" && (
+                <div className="flex items-center gap-2 text-yellow-400/70">
+                  {line.icon && iconMap[line.icon]}
+                  <span>{line.text}</span>
+                </div>
+              )}
+              {line.type === "output" && (
+                <div className="text-green-400/90 mt-1">{line.text}</div>
+              )}
+              {line.type === "result" && (
+                <div className="text-white/60 pl-4">{line.text}</div>
+              )}
+            </motion.div>
+          ))}
+          {visibleLines < TERMINAL_LINES.length && (
+            <span className="inline-block w-2 h-4 bg-cyan-400/80 animate-pulse" />
+          )}
+        </div>
+
+        {/* Bottom bar */}
+        <div className="px-4 py-2 bg-[#161b22] border-t border-white/5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {[
+              { label: "6 agents", color: "text-blue-400" },
+              { label: "58 tools", color: "text-cyan-400" },
+              { label: "Hedera", color: "text-purple-400" },
+              { label: "self-evolving", color: "text-green-400" },
+            ].map((tag) => (
+              <span key={tag.label} className={`text-[10px] font-medium ${tag.color}`}>
+                {tag.label}
+              </span>
+            ))}
+          </div>
+          <a
+            href="https://t.me/bluewave_wave_bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-white/30 hover:text-cyan-400 transition-colors"
+          >
+            try live on Telegram →
+          </a>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 interface HeroProps {
   isAuthenticated?: boolean;
@@ -142,49 +281,8 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           </div>
         </motion.div>
 
-        {/* Hero visual — app mockup */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.7 }}
-          className="mt-16 mx-auto max-w-3xl"
-        >
-          <div className="relative rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm shadow-2xl overflow-hidden">
-            {/* Browser chrome */}
-            <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10">
-              <div className="w-3 h-3 rounded-full bg-red-500/60" />
-              <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-              <div className="w-3 h-3 rounded-full bg-green-500/60" />
-              <div className="ml-4 flex-1 h-6 rounded bg-white/5" />
-            </div>
-            {/* Mock content with colorful assets */}
-            <div className="p-4 sm:p-6 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-              {[
-                { status: "Approved", color: "bg-emerald-500/20 text-emerald-400", gradient: "from-blue-500/40 to-cyan-400/40", label: "Hero Banner" },
-                { status: "Pending", color: "bg-amber-500/20 text-amber-400", gradient: "from-purple-500/40 to-pink-400/40", label: "Social Post" },
-                { status: "Draft", color: "bg-zinc-500/20 text-zinc-400", gradient: "from-orange-500/40 to-yellow-400/40", label: "Campaign" },
-                { status: "Approved", color: "bg-emerald-500/20 text-emerald-400", gradient: "from-emerald-500/40 to-teal-400/40", label: "Product" },
-                { status: "Pending", color: "bg-amber-500/20 text-amber-400", gradient: "from-rose-500/40 to-red-400/40", label: "Story" },
-                { status: "Approved", color: "bg-emerald-500/20 text-emerald-400", gradient: "from-indigo-500/40 to-blue-400/40", label: "Brand Kit" },
-              ].map((item, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4, delay: 0.9 + i * 0.1 }}
-                  className={`aspect-square rounded-lg bg-gradient-to-br ${item.gradient} border border-white/10 flex flex-col items-start justify-end p-3`}
-                >
-                  <span className="text-[10px] text-white/70 mb-1">{item.label}</span>
-                  <span
-                    className={`text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-full ${item.color}`}
-                  >
-                    {item.status}
-                  </span>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
+        {/* Hero visual — Wave agent live terminal */}
+        <HeroTerminal />
       </div>
     </section>
   );
