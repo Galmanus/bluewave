@@ -4,28 +4,28 @@ import { ChevronDown } from "lucide-react";
 
 const faqs = [
   {
-    q: "How is Bluewave different from Google Drive or Dropbox?",
-    a: "Google Drive stores files. Bluewave manages creative assets. That means AI-generated metadata, approval workflows, role-based access, and status tracking — all purpose-built for creative teams. Think of it as the step up from folders to a real creative workflow.",
+    q: "What does the Brand Guardian actually check?",
+    a: "8 dimensions: color accuracy (with Delta-E measurement), typography, logo presence, tone of voice, composition, photography style, strategic coherence, and channel adequacy. Each dimension is scored 0-100 with a weighted total and specific fix recommendations.",
   },
   {
-    q: "Can I migrate my existing assets?",
-    a: "Yes. Bulk upload via drag-and-drop. AI will auto-generate captions and hashtags for everything you upload. Most teams are fully migrated in under an hour.",
+    q: "How is this different from a regular DAM tool?",
+    a: "Regular DAMs store files. Bluewave has an autonomous AI agent that analyzes every asset against your brand DNA, generates on-brand content, and enforces compliance automatically. The agent has 89 tools and 9 specialist sub-agents — it doesn't just store your assets, it governs them.",
   },
   {
-    q: "Is my data safe? What about multi-tenancy?",
-    a: "Each workspace is completely isolated at the database level. Your data is never mixed with other tenants. All connections are encrypted. JWT-based auth with short-lived tokens.",
+    q: "Can I upload my brand guidelines?",
+    a: "Yes. Define your colors (hex codes), fonts, tone of voice, do's and don'ts, and custom rules. The agent uses these as the baseline for every compliance check. Changes to guidelines apply to all future checks immediately.",
   },
   {
-    q: "What file types do you support?",
-    a: "All major image formats (JPG, PNG, GIF, SVG, WebP, TIFF) and video formats (MP4, MOV, AVI, WebM). Up to 50MB per file on the free plan, higher limits on paid plans.",
+    q: "What content can the agent generate?",
+    a: "Captions, stories, headlines, CTAs, product descriptions, ad copy, email sequences, hashtag strategies, social calendars, and competitor audits — all on-brand, in 7 channels, in any language.",
+  },
+  {
+    q: "Do I need technical knowledge to use it?",
+    a: "No. Upload an image, get a compliance report. Type a prompt, get on-brand content. The dashboard is designed for creative teams, not engineers.",
   },
   {
     q: "Do I need a credit card to start?",
-    a: "No. The free plan is genuinely free — no card required, no trial expiration. Upgrade only when you need more storage or approval workflows.",
-  },
-  {
-    q: "Can I use Bluewave with my existing tools?",
-    a: "Bluewave works alongside your current stack. API access is available on Pro plans. Integrations with Figma, Slack, and Zapier are on the roadmap.",
+    a: "No. The free plan is genuinely free — no card required, no trial expiration.",
   },
 ];
 
@@ -33,7 +33,7 @@ export default function FAQ() {
   const [open, setOpen] = useState<number | null>(null);
 
   return (
-    <section className="py-24 sm:py-32 bg-[#FAFAFA]">
+    <section className="py-24 sm:py-32 bg-[#0a0a1a]">
       <div className="max-w-3xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -42,7 +42,7 @@ export default function FAQ() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-[#111827] leading-tight">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight">
             Frequently asked questions
           </h2>
         </motion.div>
@@ -55,17 +55,17 @@ export default function FAQ() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: i * 0.08 }}
-              className="bg-white rounded-xl border border-gray-100 overflow-hidden"
+              className="bg-white/[0.03] rounded-xl border border-white/[0.06] overflow-hidden"
             >
               <button
                 onClick={() => setOpen(open === i ? null : i)}
                 className="w-full flex items-center justify-between px-6 py-5 text-left"
               >
-                <span className="text-base font-semibold text-[#111827] pr-4">
+                <span className="text-base font-semibold text-white pr-4">
                   {faq.q}
                 </span>
                 <ChevronDown
-                  className={`w-5 h-5 text-[#9CA3AF] shrink-0 transition-transform duration-200 ${
+                  className={`w-5 h-5 text-white/40 shrink-0 transition-transform duration-200 ${
                     open === i ? "rotate-180" : ""
                   }`}
                 />
@@ -79,7 +79,7 @@ export default function FAQ() {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <p className="px-6 pb-5 text-[#6b7280] leading-relaxed">
+                    <p className="px-6 pb-5 text-[#9CA3AF] leading-relaxed">
                       {faq.a}
                     </p>
                   </motion.div>

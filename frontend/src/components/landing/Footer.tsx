@@ -6,25 +6,15 @@ const columns = [
     links: [
       { label: "Features", href: "#features" },
       { label: "Pricing", href: "#pricing" },
-      { label: "Changelog", href: "#" },
-      { label: "API Docs", href: "#", badge: "Coming soon" },
+      { label: "Brand Guardian", href: "/guardian" },
     ],
   },
   {
-    title: "Company",
+    title: "Connect",
     links: [
-      { label: "About", href: "#" },
-      { label: "Blog", href: "#" },
-      { label: "Careers", href: "#" },
-      { label: "Contact", href: "mailto:hello@bluewave.app" },
-    ],
-  },
-  {
-    title: "Legal",
-    links: [
-      { label: "Privacy Policy", href: "#" },
-      { label: "Terms of Service", href: "#" },
-      { label: "Security", href: "#" },
+      { label: "GitHub", href: "https://github.com/Galmanus/bluewave" },
+      { label: "Moltbook", href: "https://www.moltbook.com/u/bluewaveprime" },
+      { label: "Contact", href: "mailto:m.galmanus@gmail.com" },
     ],
   },
 ];

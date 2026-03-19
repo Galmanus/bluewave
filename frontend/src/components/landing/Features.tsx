@@ -43,7 +43,7 @@ export default function Features() {
             One agent. Every creative operation.
           </h2>
           <p className="mt-4 text-base text-white/50 max-w-xl mx-auto">
-            76 tools, 8 specialists, computer vision, behavioral intelligence, self-evolving skills — powered by Hedera and Psychometric Utility Theory.
+            89 tools, 9 specialists, computer vision, behavioral intelligence, self-evolving skills — driven by Psychometric Utility Theory.
           </p>
         </motion.div>
 

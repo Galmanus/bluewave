@@ -38,13 +38,13 @@ const features: { name: string; values: CellValue[] }[] = [
     ],
   },
   {
-    name: "Dark mode",
+    name: "Brand compliance scoring (0-100)",
     values: [
       { type: "check" },
       { type: "x" },
       { type: "x" },
       { type: "x" },
-      { type: "check" },
+      { type: "x" },
     ],
   },
   {
@@ -106,7 +106,7 @@ function CellContent({ cell }: { cell: CellValue }) {
     case "check":
       return <Check className="w-5 h-5 text-emerald-500 mx-auto" />;
     case "x":
-      return <X className="w-5 h-5 text-gray-300 mx-auto" />;
+      return <X className="w-5 h-5 text-white/20 mx-auto" />;
     case "partial":
       return (
         <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
@@ -122,7 +122,7 @@ function CellContent({ cell }: { cell: CellValue }) {
 
 export default function Comparison() {
   return (
-    <section className="py-24 sm:py-32 bg-white">
+    <section className="py-24 sm:py-32 bg-[#0a0a1a]">
       <div className="max-w-6xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -131,7 +131,7 @@ export default function Comparison() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-[#111827] leading-tight">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight">
             Why teams switch to Bluewave
           </h2>
         </motion.div>
@@ -176,7 +176,7 @@ export default function Comparison() {
                   whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.3, delay: 0.3 + ri * 0.05 }}
-                  className="border-t border-gray-100"
+                  className="border-t border-white/[0.06]"
                 >
                   <td className="py-4 px-4 text-sm font-medium text-[#374151]">
                     {row.name}

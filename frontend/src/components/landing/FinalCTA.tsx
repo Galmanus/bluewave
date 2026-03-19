@@ -33,7 +33,7 @@ export default function FinalCTA({ isAuthenticated }: FinalCTAProps) {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="mt-6 text-lg text-[#9CA3AF]"
         >
-          Join 500+ teams whose AI agent handles the tedious work — while they create.
+          Upload an image. Get an 8-dimension compliance report in seconds. Free.
         </motion.p>
 
         <motion.div

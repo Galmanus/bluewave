@@ -1,36 +1,36 @@
 import { motion } from "framer-motion";
-import { Rocket, CloudUpload, Send, ShieldCheck } from "lucide-react";
+import { Upload, Shield, Sparkles, CheckCircle2 } from "lucide-react";
 
 const steps = [
   {
-    icon: Rocket,
-    title: "Create your workspace",
+    icon: Upload,
+    title: "Upload your brand DNA",
     description:
-      "Sign up, name your team, invite your first members. No credit card required.",
+      "Set your colors, fonts, tone, and rules. The agent learns your brand identity.",
   },
   {
-    icon: CloudUpload,
-    title: "Upload your assets",
+    icon: Sparkles,
+    title: "Upload any asset",
     description:
-      "Drag and drop images and videos. AI automatically generates captions, hashtags, and metadata.",
+      "Drag and drop images. AI generates captions and hashtags automatically on upload.",
   },
   {
-    icon: Send,
-    title: "Submit for review",
+    icon: Shield,
+    title: "Instant compliance check",
     description:
-      "When an asset is ready, submit it for approval. Admins review and approve or reject with feedback.",
+      "8-dimension analysis: colors (Delta-E), typography, logo, tone, composition, photography, strategy, channel fit.",
   },
   {
-    icon: ShieldCheck,
-    title: "Ship with confidence",
+    icon: CheckCircle2,
+    title: "Ship on-brand. Every time.",
     description:
-      "Approved assets are clearly marked. No more guessing which version is final.",
+      "Score 0-100 with specific fixes. Only compliant content goes live.",
   },
 ];
 
 export default function HowItWorks() {
   return (
-    <section className="py-24 sm:py-32 bg-white">
+    <section className="py-24 sm:py-32 bg-[#0d1117]">
       <div className="max-w-6xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -39,14 +39,13 @@ export default function HowItWorks() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-[#111827] leading-tight">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight">
             Up and running in 5 minutes
           </h2>
         </motion.div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative">
-          {/* Connecting line (desktop only) */}
-          <div className="hidden lg:block absolute top-10 left-[12.5%] right-[12.5%] h-px bg-gray-200" />
+          <div className="hidden lg:block absolute top-10 left-[12.5%] right-[12.5%] h-px bg-white/10" />
 
           {steps.map((step, i) => (
             <motion.div
@@ -57,23 +56,22 @@ export default function HowItWorks() {
               transition={{ duration: 0.6, delay: i * 0.15 }}
               className="relative text-center"
             >
-              <div className="relative z-10 w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-6">
+              <div className="relative z-10 w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-6">
                 <span className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
                   {i + 1}
                 </span>
-                <step.icon className="w-8 h-8 text-blue-600" />
+                <step.icon className="w-8 h-8 text-blue-400" />
               </div>
-              <h3 className="text-lg font-semibold text-[#111827] mb-2">
+              <h3 className="text-lg font-semibold text-white mb-2">
                 {step.title}
               </h3>
-              <p className="text-sm text-[#6b7280] leading-relaxed max-w-xs mx-auto">
+              <p className="text-sm text-[#9CA3AF] leading-relaxed max-w-xs mx-auto">
                 {step.description}
               </p>
             </motion.div>
           ))}
         </div>
 
-        {/* Mid-page CTA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

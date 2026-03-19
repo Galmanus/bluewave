@@ -8,13 +8,14 @@ const plans = [
     name: "Free",
     monthlyPrice: 0,
     annualPrice: 0,
-    description: "For individuals and small teams getting started",
+    description: "Try the Brand Guardian with no commitment",
     features: [
       "Up to 3 users",
       "5 GB storage",
-      "Basic AI captions",
-      "Upload & organize",
-      "Community support",
+      "50 AI actions/month",
+      "Brand compliance checks (8 dimensions)",
+      "AI captions + hashtags on upload",
+      "Approval workflows",
     ],
     cta: "Start free",
     ctaLink: "/register",
@@ -22,37 +23,38 @@ const plans = [
   },
   {
     name: "Pro",
-    monthlyPrice: 15,
-    annualPrice: 12,
-    description: "For growing teams that need approval workflows",
+    monthlyPrice: 29,
+    annualPrice: 24,
+    description: "For teams that ship content daily",
     features: [
       "Unlimited users",
       "100 GB storage",
-      "Advanced AI (captions + hashtags + regeneration)",
-      "Approval workflows (submit / approve / reject)",
+      "Unlimited AI actions",
+      "Brand Content Generator (10 content types)",
+      "Social calendar + scheduling",
       "Role-based access (admin / editor / viewer)",
-      "Priority support",
+      "API access",
     ],
     cta: "Start free trial",
     ctaLink: "/register",
     highlighted: true,
-    badge: "Most popular",
+    badge: "Best value",
   },
   {
     name: "Enterprise",
     monthlyPrice: null,
     annualPrice: null,
-    description: "For organizations with advanced needs",
+    description: "For agencies managing multiple brands",
     features: [
       "Everything in Pro",
       "Unlimited storage",
-      "SSO / SAML",
+      "Multi-brand workspaces",
+      "Autonomous Wave agent (89 tools, 9 specialists)",
       "Custom integrations",
-      "Dedicated support",
-      "SLA guarantee",
+      "Dedicated support + SLA",
     ],
-    cta: "Contact sales",
-    ctaLink: "mailto:sales@bluewave.app",
+    cta: "Contact us",
+    ctaLink: "mailto:m.galmanus@gmail.com",
     highlighted: false,
   },
 ];
@@ -65,7 +67,7 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
   const [annual, setAnnual] = useState(true);
 
   return (
-    <section id="pricing" className="py-24 sm:py-32 bg-[#FAFAFA]">
+    <section id="pricing" className="py-24 sm:py-32 bg-[#111827]">
       <div className="max-w-6xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -74,13 +76,13 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider">
+          <span className="text-sm font-semibold text-blue-400 uppercase tracking-wider">
             Pricing
           </span>
-          <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-[#111827] leading-tight">
+          <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-white leading-tight">
             Simple, transparent pricing
           </h2>
-          <p className="mt-4 text-lg text-[#6b7280]">
+          <p className="mt-4 text-lg text-white/50">
             No hidden fees. No sales calls. Start free, upgrade when ready.
           </p>
         </motion.div>
@@ -89,7 +91,7 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
         <div className="flex items-center justify-center gap-3 mb-12">
           <span
             className={`text-sm font-medium ${
-              !annual ? "text-[#111827]" : "text-[#9CA3AF]"
+              !annual ? "text-white" : "text-[#9CA3AF]"
             }`}
           >
             Monthly
@@ -97,7 +99,7 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
           <button
             onClick={() => setAnnual(!annual)}
             className={`relative w-12 h-6 rounded-full transition-colors ${
-              annual ? "bg-blue-600" : "bg-gray-300"
+              annual ? "bg-blue-600" : "bg-white/20"
             }`}
           >
             <div
@@ -108,7 +110,7 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
           </button>
           <span
             className={`text-sm font-medium ${
-              annual ? "text-[#111827]" : "text-[#9CA3AF]"
+              annual ? "text-white" : "text-[#9CA3AF]"
             }`}
           >
             Annual
@@ -129,8 +131,8 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
               transition={{ duration: 0.6, delay: i * 0.15 }}
               className={`relative rounded-xl p-8 ${
                 plan.highlighted
-                  ? "bg-white border-2 border-blue-600 shadow-lg scale-[1.02]"
-                  : "bg-white border border-gray-200 shadow-sm"
+                  ? "bg-white/[0.06] border-2 border-blue-500/50 shadow-lg shadow-blue-500/10 scale-[1.02]"
+                  : "bg-white/[0.03] border border-white/[0.06]"
               }`}
             >
               {plan.badge && (
@@ -139,18 +141,18 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
                 </span>
               )}
 
-              <h3 className="text-xl font-bold text-[#111827] mb-2">
+              <h3 className="text-xl font-bold text-white mb-2">
                 {plan.name}
               </h3>
-              <p className="text-sm text-[#6b7280] mb-6">{plan.description}</p>
+              <p className="text-sm text-white/50 mb-6">{plan.description}</p>
 
               <div className="mb-8">
                 {plan.monthlyPrice !== null ? (
                   <>
-                    <span className="text-4xl font-bold text-[#111827]">
+                    <span className="text-4xl font-bold text-white">
                       ${annual ? plan.annualPrice : plan.monthlyPrice}
                     </span>
-                    <span className="text-[#6b7280]">
+                    <span className="text-white/50">
                       {plan.monthlyPrice === 0
                         ? "/month"
                         : `/user/month`}
@@ -162,7 +164,7 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
                     )}
                   </>
                 ) : (
-                  <span className="text-4xl font-bold text-[#111827]">
+                  <span className="text-4xl font-bold text-white">
                     Custom
                   </span>
                 )}
@@ -172,7 +174,7 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-start gap-3">
                     <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                    <span className="text-sm text-[#374151]">{f}</span>
+                    <span className="text-sm text-white/70">{f}</span>
                   </li>
                 ))}
               </ul>
@@ -182,7 +184,7 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
                 className={`block text-center px-6 py-3 rounded-lg font-semibold transition-all duration-150 ${
                   plan.highlighted
                     ? "bg-blue-600 text-white hover:bg-blue-700 hover:scale-[1.02] hover:shadow-[0_0_24px_rgba(37,99,235,0.3)]"
-                    : "bg-gray-100 text-[#111827] hover:bg-gray-200"
+                    : "bg-white/10 text-white hover:bg-white/20"
                 }`}
               >
                 {isAuthenticated ? "Go to Dashboard" : plan.cta}
