@@ -751,7 +751,7 @@
     }
   },
   "payment_addresses": {
-    "pix": "m.galmanus@gmail.com",
+    "pix": "007a1d60-71e0-425f-a5b8-6fa2742b4c70",
     "hbar_wallet": "0x46EB78DE85485ffD54EdA2f02D2a3c42C5a92381",
     "note": "When a client wants to pay, provide these addresses. PIX for Brazilians (instant, free). HBAR wallet for crypto users. Every payment goes directly to Manuel."
   }
