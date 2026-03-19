@@ -26,7 +26,7 @@ logger = logging.getLogger("openclaw.hedera")
 
 # ── Config ────────────────────────────────────────────────────
 
-HEDERA_NETWORK = os.environ.get("HEDERA_NETWORK", "testnet")
+HEDERA_NETWORK = os.environ.get("HEDERA_NETWORK", "mainnet")
 HEDERA_OPERATOR_ID = os.environ.get("HEDERA_OPERATOR_ID", "")
 HEDERA_OPERATOR_KEY = os.environ.get("HEDERA_OPERATOR_KEY", "")
 HEDERA_HCS_TOPIC_ID = os.environ.get("HEDERA_HCS_TOPIC_ID", "")

@@ -35,6 +35,7 @@ DEFAULT_PRICING = {
         "name": "AI Caption Pack (10 images)",
         "description": "Upload 10 images, get marketing-ready captions + hashtags for each. Claude Vision analyzes the actual content.",
         "price_usd": 9,
+        "price_brl": 51,
         "price_hbar": 60,
         "cost_estimate_usd": 0.50,
         "margin_percent": 94,

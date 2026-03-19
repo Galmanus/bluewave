@@ -19,8 +19,11 @@ const HEDERA_NETWORKS = {
   },
 };
 
-const NETWORK = HEDERA_NETWORKS.testnet;
+const NETWORK = HEDERA_NETWORKS.mainnet;
 const AI_ACTION_COST_HBAR = "0.33"; // ~$0.05 at $0.15/HBAR
+
+// Manuel's wallet — all payments go here
+const TREASURY_ADDRESS = import.meta.env.VITE_TREASURY_ADDRESS || "0x46eb000000000000000000000000000000002381";
 
 interface WalletState {
   address: string | null;
@@ -137,7 +140,7 @@ export function useWallet() {
       const signer = await provider.getSigner();
 
       const tx = await signer.sendTransaction({
-        to: recipientAddress || "0x0000000000000000000000000000000000000000",
+        to: recipientAddress || TREASURY_ADDRESS,
         value: parseEther(AI_ACTION_COST_HBAR),
         data: new TextEncoder().encode(JSON.stringify({
           type: "bluewave_ai_action",
