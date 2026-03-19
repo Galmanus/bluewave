@@ -74,6 +74,9 @@ app.include_router(resize.router, prefix="/api/v1")
 app.include_router(sso.router, prefix="/api/v1")
 app.include_router(permissions.router, prefix="/api/v1")
 
+from app.routers import wave_proxy
+app.include_router(wave_proxy.router, prefix="/api/v1")
+
 
 @app.on_event("startup")
 async def on_startup() -> None:

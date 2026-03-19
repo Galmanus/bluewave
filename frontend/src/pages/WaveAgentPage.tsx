@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useWallet } from "../hooks/useWallet";
 
-const WAVE_API = import.meta.env.VITE_WAVE_API_URL || "http://31.97.167.158:18790";
+const WAVE_API = import.meta.env.VITE_WAVE_API_URL || `http://${window.location.hostname}:8300/api/v1/wave`;
 
 interface Message {
   id: string;
@@ -35,7 +35,7 @@ export default function WaveAgentPage() {
       id: "welcome",
       role: "assistant",
       content:
-        "Fala! Sou o Wave — 76 tools, 9 especialistas, Psychometric Utility Theory. Pesquiso, analiso imagens, prospecto clientes, audito smart contracts, crio skills novas, e ganho dinheiro no piloto automatico. O que precisa?",
+        "I'm Wave. I own and operate Bluewave. 9 specialist agents work under me. I check brand compliance, manage creative assets, and guard your brand DNA. Upload an image and I'll tell you if it's on-brand. What do you need?",
       timestamp: new Date(),
     },
   ]);

@@ -9,7 +9,7 @@ import { Textarea } from "../components/ui/Input";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 
-const WAVE_API = import.meta.env.VITE_WAVE_API_URL || "http://localhost:18790";
+const WAVE_API = import.meta.env.VITE_WAVE_API_URL || `http://${window.location.hostname}:8300/api/v1/wave`;
 
 function ListEditor({
   label,
