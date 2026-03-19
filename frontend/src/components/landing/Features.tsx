@@ -8,6 +8,8 @@ import {
   Zap,
   Globe,
   Hexagon,
+  BarChart3,
+  Shield,
 } from "lucide-react";
 
 const ASSETS = [
@@ -35,7 +37,7 @@ export default function Features() {
             One agent. Every creative operation.
           </h2>
           <p className="mt-4 text-base text-white/50 max-w-xl mx-auto">
-            58 tools, 6 specialists, computer vision, sales prospecting, self-evolving skills — all on Hedera.
+            76 tools, 8 specialists, computer vision, behavioral intelligence, self-evolving skills — powered by Hedera and Psychometric Utility Theory.
           </p>
         </motion.div>
 
@@ -220,19 +222,21 @@ export default function Features() {
           >
             <div className="flex items-center gap-2 mb-4">
               <Bot className="w-5 h-5 text-blue-400" />
-              <h3 className="text-lg font-semibold text-white">6 Specialists</h3>
+              <h3 className="text-lg font-semibold text-white">8 Specialists</h3>
             </div>
             <p className="text-sm text-white/50 mb-5">
-              Wave delegates to domain experts. Each has their own tools and personality.
+              Wave delegates to domain experts. Each has tools, personality, and PUT framework.
             </p>
             <div className="space-y-2">
               {[
                 { emoji: "🎨", name: "Curator", domain: "Asset management", tools: 10 },
                 { emoji: "✅", name: "Director", domain: "Approval workflow", tools: 9 },
                 { emoji: "🛡️", name: "Guardian", domain: "Brand compliance", tools: 6 },
-                { emoji: "📊", name: "Strategist", domain: "Analytics", tools: 6 },
-                { emoji: "✍️", name: "Creative", domain: "Content strategy", tools: 10 },
+                { emoji: "📊", name: "Strategist", domain: "Analytics + PUT", tools: 6 },
+                { emoji: "✍️", name: "Creative", domain: "Content + Vectors", tools: 10 },
                 { emoji: "⚙️", name: "Admin", domain: "Platform ops", tools: 10 },
+                { emoji: "⚖️", name: "Legal", domain: "Compliance + IP", tools: 5 },
+                { emoji: "🔒", name: "Security", domain: "OWASP + ATT&CK", tools: 5 },
               ].map((agent) => (
                 <div key={agent.name} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                   <span className="text-sm">{agent.emoji}</span>
@@ -275,7 +279,72 @@ export default function Features() {
             </div>
           </motion.div>
 
-          {/* Card 8 — Approval Workflow */}
+          {/* Card 8 — Behavioral Intelligence (PUT) */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.42 }}
+            className="lg:col-span-2 rounded-2xl border border-white/[0.06] bg-gradient-to-br from-amber-500/[0.03] to-orange-500/[0.03] p-6 relative overflow-hidden group hover:border-amber-500/20 transition-colors"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="w-5 h-5 text-amber-400" />
+              <h3 className="text-lg font-semibold text-white">Psychometric Utility Theory</h3>
+              <span className="ml-auto px-2 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-400 rounded-full">Original Research</span>
+            </div>
+            <p className="text-sm text-white/50 mb-5 max-w-lg">
+              Proprietary behavioral intelligence framework. Wave predicts purchase decisions using mathematical models derived from 3,000 years of strategic philosophy.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Utility Function", sublabel: "U = f(A,F,S,w,k)", desc: "Predicts decision state" },
+                { label: "Shadow Coefficient", sublabel: "k (suppressed fear)", desc: "Hidden buying signals" },
+                { label: "Desperation Factor", sublabel: "Omega sigmoid", desc: "Purchase timing" },
+                { label: "7 Decision Vectors", sublabel: "Fear to Trust", desc: "Sales angle selection" },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3"
+                >
+                  <p className="text-xs font-medium text-amber-300">{item.label}</p>
+                  <p className="text-[10px] text-white/40 font-mono mt-1">{item.sublabel}</p>
+                  <p className="text-[10px] text-white/25 mt-1">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Card 9 — Security */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.45 }}
+            className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 relative overflow-hidden group hover:border-red-500/20 transition-colors"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Shield className="w-5 h-5 text-red-400" />
+              <h3 className="text-lg font-semibold text-white">Security Auditor</h3>
+            </div>
+            <p className="text-sm text-white/50 mb-5">
+              MITRE ATT&CK + OWASP methodology. Thinks like an attacker, defends like an expert.
+            </p>
+            <div className="space-y-1.5 font-mono text-[10px]">
+              {[
+                { check: "OWASP Top 10", status: "90+ test cases" },
+                { check: "MITRE ATT&CK", status: "Full TTP mapping" },
+                { check: "Infrastructure", status: "Docker + DB + API" },
+                { check: "Blockchain", status: "Wallet + tx security" },
+              ].map((item) => (
+                <div key={item.check} className="flex items-center justify-between px-3 py-1.5 rounded bg-white/[0.03] border border-white/[0.04]">
+                  <span className="text-white/60">{item.check}</span>
+                  <span className="text-red-400">{item.status}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Card 10 — Approval Workflow */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
