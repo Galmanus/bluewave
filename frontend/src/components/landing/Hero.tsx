@@ -86,19 +86,6 @@ function WaveCanvas() {
       // Layer 5 — low accent
       drawGlowWave(h * 0.78, 30, 0.004, 0.3, 99, 102, 241, 3);       // indigo
 
-      // Particle shimmer on the main wave
-      for (let i = 0; i < 15; i++) {
-        const px = ((time * 40 + i * 97) % canvas.width);
-        const py = h * 0.45 +
-          Math.sin(px * 0.004 + time * 0.6 + 1) * 80 +
-          Math.sin(px * 0.002 + time * 0.42 + 2) * 40;
-        const shimmer = Math.sin(time * 3 + i) * 0.5 + 0.5;
-        ctx.beginPath();
-        ctx.arc(px, py, 1.5 + shimmer, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(34,211,238,${0.3 + shimmer * 0.5})`;
-        ctx.fill();
-      }
-
       animationId = requestAnimationFrame(animate);
     };
 
