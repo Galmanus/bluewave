@@ -15,6 +15,8 @@ import logging
 import os
 from typing import Dict, List, Optional
 
+from token_optimizer import compress_old_tool_results
+
 logger = logging.getLogger("openclaw.context")
 
 # Configurable limits
@@ -102,11 +104,13 @@ class ContextWindowManager:
     def prepare_messages(self, messages: List[Dict]) -> List[Dict]:
         """Return messages optimized for the context window.
 
-        If estimated token count exceeds threshold:
-        1. Summarize older messages into a single context message
-        2. Keep only the most recent N messages verbatim
-        3. Prepend the summary as a user message
+        Applies two stages of optimization:
+        1. Compress old tool results (always — cheap and effective)
+        2. If still over threshold, summarize older messages
         """
+        # Stage 1: Always compress old tool results (saves 30-60% on tool-heavy sessions)
+        compress_old_tool_results(messages, keep_recent_turns=2)
+
         estimated = estimate_tokens(messages)
 
         if estimated < SUMMARIZE_THRESHOLD:

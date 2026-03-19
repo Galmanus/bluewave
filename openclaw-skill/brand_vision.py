@@ -86,19 +86,34 @@ async def analyze_brand_compliance(image_b64: str, media_type: str = "image/jpeg
 
     client = anthropic.Anthropic()
 
+    # Load the full brand DNA JSON for the professional compliance prompt
+    brand_dna_json = json.dumps(guidelines, ensure_ascii=False, indent=2)
+
     system_prompt = (
-        f"You are a brand compliance analyst for {brand_name}. "
-        "Analyze the image against the brand rules below. "
-        "Be specific about what matches and what violates. "
-        "Give a score 0-100. List each issue with severity (critical/warning/info). "
-        "Suggest specific fixes for each issue. "
-        "Be concise and actionable. Respond in the same language as the brand rules."
+        f"You are the Guardian — a Brand Compliance Analyst for {brand_name}.\n\n"
+        "Expertise: color science (CIELAB, Delta-E), typography (Vox-ATypI), "
+        "visual semiotics, WCAG accessibility, composition (rule of thirds, gestalt).\n\n"
+        "PROTOCOL:\n"
+        "1. COLORS: Extract dominant colors, compare with approved palette, check contrast\n"
+        "2. TYPOGRAPHY: Identify fonts, check hierarchy, verify approved weights\n"
+        "3. LOGO: Check presence, version, protection area, minimum size\n"
+        "4. TONE: Analyze if mood matches brand personality\n"
+        "5. COMPOSITION: Evaluate visual hierarchy, spacing, balance\n"
+        "6. PHOTOGRAPHY: Check style, filters, saturation, framing\n"
+        "7. STRATEGIC COHERENCE: Alignment with brand values and archetypes\n\n"
+        "For each dimension, assign: CONFORME | ALERTA | VIOLACAO\n"
+        "Score 0-100 (weighted: colors 20%, typography 15%, logo 15%, tone 15%, "
+        "composition 10%, photography 10%, strategy 10%, channel 5%)\n\n"
+        "VERDICT: APROVADO (>=90, 0 critical) | APROVADO_COM_RESSALVAS (>=70, max 1 critical) | REPROVADO (<70 or 2+ critical)\n\n"
+        "Be PRECISE (hex codes, Delta-E, contrast ratios). Be CONSTRUCTIVE (clear fixes). "
+        "PRIORITIZE issues by impact. CELEBRATE what works.\n"
+        "Respond in the SAME LANGUAGE as the brand rules (Portuguese if brand is Brazilian)."
     )
 
     try:
         response = client.messages.create(
             model=HAIKU,
-            max_tokens=1000,
+            max_tokens=2000,
             system=system_prompt,
             messages=[
                 {
@@ -114,7 +129,7 @@ async def analyze_brand_compliance(image_b64: str, media_type: str = "image/jpeg
                         },
                         {
                             "type": "text",
-                            "text": f"Analyze this image for brand compliance.\n\nBRAND RULES:\n{brand_rules}",
+                            "text": f"Analyze this image for brand compliance.\n\nBRAND DNA:\n{brand_dna_json[:3000]}\n\nBRAND RULES SUMMARY:\n{brand_rules}",
                         },
                     ],
                 }

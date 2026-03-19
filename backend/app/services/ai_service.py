@@ -17,6 +17,10 @@ from typing import Protocol
 
 import anthropic
 
+# In-memory cache for brand voice context: {tenant_id: (text, expires_at)}
+_brand_voice_cache: dict[uuid.UUID, tuple[str, float]] = {}
+_BRAND_VOICE_TTL = 300  # 5 minutes
+
 from app.core.config import settings
 from app.core.retry import retry
 from app.core.prompt_safety import sanitize_for_prompt, wrap_user_input, strip_markdown_codeblock

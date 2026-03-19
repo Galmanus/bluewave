@@ -36,6 +36,7 @@ from skills_handler import get_all_skill_tools, execute_skill, is_skill_tool
 from skills.tracing import trace_agent_cycle, trace_delegation, is_enabled as tracing_enabled
 from intent_router import classify_intent, get_tools_for_intent, get_prompt_for_intent
 from context_manager import ContextWindowManager
+from token_optimizer import compress_tool_result, compress_old_tool_results
 
 logger = logging.getLogger("openclaw.orchestrator")
 
@@ -224,17 +225,22 @@ class Orchestrator:
             rt.reset()
 
     async def _execute_orchestrator_tool(self, tool_name: str, tool_input: Dict) -> str:
-        """Execute a tool that the orchestrator calls directly (not delegation)."""
+        """Execute a tool that the orchestrator calls directly (not delegation).
+
+        Results are compressed via token_optimizer to minimize context growth.
+        """
         # Check if it's a skill tool first
         if is_skill_tool(tool_name):
             logger.info("Executing skill: %s", tool_name)
             result = await execute_skill(tool_name, tool_input)
-            return json.dumps(result, ensure_ascii=False, default=str)
+            raw = json.dumps(result, ensure_ascii=False, default=str)
+            return compress_tool_result(tool_name, raw)
 
         # Otherwise, it's a Bluewave API tool
         try:
             result = await self.handler.execute(tool_name, tool_input)
-            return json.dumps(result.to_dict(), ensure_ascii=False, default=str)
+            raw = json.dumps(result.to_dict(), ensure_ascii=False, default=str)
+            return compress_tool_result(tool_name, raw)
         except Exception as e:
             return json.dumps({"success": False, "data": None, "message": str(e)})
 

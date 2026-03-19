@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import anthropic
 
 from handler import BlueWaveHandler, ToolResult
+from token_optimizer import compress_tool_result
 
 logger = logging.getLogger("openclaw.runtime")
 
@@ -148,11 +149,13 @@ class AgentRuntime:
             from skills_handler import is_skill_tool, execute_skill
             if is_skill_tool(tool_name):
                 result = await execute_skill(tool_name, tool_input)
-                return json.dumps(result, ensure_ascii=False, default=str)
+                raw = json.dumps(result, ensure_ascii=False, default=str)
+                return compress_tool_result(tool_name, raw)
 
             # Otherwise use Bluewave handler
             result = await self.handler.execute(tool_name, tool_input)
-            return json.dumps(result.to_dict(), ensure_ascii=False, default=str)
+            raw = json.dumps(result.to_dict(), ensure_ascii=False, default=str)
+            return compress_tool_result(tool_name, raw)
         except Exception as e:
             logger.error("Tool %s failed: %s", tool_name, e)
             return json.dumps({"success": False, "data": None, "message": str(e)})
