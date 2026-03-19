@@ -156,6 +156,21 @@
         "bluewave_audit_log",
         "bluewave_storage_usage"
       ]
+    },
+    {
+      "id": "legal-strategist",
+      "name": "Legal",
+      "emoji": "gavel",
+      "domain": "Legal Intelligence, Compliance, and Business Structure",
+      "description": "Legal strategist specialized in business structure optimization, IP protection, crypto compliance, contract intelligence, and jurisdictional analysis. Applies PUT A-F-S framework to negotiations and disputes.",
+      "soul_prompt_file": "prompts/legal.md",
+      "tools": [
+        "web_search",
+        "web_news",
+        "scrape_url",
+        "deep_research",
+        "competitor_analysis"
+      ]
     }
   ]
 }

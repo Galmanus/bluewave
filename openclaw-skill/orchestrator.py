@@ -60,6 +60,7 @@ DELEGATE_TOOL = {
                     "analytics-strategist",
                     "creative-strategist",
                     "ops-admin",
+                    "legal-strategist",
                 ],
                 "description": "ID of the specialist agent to delegate to.",
             },
