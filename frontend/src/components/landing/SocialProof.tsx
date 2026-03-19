@@ -45,8 +45,8 @@ function CountUp({ target, suffix = "" }: { target: string; suffix?: string }) {
 }
 
 const metrics = [
-  { value: "58", suffix: " tools", label: "operational skills across 13 modules" },
-  { value: "6", suffix: " agents", label: "PhD-level specialists coordinated by Wave" },
+  { value: "76", suffix: " tools", label: "operational skills across 20 modules" },
+  { value: "9", suffix: " agents", label: "specialists coordinated by Wave + PUT" },
   { value: "99", suffix: "%", label: "cheaper billing vs Stripe (on Hedera)" },
   { value: "1", suffix: " session", label: "from zero to autonomous agent" },
 ];

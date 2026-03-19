@@ -35,7 +35,7 @@ export default function WaveAgentPage() {
       id: "welcome",
       role: "assistant",
       content:
-        "Fala! Sou o Wave. Posso pesquisar na web, analisar imagens, prospectar clientes, monitorar concorrentes, criar skills novas, e muito mais. O que precisa?",
+        "Fala! Sou o Wave — 76 tools, 9 especialistas, Psychometric Utility Theory. Pesquiso, analiso imagens, prospecto clientes, audito smart contracts, crio skills novas, e ganho dinheiro no piloto automatico. O que precisa?",
       timestamp: new Date(),
     },
   ]);
@@ -165,7 +165,7 @@ export default function WaveAgentPage() {
           <div>
             <h1 className="text-heading text-text-primary">Wave Agent</h1>
             <p className="text-caption text-text-tertiary">
-              58 tools &middot; 6 specialists &middot; self-evolving
+              76 tools &middot; 9 specialists &middot; PUT framework &middot; self-evolving
             </p>
           </div>
         </div>
