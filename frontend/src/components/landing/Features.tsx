@@ -34,11 +34,26 @@ function AssetGridMockup() {
         ))}
       </div>
       <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {Array.from({ length: 6 }).map((_, i) => (
+        {[
+          { color: "from-blue-400 to-cyan-300", label: "Hero Banner", status: "Approved", statusColor: "bg-emerald-100 text-emerald-700" },
+          { color: "from-purple-400 to-pink-300", label: "Social Post", status: "Pending", statusColor: "bg-amber-100 text-amber-700" },
+          { color: "from-orange-400 to-yellow-300", label: "Campaign", status: "Draft", statusColor: "bg-gray-100 text-gray-500" },
+          { color: "from-emerald-400 to-teal-300", label: "Product Shot", status: "Approved", statusColor: "bg-emerald-100 text-emerald-700" },
+          { color: "from-rose-400 to-red-300", label: "Story Cover", status: "Pending", statusColor: "bg-amber-100 text-amber-700" },
+          { color: "from-indigo-400 to-blue-300", label: "Brand Kit", status: "Approved", statusColor: "bg-emerald-100 text-emerald-700" },
+        ].map((item, i) => (
           <div
             key={i}
-            className="aspect-square rounded-lg bg-gray-100 animate-pulse"
-          />
+            className="aspect-square rounded-lg relative overflow-hidden group"
+          >
+            <div className={`absolute inset-0 bg-gradient-to-br ${item.color}`} />
+            <div className="absolute inset-0 flex flex-col items-start justify-end p-2.5">
+              <span className="text-[10px] font-medium text-white/90 drop-shadow">{item.label}</span>
+              <span className={`mt-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${item.statusColor}`}>
+                {item.status}
+              </span>
+            </div>
+          </div>
         ))}
       </div>
     </div>
@@ -48,7 +63,9 @@ function AssetGridMockup() {
 function AICaptionMockup() {
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden p-5">
-      <div className="aspect-video rounded-lg bg-gray-100 mb-4" />
+      <div className="aspect-video rounded-lg bg-gradient-to-br from-blue-400 to-cyan-300 mb-4 flex items-center justify-center">
+        <Sparkles className="w-10 h-10 text-white/60" />
+      </div>
       <div className="space-y-3">
         <div>
           <span className="text-xs font-semibold text-gray-400 uppercase">

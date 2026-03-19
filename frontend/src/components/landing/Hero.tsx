@@ -157,24 +157,24 @@ export default function Hero({ isAuthenticated }: HeroProps) {
               <div className="w-3 h-3 rounded-full bg-green-500/60" />
               <div className="ml-4 flex-1 h-6 rounded bg-white/5" />
             </div>
-            {/* Mock content */}
+            {/* Mock content with colorful assets */}
             <div className="p-4 sm:p-6 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
               {[
-                { status: "Approved", color: "bg-emerald-500/20 text-emerald-400" },
-                { status: "Pending", color: "bg-amber-500/20 text-amber-400" },
-                { status: "Draft", color: "bg-zinc-500/20 text-zinc-400" },
-                { status: "Approved", color: "bg-emerald-500/20 text-emerald-400" },
-                { status: "Pending", color: "bg-amber-500/20 text-amber-400" },
-                { status: "Approved", color: "bg-emerald-500/20 text-emerald-400" },
+                { status: "Approved", color: "bg-emerald-500/20 text-emerald-400", gradient: "from-blue-500/40 to-cyan-400/40", label: "Hero Banner" },
+                { status: "Pending", color: "bg-amber-500/20 text-amber-400", gradient: "from-purple-500/40 to-pink-400/40", label: "Social Post" },
+                { status: "Draft", color: "bg-zinc-500/20 text-zinc-400", gradient: "from-orange-500/40 to-yellow-400/40", label: "Campaign" },
+                { status: "Approved", color: "bg-emerald-500/20 text-emerald-400", gradient: "from-emerald-500/40 to-teal-400/40", label: "Product" },
+                { status: "Pending", color: "bg-amber-500/20 text-amber-400", gradient: "from-rose-500/40 to-red-400/40", label: "Story" },
+                { status: "Approved", color: "bg-emerald-500/20 text-emerald-400", gradient: "from-indigo-500/40 to-blue-400/40", label: "Brand Kit" },
               ].map((item, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.4, delay: 0.9 + i * 0.1 }}
-                  className="aspect-square rounded-lg bg-white/5 border border-white/10 flex flex-col items-start justify-end p-3"
+                  className={`aspect-square rounded-lg bg-gradient-to-br ${item.gradient} border border-white/10 flex flex-col items-start justify-end p-3`}
                 >
-                  <div className="w-full h-2 rounded bg-white/10 mb-2" />
+                  <span className="text-[10px] text-white/70 mb-1">{item.label}</span>
                   <span
                     className={`text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-full ${item.color}`}
                   >
