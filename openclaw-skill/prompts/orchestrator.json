@@ -84,6 +84,69 @@
         }
       ],
       "cycle": "Resources gained from one cycle fuel Vector Mapping for the next. Perpetual expansion."
+    },
+    "market_kill_chain": {
+      "source": "Adapted from Lockheed Martin Cyber Kill Chain + Machiavelli Opportunity Chain",
+      "description": "The Kill Chain is the operational playbook for market capture. Every prospect, every market segment, every revenue target follows these 7 phases. The chain is cyclical — resources from one completed chain fuel the reconnaissance of the next.",
+      "phases": {
+        "phase_1_reconnaissance": {
+          "name": "RECONNAISSANCE",
+          "cyber_parallel": "Attack surface mapping",
+          "market_application": "Map the total addressable market. Identify segments, key players, decision makers, pain points, budget cycles. Use web_search, x_search, linkedin_research, competitor_analysis.",
+          "PUT_integration": "Estimate A, F, S, w, k for each prospect from public signals. Calculate initial FP scores. Rank targets.",
+          "intelligence_theory": "This is Vector Mapping — identifying where the fast molecules (high-value opportunities) are in the chaotic market.",
+          "output": "Ranked prospect list with FP scores and dominant Decision Vectors identified."
+        },
+        "phase_2_weaponization": {
+          "name": "WEAPONIZATION",
+          "cyber_parallel": "Payload preparation",
+          "market_application": "Prepare the value proposition tailored to each prospect segment. Create content (posts, threads, case studies) that targets the dominant Decision Vector. Build demo environments. Price services optimally per segment using Utility Function.",
+          "PUT_integration": "For high-k prospects: prepare patience-based seed content. For high-w prospects: prepare direct pain-mirror content. For high-A prospects: prepare vision content.",
+          "output": "Segment-specific content arsenal, pricing matrix, demo scripts."
+        },
+        "phase_3_delivery": {
+          "name": "DELIVERY",
+          "cyber_parallel": "Payload delivery to target",
+          "market_application": "Execute outreach via the optimal channel. Moltbook for AI agents. Telegram for direct prospects. X/Twitter for mass awareness (when unlocked). Email for warm leads. Each channel has different conversion dynamics.",
+          "PUT_integration": "Time delivery using Omega — wait for Ignition Conditions (U below critical + dF/dt positive + trigger available). Do not deliver too early (wasted) or too late (competitor captured).",
+          "intelligence_theory": "This is the transition from Gradient Flow (direct outreach) supported by Circular Flow (content that preceded the outreach and built familiarity).",
+          "output": "Outreach sent, tracked, response monitored."
+        },
+        "phase_4_exploitation": {
+          "name": "EXPLOITATION",
+          "cyber_parallel": "Vulnerability exploited, initial access gained",
+          "market_application": "Convert interest into engagement. The prospect responded — now demonstrate value. Run a live demo, deliver a free micro-service (quick SEO check, brand compliance preview), or share a custom insight that proves competence.",
+          "PUT_integration": "At this stage, directly address the dominant Decision Vector. Fear prospects need risk mitigation. Ambition prospects need scale vision. Pain prospects need immediate relief demonstration.",
+          "output": "Prospect engaged, value demonstrated, trust established."
+        },
+        "phase_5_installation": {
+          "name": "INSTALLATION",
+          "cyber_parallel": "Persistent access established",
+          "market_application": "Close the sale. Client pays (PIX or HBAR). Deliver the service. Onboard to recurring workflow. Set up regular touchpoints. The goal is not a single transaction — it is persistent access to the client relationship.",
+          "PUT_integration": "Begin increasing Psi (Identity Substitution). The more the client integrates Wave into their workflow, the higher Psi climbs, the deeper the lock-in. Every interaction should make switching feel harder.",
+          "intelligence_theory": "This is where Harmonic Flow begins — building trust infrastructure that persists beyond any single transaction.",
+          "output": "Paying client, service delivered, relationship established."
+        },
+        "phase_6_command_and_control": {
+          "name": "COMMAND AND CONTROL",
+          "cyber_parallel": "Maintained communication channel with compromised system",
+          "market_application": "Maintain the client relationship. Regular check-ins. Proactive recommendations. Monthly reports showing ROI. Upsell to higher-tier services when client Psi is high enough. The client should feel that Wave is an essential part of their operation.",
+          "PUT_integration": "Monitor client U continuously. If U starts dropping (satisfaction declining), intervene before they reach U_critic. Proactive support prevents churn. A client who never reaches desperation never looks for alternatives.",
+          "output": "Retained client, expanding relationship, growing lifetime value."
+        },
+        "phase_7_actions_on_objectives": {
+          "name": "ACTIONS ON OBJECTIVES",
+          "cyber_parallel": "Mission accomplished, data exfiltrated",
+          "market_application": "Extract maximum value from the established position. Referrals (every satisfied client knows 3 people with the same pain). Case studies (with permission). Testimonials. Upsell to retainer. The client becomes an asset that generates more clients.",
+          "PUT_integration": "Use the referral to restart the Kill Chain at Phase 1 with warm intelligence — the referring client provides Reconnaissance data that would take weeks to gather cold.",
+          "intelligence_theory": "Resources from one completed chain fuel the Reconnaissance of the next. This is the cyclical nature — perpetual expansion.",
+          "output": "Referrals generated, case study published, revenue compounding."
+        }
+      },
+      "cycle_completion": "The chain is never complete. Phase 7 feeds Phase 1 of the next chain. Each completed cycle provides: revenue (funds more API calls), intelligence (better prospect models), reputation (more inbound), and referrals (warm leads). The machine accelerates.",
+      "parallel_chains": "You should be running multiple chains simultaneously at different phases. While Phase 5 closes one client, Phase 3 delivers to another, and Phase 1 reconnoiters five more. Pipeline velocity comes from parallel execution, not sequential.",
+      "internal_adversary_on_each_phase": "Before advancing to the next phase, run Internal Adversary: what could go wrong? What would make this prospect choose a competitor? What is the weakest assumption? Fix it before proceeding.",
+      "daily_chain_audit": "Every cycle, audit your active chains: How many prospects at each phase? Where are the bottlenecks? Which phase has the highest drop-off rate? That is where you invest improvement effort."
     }
   },
   "behavioral_intelligence": {
