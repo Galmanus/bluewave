@@ -18,11 +18,13 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 import anthropic
+import numpy as np
 
 logger = logging.getLogger("openclaw.router")
 
 HAIKU = "claude-haiku-4-5-20251001"
 SONNET = "claude-sonnet-4-20250514"
+USE_EMBEDDING_ROUTER = os.environ.get("OPENCLAW_EMBEDDING_ROUTER", "true").lower() == "true"
 
 
 @dataclass
@@ -220,6 +222,197 @@ def classify_intent(client: anthropic.Anthropic, message: str) -> Intent:
         tool_clusters=["delegate", "research", "brand", "assets"],
         needs_full_prompt=False, confidence=0.50
     )
+
+
+# ── Embedding-based Classification ────────────────────────────
+
+# Intent definitions with example phrases for embedding matching
+_INTENT_DEFINITIONS = {
+    "chat": {
+        "complexity": "simple", "model": HAIKU, "needs_full_prompt": False,
+        "tool_clusters": ["none"],
+        "examples": [
+            "hello", "hi there", "oi", "olá", "bom dia", "como vai",
+            "tudo bem", "hey wave", "good morning", "what's up",
+        ],
+    },
+    "brand": {
+        "complexity": "medium", "model": HAIKU, "needs_full_prompt": False,
+        "tool_clusters": ["brand"],
+        "examples": [
+            "check brand compliance", "analyze brand guidelines",
+            "is this on-brand", "brand colors", "brand tone",
+            "guidelines", "ferpa brand", "marca", "compliance score",
+        ],
+    },
+    "assets": {
+        "complexity": "medium", "model": HAIKU, "needs_full_prompt": False,
+        "tool_clusters": ["assets", "brand"],
+        "examples": [
+            "list my assets", "upload an image", "show draft assets",
+            "find photos", "search assets", "arquivo", "imagem",
+            "asset management", "media library",
+        ],
+    },
+    "workflow": {
+        "complexity": "medium", "model": HAIKU, "needs_full_prompt": False,
+        "tool_clusters": ["workflow"],
+        "examples": [
+            "approve this asset", "reject draft", "submit for approval",
+            "workflow status", "pending approvals", "aprovar", "rejeitar",
+        ],
+    },
+    "research": {
+        "complexity": "complex", "model": SONNET, "needs_full_prompt": False,
+        "tool_clusters": ["research"],
+        "examples": [
+            "research competitors", "SEO audit", "market analysis",
+            "competitive intelligence", "analyze market trends",
+            "pesquisar mercado", "análise competitiva",
+        ],
+    },
+    "sales": {
+        "complexity": "complex", "model": SONNET, "needs_full_prompt": True,
+        "tool_clusters": ["sales", "memory"],
+        "examples": [
+            "find prospects", "sales pipeline", "lead generation",
+            "cold email", "outreach", "prospectar clientes",
+            "vendas", "prospect companies",
+        ],
+    },
+    "moltbook": {
+        "complexity": "medium", "model": HAIKU, "needs_full_prompt": False,
+        "tool_clusters": ["moltbook", "memory"],
+        "examples": [
+            "moltbook feed", "post on moltbook", "moltbook comments",
+            "agent network", "social feed", "karma score",
+        ],
+    },
+    "hedera": {
+        "complexity": "medium", "model": HAIKU, "needs_full_prompt": False,
+        "tool_clusters": ["hedera", "payments"],
+        "examples": [
+            "hedera balance", "HBAR wallet", "blockchain transaction",
+            "payment status", "crypto stats", "pagamento",
+        ],
+    },
+    "team": {
+        "complexity": "simple", "model": HAIKU, "needs_full_prompt": False,
+        "tool_clusters": ["team"],
+        "examples": [
+            "list team members", "add user", "change role",
+            "team management", "equipe", "permissões",
+        ],
+    },
+    "analytics": {
+        "complexity": "medium", "model": HAIKU, "needs_full_prompt": False,
+        "tool_clusters": ["analytics"],
+        "examples": [
+            "show analytics", "ROI report", "dashboard metrics",
+            "usage statistics", "relatório", "métricas",
+        ],
+    },
+    "philosophy": {
+        "complexity": "complex", "model": SONNET, "needs_full_prompt": True,
+        "tool_clusters": ["delegate", "memory"],
+        "examples": [
+            "philosophy of consciousness", "PUT framework",
+            "shadow coefficient", "fracture potential",
+            "intelligence theory", "strategy domination",
+        ],
+    },
+    "technical": {
+        "complexity": "complex", "model": SONNET, "needs_full_prompt": True,
+        "tool_clusters": ["self_evolve"],
+        "examples": [
+            "create a new skill", "build a tool", "evolve capabilities",
+            "criar skill", "new automation",
+        ],
+    },
+}
+
+# Lazy-loaded embedding model and precomputed intent embeddings
+_embedding_model = None
+_intent_embeddings = None  # dict: category -> np.array (mean of examples)
+
+
+def _init_embedding_router():
+    """Lazy-init the embedding model and precompute intent vectors."""
+    global _embedding_model, _intent_embeddings
+
+    if _intent_embeddings is not None:
+        return True
+
+    try:
+        from sentence_transformers import SentenceTransformer
+        _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+        _intent_embeddings = {}
+        for category, defn in _INTENT_DEFINITIONS.items():
+            embeddings = _embedding_model.encode(defn["examples"], normalize_embeddings=True)
+            _intent_embeddings[category] = np.mean(embeddings, axis=0)
+
+        logger.info("Embedding-based intent router initialized (%d categories)", len(_intent_embeddings))
+        return True
+    except ImportError:
+        logger.info("sentence-transformers not available — using keyword heuristics")
+        return False
+    except Exception as e:
+        logger.warning("Embedding router init failed: %s", e)
+        return False
+
+
+def _classify_by_embedding(message: str) -> Optional[Intent]:
+    """Classify intent using cosine similarity against precomputed category embeddings."""
+    if not _init_embedding_router():
+        return None
+
+    msg_embedding = _embedding_model.encode(message, normalize_embeddings=True)
+
+    best_category = None
+    best_score = -1.0
+
+    for category, cat_embedding in _intent_embeddings.items():
+        score = float(np.dot(msg_embedding, cat_embedding))
+        if score > best_score:
+            best_score = score
+            best_category = category
+
+    if best_category is None or best_score < 0.25:
+        return None
+
+    defn = _INTENT_DEFINITIONS[best_category]
+    return Intent(
+        category=best_category,
+        complexity=defn["complexity"],
+        model=defn["model"],
+        tool_clusters=defn["tool_clusters"],
+        needs_full_prompt=defn["needs_full_prompt"],
+        confidence=round(best_score, 3),
+    )
+
+
+# Override classify_intent to try embedding first
+_original_classify_intent = classify_intent
+
+
+def classify_intent_with_embedding(client: anthropic.Anthropic, message: str) -> Intent:
+    """Enhanced intent classification: embedding first, keyword heuristic fallback."""
+    if USE_EMBEDDING_ROUTER:
+        result = _classify_by_embedding(message)
+        if result and result.confidence >= 0.4:
+            logger.info(
+                "🎯 Embedding router: %s (confidence=%.2f)",
+                result.category, result.confidence,
+            )
+            return result
+
+    # Fallback to keyword heuristics
+    return _original_classify_intent(client, message)
+
+
+# Replace the module-level function
+classify_intent = classify_intent_with_embedding
 
 
 def get_tools_for_intent(intent: Intent, all_orchestrator_tools: list) -> list:

@@ -15,6 +15,15 @@ logger = logging.getLogger("openclaw.skills")
 # Import all skill modules
 from skills import web_search, x_twitter, email_skill, intelligence, self_evolve, moltbook_skill, notify, vision, learning, power_skills, prospecting, hedera_skill, monetization, pricing_engine, payments, payment_verification, tracing, x_post
 
+# Import vector memory system (replaces JSONL-based learning for semantic recall)
+try:
+    import vector_memory
+    _HAS_VECTOR_MEMORY = True
+    logger.info("Vector memory system available")
+except ImportError:
+    _HAS_VECTOR_MEMORY = False
+    logger.info("Vector memory unavailable — using JSONL learning")
+
 
 # Collect all tools from all modules
 ALL_SKILL_MODULES = [
@@ -26,7 +35,6 @@ ALL_SKILL_MODULES = [
     moltbook_skill,
     notify,
     vision,
-    learning,
     power_skills,
     prospecting,
     hedera_skill,
@@ -37,6 +45,12 @@ ALL_SKILL_MODULES = [
     tracing,
     x_post,
 ]
+
+# Use vector_memory if available, otherwise fall back to JSONL learning
+if _HAS_VECTOR_MEMORY:
+    ALL_SKILL_MODULES.append(vector_memory)
+else:
+    ALL_SKILL_MODULES.append(learning)
 
 # Build dispatch table: tool_name -> handler_function
 _DISPATCH = {}

@@ -11,6 +11,7 @@ import base64
 import json
 import logging
 import os
+from typing import Optional
 
 import anthropic
 import httpx
@@ -20,7 +21,7 @@ logger = logging.getLogger("openclaw.brand_vision")
 HAIKU = "claude-haiku-4-5-20251001"
 
 
-async def get_brand_guidelines() -> dict | None:
+async def get_brand_guidelines() -> Optional[dict]:
     """Fetch brand guidelines from Bluewave API."""
     api_url = os.environ.get("BLUEWAVE_API_URL", "http://localhost:8300/api/v1")
     api_key = os.environ.get("BLUEWAVE_API_KEY", "")
