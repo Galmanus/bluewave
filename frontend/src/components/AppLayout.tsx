@@ -16,6 +16,10 @@ import {
   Webhook,
   TrendingUp,
   Palette,
+  Bot,
+  BarChart3,
+  Calendar,
+  Hexagon,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
@@ -29,8 +33,12 @@ import { cn } from "../lib/cn";
 const NAV_ITEMS = [
   { to: "/assets", label: "Assets", icon: Images, minRole: "viewer" },
   { to: "/assets/upload", label: "Upload", icon: Upload, minRole: "editor" },
+  { to: "/wave", label: "Wave Agent", icon: Bot, minRole: "editor" },
   { to: "/trends", label: "Trends", icon: TrendingUp, minRole: "editor" },
+  { to: "/calendar", label: "Calendar", icon: Calendar, minRole: "editor" },
   { to: "/brand", label: "Brand", icon: Palette, minRole: "admin" },
+  { to: "/analytics", label: "Analytics", icon: BarChart3, minRole: "admin" },
+  { to: "/hedera", label: "Hedera", icon: Hexagon, minRole: "admin" },
   { to: "/team", label: "Team", icon: Users, minRole: "admin" },
   { to: "/integrations", label: "Integrations", icon: Webhook, minRole: "admin" },
 ];

@@ -58,7 +58,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           transition={{ duration: 0.6, delay: 0.1 }}
         >
           <span className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-            AI Creative Operations Agent
+            Autonomous AI Agent &middot; 58 Tools &middot; Hedera-Powered
           </span>
         </motion.div>
 
@@ -81,8 +81,8 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mt-6 text-lg sm:text-xl text-[#9CA3AF] max-w-2xl mx-auto leading-relaxed"
         >
-          An AI agent that sees your media, writes captions in your brand voice,
-          checks compliance, routes approvals, and publishes — on autopilot.
+          An autonomous AI agent with 58 tools, 6 specialists, computer vision,
+          sales prospecting, and self-evolving skills — billing on Hedera at 99.3% less cost.
         </motion.p>
 
         {/* CTAs */}
