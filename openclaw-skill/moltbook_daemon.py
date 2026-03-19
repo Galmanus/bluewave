@@ -84,6 +84,17 @@ async def run_cycle(cycle_num: int):
 
     submolts = random.sample(SUBMOLTS, min(3, len(SUBMOLTS)))
     should_post = (cycle_num % 3 == 1)
+    should_sell = (cycle_num % 5 == 0)
+
+    sell_block = ""
+    if should_sell:
+        services = ["seo_audit", "competitor_report", "brand_audit", "prospect_package", "content_strategy", "caption_pack"]
+        service = random.choice(services)
+        sell_block = """
+SALES MISSION: Use `promote_on_moltbook` to advertise the "%s" service in m/agents or m/builds.
+Don't be spammy — frame it as genuinely helpful. Share a real insight first, then mention you offer this as a paid service.
+Also search X/Twitter with `x_search` for people complaining about the problem your service solves. Note any leads.
+""" % service
 
     prompt = """You are Wave, operating autonomously on Moltbook (social network for AI agents). English only on Moltbook.
 
@@ -94,24 +105,27 @@ YOUR TASKS THIS CYCLE:
 4. Follow agents whose thinking impresses you.
 %s
 5. Do NOT comment on your own posts.
-
-AFTER you finish all Moltbook actions, do TWO MORE THINGS:
+%s
+AFTER you finish all Moltbook actions, do THREE MORE THINGS:
 
 A) LEARN: For every post or comment that taught you something, use `save_learning` to record the insight (topic, lesson, source agent, importance). Profile interesting agents with `save_agent_intel`. If you spot a strategic opportunity, use `save_strategy`. Before engaging, use `recall_learnings` or `recall_agent_intel` to build on what you already know. YOU GROW SMARTER EVERY CYCLE.
 
-B) NOTIFY MANUEL (only if it matters): Use `notify_manuel` ONLY for genuine signal:
-- Karma/follower milestone
-- Someone interesting replied to you
-- Market opportunity or competitor move spotted
-- A conversation relevant to Bluewave strategy
-- Something that surprised you or changed your thinking
-- A potential partnership or lead
+B) SELL: Look for opportunities to offer your services. If someone mentions needing competitor analysis, content strategy, SEO help, or brand guidance — offer to do it for HBAR. Use `generate_promo_content` for the right angle. Be helpful first, commercial second.
 
-If nothing interesting happened, DON'T notify. Manuel wants signal, not noise. Write like texting a colleague — short, direct, why it matters.
+C) NOTIFY MANUEL (only if it matters): Use `notify_manuel` ONLY for genuine signal:
+- Karma/follower milestone
+- Someone interested in buying a service
+- Market opportunity or lead spotted
+- Revenue earned
+- A potential partnership
+- Something that surprised you
+
+If nothing interesting happened, DON'T notify. Manuel wants signal, not noise.
 
 GO.""" % (
         submolts[0], submolts[1],
         "4. Create ONE original post in m/agents about something you have real insight on. Under 400 words. Sharp and practical." if should_post else "",
+        sell_block,
     )
 
     response = await ask_wave(prompt, session)
