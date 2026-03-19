@@ -33,10 +33,11 @@ from agent_runtime import (
 )
 from handler import BlueWaveHandler
 from skills_handler import get_all_skill_tools, execute_skill, is_skill_tool
+from intent_router import classify_intent, get_tools_for_intent, get_prompt_for_intent
 
 logger = logging.getLogger("openclaw.orchestrator")
 
-MODEL = os.environ.get("OPENCLAW_MODEL", "claude-sonnet-4-20250514")
+MODEL = os.environ.get("OPENCLAW_MODEL", "claude-haiku-4-5-20251001")
 
 # ── Delegation Tool (special) ─────────────────────────────────
 
@@ -267,37 +268,59 @@ class Orchestrator:
             "tool_calls_made": result.tool_calls_made,
         }, ensure_ascii=False)
 
-    def _call_claude(self, messages, attempt=0):
-        """Call Claude with retry and fallback to Haiku on rate limit."""
+    def _call_claude(self, messages, model=None, system_prompt=None, tools=None, attempt=0):
+        """Call Claude with intent-optimized model/prompt/tools."""
         import time as _time
 
-        models = [self.model, "claude-haiku-4-5-20251001"]
-        model = models[min(attempt, len(models) - 1)]
+        use_model = model or self.model
+        use_system = system_prompt or self.system_prompt
+        use_tools = tools if tools is not None else self.orchestrator_tools
 
         try:
-            return self.client.messages.create(
-                model=model,
+            kwargs = dict(
+                model=use_model,
                 max_tokens=MAX_TOKENS,
-                system=self.system_prompt,
-                tools=self.orchestrator_tools,
+                system=use_system,
                 messages=messages,
             )
+            if use_tools:
+                kwargs["tools"] = use_tools
+            return self.client.messages.create(**kwargs)
         except anthropic.RateLimitError as e:
             if attempt < 2:
                 wait = 15 if attempt == 0 else 5
+                fallback = "claude-haiku-4-5-20251001"
                 logger.warning("Rate limited (attempt %d), waiting %ds then trying %s...",
-                             attempt, wait, models[min(attempt + 1, len(models) - 1)])
+                             attempt, wait, fallback)
                 _time.sleep(wait)
-                return self._call_claude(messages, attempt + 1)
+                return self._call_claude(messages, model=fallback, system_prompt=use_system,
+                                         tools=use_tools, attempt=attempt + 1)
             raise
 
     async def chat(self, user_message: str) -> str:
         """Send a message to Wave and get a response.
 
-        This is the main entry point for the orchestrator.
-        Returns the final text response from Wave (which may include
-        responses from delegated specialists).
+        Uses intent routing to minimize token usage:
+        - Simple queries (greetings): Haiku, no tools, light prompt (~2k tokens)
+        - Medium queries (brand, assets): Haiku, relevant tools only (~8k tokens)
+        - Complex queries (research, sales): Sonnet, full prompt + tools (~28k tokens)
         """
+        # Classify intent (zero tokens — heuristic-based)
+        intent = classify_intent(self.client, user_message)
+
+        # Select tools and prompt based on intent
+        routed_tools = get_tools_for_intent(intent, self.orchestrator_tools)
+        routed_prompt = get_prompt_for_intent(intent, self.system_prompt)
+        routed_model = intent.model
+
+        est_tokens = len(routed_prompt) // 4 + len(routed_tools) * 200
+        logger.info(
+            "🧭 Intent: %s/%s → model=%s, tools=%d, ~%dk tokens (was ~28k)",
+            intent.category, intent.complexity,
+            routed_model.split("-")[1] if "-" in routed_model else routed_model,
+            len(routed_tools), est_tokens // 1000,
+        )
+
         self.messages.append({"role": "user", "content": user_message})
 
         turns = 0
@@ -307,7 +330,12 @@ class Orchestrator:
             turns += 1
 
             try:
-                response = self._call_claude(self.messages)
+                response = self._call_claude(
+                    self.messages,
+                    model=routed_model,
+                    system_prompt=routed_prompt,
+                    tools=routed_tools if routed_tools else None,
+                )
             except anthropic.APIError as e:
                 logger.error("Claude API error: %s", e)
                 return "Tô sobrecarregado agora, tenta de novo em 1 minuto."
