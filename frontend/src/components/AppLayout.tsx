@@ -29,6 +29,7 @@ import { Badge } from "./ui/Badge";
 import { Tooltip } from "./ui/Tooltip";
 import { CommandPalette } from "./ui/CommandPalette";
 import { cn } from "../lib/cn";
+import WalletButton from "./WalletButton";
 
 const NAV_ITEMS = [
   { to: "/assets", label: "Assets", icon: Images, minRole: "viewer" },
@@ -223,6 +224,7 @@ export default function AppLayout() {
             </kbd>
           </button>
           <div className="flex items-center gap-3">
+            <WalletButton />
             <Badge variant={user.role as "admin" | "editor" | "viewer"} dot>
               {user.role}
             </Badge>

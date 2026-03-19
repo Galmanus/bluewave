@@ -8,12 +8,16 @@ import {
   TrendingDown,
   CheckCircle2,
   Hash,
+  Wallet,
 } from "lucide-react";
+import { useWallet } from "../hooks/useWallet";
 
 const WAVE_API = import.meta.env.VITE_WAVE_API_URL || "http://localhost:18790";
 const HASHSCAN_TESTNET = "https://hashscan.io/testnet";
 
 export default function HederaPage() {
+  const wallet = useWallet();
+
   const { data: _statsResult } = useQuery({
     queryKey: ["hedera", "stats"],
     queryFn: async () => {
@@ -86,6 +90,50 @@ export default function HederaPage() {
           <ExternalLink className="h-3.5 w-3.5" />
           HashScan Explorer
         </a>
+      </div>
+
+      {/* Wallet Connection */}
+      <div className="rounded-xl border border-border bg-surface p-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-500/10">
+              <Wallet className="h-4 w-4 text-orange-500" />
+            </div>
+            <div>
+              <h3 className="text-body-medium text-text-primary font-medium">
+                MetaMask Wallet
+              </h3>
+              <p className="text-caption text-text-tertiary">
+                {wallet.address
+                  ? "Connected to Hedera " + (wallet.chainId === 296 ? "Testnet" : "Mainnet")
+                  : "Connect to pay for AI actions with HBAR"}
+              </p>
+            </div>
+          </div>
+
+          {wallet.address ? (
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-body-medium font-mono text-text-primary">
+                  {wallet.shortAddress}
+                </p>
+                <p className="text-caption text-text-tertiary">
+                  {wallet.balance ? `${parseFloat(wallet.balance).toFixed(4)} HBAR` : "Loading..."}
+                </p>
+              </div>
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+            </div>
+          ) : (
+            <button
+              onClick={wallet.connect}
+              disabled={wallet.isConnecting}
+              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-caption font-medium text-white hover:from-orange-600 hover:to-amber-600 transition-all disabled:opacity-50"
+            >
+              <Wallet className="h-3.5 w-3.5" />
+              {wallet.isConnecting ? "Connecting..." : "Connect MetaMask"}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Services Grid */}
