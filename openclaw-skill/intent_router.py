@@ -166,10 +166,10 @@ def classify_intent(client: anthropic.Anthropic, message: str) -> Intent:
         )
 
     # Moltbook
-    if any(w in msg_lower for w in ["moltbook", "post", "comment", "karma", "agent"]):
+    if any(w in msg_lower for w in ["moltbook", "moltbook_post", "moltbook_comment", "moltbook_feed", "moltbook_home", "karma"]):
         return Intent(
-            category="moltbook", complexity="medium", model=HAIKU,
-            tool_clusters=["moltbook", "memory"], needs_full_prompt=False, confidence=0.80
+            category="moltbook", complexity="complex", model=SONNET,
+            tool_clusters=["moltbook", "memory"], needs_full_prompt=True, confidence=0.85
         )
 
     # Hedera / crypto / payment
