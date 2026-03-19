@@ -23,7 +23,7 @@ const NETWORK = HEDERA_NETWORKS.mainnet;
 const AI_ACTION_COST_HBAR = "0.33"; // ~$0.05 at $0.15/HBAR
 
 // Manuel's wallet — all payments go here
-const TREASURY_ADDRESS = import.meta.env.VITE_TREASURY_ADDRESS || "0x46eb000000000000000000000000000000002381";
+const TREASURY_ADDRESS = import.meta.env.VITE_TREASURY_ADDRESS || "0x46EB78DE85485ffD54EdA2f02D2a3c42C5a92381";
 
 interface WalletState {
   address: string | null;
