@@ -1,8 +1,123 @@
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Waves, ArrowRight, Bot, Search, Eye, Shield, BarChart3, Zap, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useWallet } from "../../hooks/useWallet";
+
+function WaveCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animationId: number;
+    let time = 0;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const drawWave = (
+      yBase: number,
+      amplitude: number,
+      frequency: number,
+      speed: number,
+      color: string,
+      lineWidth: number,
+      phase: number
+    ) => {
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+
+      for (let x = 0; x <= canvas.width; x += 2) {
+        const y =
+          yBase +
+          Math.sin(x * frequency + time * speed + phase) * amplitude +
+          Math.sin(x * frequency * 0.5 + time * speed * 0.7 + phase * 2) * amplitude * 0.5 +
+          Math.sin(x * frequency * 2 + time * speed * 1.3) * amplitude * 0.2;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    };
+
+    const drawGlowWave = (
+      yBase: number,
+      amplitude: number,
+      frequency: number,
+      speed: number,
+      r: number, g: number, b: number,
+      phase: number
+    ) => {
+      // Glow layer (thick, transparent)
+      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},0.03)`, 40, phase);
+      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},0.06)`, 16, phase);
+      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},0.12)`, 6, phase);
+      // Core line (thin, bright)
+      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},0.35)`, 2, phase);
+      drawWave(yBase, amplitude, frequency, speed, `rgba(${r},${g},${b},0.6)`, 1, phase);
+    };
+
+    const animate = () => {
+      time += 0.008;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const h = canvas.height;
+
+      // Layer 1 — deep background wave (subtle)
+      drawGlowWave(h * 0.3, 60, 0.003, 0.4, 59, 130, 246, 0);        // blue
+
+      // Layer 2 — main wave (hero)
+      drawGlowWave(h * 0.45, 80, 0.004, 0.6, 34, 211, 238, 1);       // cyan
+
+      // Layer 3 — bright crest
+      drawGlowWave(h * 0.55, 50, 0.005, 0.8, 34, 211, 238, 2.5);     // cyan bright
+
+      // Layer 4 — secondary wave
+      drawGlowWave(h * 0.65, 40, 0.006, 0.5, 6, 182, 212, 4);        // teal
+
+      // Layer 5 — low accent
+      drawGlowWave(h * 0.78, 30, 0.004, 0.3, 99, 102, 241, 3);       // indigo
+
+      // Particle shimmer on the main wave
+      for (let i = 0; i < 15; i++) {
+        const px = ((time * 40 + i * 97) % canvas.width);
+        const py = h * 0.45 +
+          Math.sin(px * 0.004 + time * 0.6 + 1) * 80 +
+          Math.sin(px * 0.002 + time * 0.42 + 2) * 40;
+        const shimmer = Math.sin(time * 3 + i) * 0.5 + 0.5;
+        ctx.beginPath();
+        ctx.arc(px, py, 1.5 + shimmer, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(34,211,238,${0.3 + shimmer * 0.5})`;
+        ctx.fill();
+      }
+
+      animationId = requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 w-full h-full"
+      style={{ opacity: 0.7 }}
+    />
+  );
+}
 
 const TERMINAL_LINES = [
   { type: "input", text: "find creative agencies with content ops problems" },
@@ -188,61 +303,24 @@ interface HeroProps {
 export default function Hero({ isAuthenticated }: HeroProps) {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#0a0a1a] to-[#111827]">
-      {/* Animated wave gradient */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Main wave — large cyan sweep */}
+      {/* Ocean wave canvas */}
+      <WaveCanvas />
+      {/* Glow overlay for depth */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
-          className="absolute w-[200%] h-[200%] rounded-full blur-[150px]"
+          className="absolute w-[800px] h-[800px] rounded-full blur-[160px] opacity-30"
           style={{
-            background: "radial-gradient(ellipse at center, rgba(34,211,238,0.18) 0%, transparent 60%)",
-            top: "10%",
-            left: "-50%",
-            animation: "waveFloat 8s ease-in-out infinite",
-          }}
-        />
-        {/* Secondary wave — blue accent */}
-        <div
-          className="absolute w-[180%] h-[180%] rounded-full blur-[130px]"
-          style={{
-            background: "radial-gradient(ellipse at center, rgba(59,130,246,0.15) 0%, transparent 55%)",
-            bottom: "-30%",
-            right: "-40%",
-            animation: "waveFloat 10s ease-in-out infinite reverse",
-          }}
-        />
-        {/* Bright cyan core — the wave crest */}
-        <div
-          className="absolute w-[600px] h-[600px] sm:w-[900px] sm:h-[900px] rounded-full blur-[120px]"
-          style={{
-            background: "radial-gradient(circle, rgba(34,211,238,0.25) 0%, rgba(59,130,246,0.1) 40%, transparent 70%)",
-            top: "15%",
-            left: "20%",
-            animation: "wavePulse 6s ease-in-out infinite",
-          }}
-        />
-        {/* Deep accent */}
-        <div
-          className="absolute w-[400px] h-[400px] rounded-full blur-[100px]"
-          style={{
-            background: "radial-gradient(circle, rgba(6,182,212,0.2) 0%, transparent 60%)",
-            bottom: "20%",
-            left: "60%",
-            animation: "waveFloat 12s ease-in-out infinite",
+            background: "radial-gradient(circle, rgba(34,211,238,0.4) 0%, transparent 60%)",
+            top: "20%",
+            left: "30%",
+            animation: "glowDrift 10s ease-in-out infinite",
           }}
         />
       </div>
-
-      {/* CSS animations */}
       <style>{`
-        @keyframes waveFloat {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          25% { transform: translate(5%, -3%) scale(1.05); }
-          50% { transform: translate(-3%, 5%) scale(0.95); }
-          75% { transform: translate(3%, 2%) scale(1.02); }
-        }
-        @keyframes wavePulse {
-          0%, 100% { opacity: 0.6; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.15); }
+        @keyframes glowDrift {
+          0%, 100% { transform: translate(0, 0); opacity: 0.25; }
+          50% { transform: translate(-5%, 3%); opacity: 0.4; }
         }
       `}</style>
 
