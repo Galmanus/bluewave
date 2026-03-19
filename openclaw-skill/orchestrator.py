@@ -26,6 +26,7 @@ from agent_runtime import (
     AgentResult,
     AgentRuntime,
     convert_tool_to_claude_schema,
+    enhance_prompt_with_cognition,
     load_all_tools,
     load_prompt,
     MAX_TOKENS,
@@ -175,7 +176,12 @@ class Orchestrator:
         # Compact skills directory (saves ~500 tokens vs. full listing)
         skills_info = "\n\n## Skills Diretas\nweb_search, web_news, save/recall_learnings, create_skill. Demais skills via especialistas.\n"
 
-        self.system_prompt = self.orchestrator_config.system_prompt + agent_directory + skills_info
+        # Enhance orchestrator prompt with cognitive protocol
+        enhanced_base = enhance_prompt_with_cognition(
+            "bluewave-orchestrator",
+            self.orchestrator_config.system_prompt,
+        )
+        self.system_prompt = enhanced_base + agent_directory + skills_info
 
         # Lazy-loaded PUT framework addon (~600 tokens, only for complex intents)
         put_path = Path(__file__).parent / "prompts" / "put_framework.md"
@@ -228,7 +234,12 @@ class Orchestrator:
             return json.dumps({"success": False, "data": None, "message": str(e)})
 
     async def _delegate_to_specialist(self, agent_id: str, task: str, user_message: str = "") -> str:
-        """Run a specialist agent and return its response. Traced via LangSmith."""
+        """Run a specialist agent with verification gate.
+
+        Verification: checks that the specialist's response is non-empty,
+        doesn't contain error indicators, and actually addresses the task.
+        If verification fails, adds diagnostic context for the orchestrator.
+        """
         import time as _time
 
         if agent_id not in self.specialists:
@@ -263,13 +274,58 @@ class Orchestrator:
             duration_ms,
         )
 
-        return json.dumps({
-            "success": result.error is None,
+        # ── VERIFICATION GATE ─────────────────────────────────
+        verification = self._verify_specialist_result(result, task, agent_id)
+
+        response_payload = {
+            "success": result.error is None and verification["passed"],
             "agent": agent_id,
             "agent_name": "%s %s" % (config.emoji, config.name),
             "response": result.text,
             "tool_calls_made": result.tool_calls_made,
-        }, ensure_ascii=False)
+        }
+
+        # Add diagnostic context if verification flagged issues
+        if not verification["passed"]:
+            response_payload["verification_warning"] = verification["reason"]
+            logger.warning(
+                "⚠️ Verification gate flagged %s result: %s",
+                agent_id, verification["reason"],
+            )
+
+        return json.dumps(response_payload, ensure_ascii=False)
+
+    def _verify_specialist_result(self, result: AgentResult, task: str, agent_id: str) -> Dict:
+        """Verification gate: check specialist output quality.
+
+        Returns {"passed": bool, "reason": str}
+        Zero API calls — pure heuristic checks.
+        """
+        # Check 1: Non-empty response
+        if not result.text or len(result.text.strip()) < 20:
+            return {"passed": False, "reason": "Specialist returned empty or too-short response. May need re-query."}
+
+        # Check 2: Error in response
+        if result.error:
+            return {"passed": False, "reason": "Specialist encountered error: %s" % result.error}
+
+        # Check 3: Hit max turns (may be incomplete)
+        if result.turns_used >= MAX_TURNS - 1:
+            return {"passed": False, "reason": "Specialist hit turn limit — response may be incomplete."}
+
+        # Check 4: Response is just an error message forwarded
+        lower = result.text.lower()
+        error_indicators = ["sobrecarregado", "tenta de novo", "error", "failed", "cannot connect"]
+        if any(ind in lower for ind in error_indicators) and result.tool_calls_made == 0:
+            return {"passed": False, "reason": "Specialist returned error without attempting tools."}
+
+        # Check 5: Zero tool calls for tool-requiring tasks
+        tool_keywords = {"list", "get", "check", "search", "analyze", "report", "approve", "reject"}
+        task_lower = task.lower()
+        if result.tool_calls_made == 0 and any(kw in task_lower for kw in tool_keywords):
+            return {"passed": False, "reason": "Specialist answered without calling tools — may be hallucinating data."}
+
+        return {"passed": True, "reason": ""}
 
     def _call_claude(self, messages, model=None, system_prompt=None, tools=None, attempt=0):
         """Call Claude with intent-optimized model/prompt/tools and context management."""

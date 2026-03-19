@@ -70,6 +70,35 @@ def build_brand_prompt(guidelines: dict) -> str:
     return "\n".join(parts)
 
 
+def compress_image_b64(image_b64: str, max_bytes: int = 4_500_000) -> tuple:
+    """Compress image if it exceeds max_bytes. Returns (b64, media_type)."""
+    raw = base64.b64decode(image_b64)
+    if len(raw) <= max_bytes:
+        return image_b64, "image/jpeg"
+
+    from PIL import Image
+    import io
+
+    img = Image.open(io.BytesIO(raw))
+    # Resize if very large
+    max_dim = 2048
+    if max(img.size) > max_dim:
+        img.thumbnail((max_dim, max_dim), Image.LANCZOS)
+
+    # Compress as JPEG
+    for quality in [85, 70, 50, 30]:
+        buf = io.BytesIO()
+        img.convert("RGB").save(buf, format="JPEG", quality=quality)
+        if buf.tell() <= max_bytes:
+            return base64.b64encode(buf.getvalue()).decode(), "image/jpeg"
+
+    # Last resort: aggressive resize
+    img.thumbnail((1024, 1024), Image.LANCZOS)
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, format="JPEG", quality=50)
+    return base64.b64encode(buf.getvalue()).decode(), "image/jpeg"
+
+
 async def analyze_brand_compliance(image_b64: str, media_type: str = "image/jpeg") -> str:
     """Analyze an image against brand guidelines using Claude Vision directly.
 
@@ -86,28 +115,49 @@ async def analyze_brand_compliance(image_b64: str, media_type: str = "image/jpeg
 
     client = anthropic.Anthropic()
 
+    # Compress image if too large for Claude Vision (5MB limit)
+    image_b64, media_type = compress_image_b64(image_b64)
+
     # Load the full brand DNA JSON for the professional compliance prompt
     brand_dna_json = json.dumps(guidelines, ensure_ascii=False, indent=2)
 
     system_prompt = (
-        f"You are the Guardian — a Brand Compliance Analyst for {brand_name}.\n\n"
-        "Expertise: color science (CIELAB, Delta-E), typography (Vox-ATypI), "
-        "visual semiotics, WCAG accessibility, composition (rule of thirds, gestalt).\n\n"
-        "PROTOCOL:\n"
-        "1. COLORS: Extract dominant colors, compare with approved palette, check contrast\n"
-        "2. TYPOGRAPHY: Identify fonts, check hierarchy, verify approved weights\n"
-        "3. LOGO: Check presence, version, protection area, minimum size\n"
-        "4. TONE: Analyze if mood matches brand personality\n"
-        "5. COMPOSITION: Evaluate visual hierarchy, spacing, balance\n"
-        "6. PHOTOGRAPHY: Check style, filters, saturation, framing\n"
-        "7. STRATEGIC COHERENCE: Alignment with brand values and archetypes\n\n"
-        "For each dimension, assign: CONFORME | ALERTA | VIOLACAO\n"
-        "Score 0-100 (weighted: colors 20%, typography 15%, logo 15%, tone 15%, "
-        "composition 10%, photography 10%, strategy 10%, channel 5%)\n\n"
-        "VERDICT: APROVADO (>=90, 0 critical) | APROVADO_COM_RESSALVAS (>=70, max 1 critical) | REPROVADO (<70 or 2+ critical)\n\n"
-        "Be PRECISE (hex codes, Delta-E, contrast ratios). Be CONSTRUCTIVE (clear fixes). "
-        "PRIORITIZE issues by impact. CELEBRATE what works.\n"
-        "Respond in the SAME LANGUAGE as the brand rules (Portuguese if brand is Brazilian)."
+        f"You are a senior brand compliance analyst for {brand_name}.\n\n"
+        "STRICT FORMAT RULES:\n"
+        "- NEVER use emojis. Not one. Zero.\n"
+        "- NEVER use markdown tables (they render badly). Use structured text instead.\n"
+        "- Use ## for section headers, **bold** for emphasis, - for lists.\n"
+        "- Write like a professional consultant delivering a report to a CMO. Clean, precise, authoritative.\n"
+        "- Use --- to separate sections.\n\n"
+        "ANALYSIS PROTOCOL (8 dimensions):\n\n"
+        "## 1. COLORS (weight: 20%)\n"
+        "Extract dominant colors as hex. Compare each with approved palette using Delta-E.\n"
+        "List each color found, its nearest approved match, and the Delta-E distance.\n"
+        "Flag any color not in palette. Check WCAG contrast ratios.\n\n"
+        "## 2. TYPOGRAPHY (weight: 15%)\n"
+        "Identify visible fonts. Compare with approved list. Check hierarchy and weights.\n\n"
+        "## 3. LOGO (weight: 15%)\n"
+        "Check presence, version, protection area, minimum size.\n\n"
+        "## 4. TONE (weight: 15%)\n"
+        "Does the mood match the brand personality? Analyze visual tone vs brand voice.\n\n"
+        "## 5. COMPOSITION (weight: 10%)\n"
+        "Rule of thirds, visual hierarchy, gestalt, spacing, balance.\n\n"
+        "## 6. PHOTOGRAPHY (weight: 10%)\n"
+        "Style, saturation, lighting, framing vs brand standards.\n\n"
+        "## 7. STRATEGIC COHERENCE (weight: 10%)\n"
+        "Alignment with brand values, archetypes, personas, positioning.\n\n"
+        "## 8. CHANNEL ADEQUACY (weight: 5%)\n"
+        "Format and style appropriate for the intended channel.\n\n"
+        "SCORING: Each dimension 0-100. Weighted total.\n"
+        "VERDICT: APPROVED (>=90, 0 critical) | APPROVED WITH NOTES (>=70) | REJECTED (<70)\n\n"
+        "OUTPUT FORMAT:\n"
+        "Start with: COMPLIANCE REPORT — [brand name]\n"
+        "Then: Overall Score: XX/100 — VERDICT\n"
+        "Then each dimension as a section with score, status, findings, and fixes.\n"
+        "End with: PRIORITY CORRECTIONS (numbered list, most urgent first)\n"
+        "Then: WHAT WORKS (brief list of positives)\n\n"
+        "Be PRECISE (hex codes, Delta-E values, contrast ratios). Be CONSTRUCTIVE.\n"
+        "Respond in the SAME LANGUAGE as the brand rules."
     )
 
     try:

@@ -286,6 +286,68 @@ async def list_sessions():
     }
 
 
+# ── Brand Compliance Check (direct Vision, no orchestrator) ──
+
+@app.post("/compliance-check")
+async def compliance_check(request: Request):
+    """Direct brand compliance analysis via Claude Vision.
+
+    Bypasses orchestrator. Sends image + brand DNA to Haiku Vision.
+    Cost: ~$0.005 per image.
+    """
+    import time as _time
+    from brand_vision import analyze_brand_compliance
+
+    body = await request.json()
+    image_b64 = body.get("image_base64", "")
+    media_type = body.get("media_type", "image/jpeg")
+
+    if not image_b64 or len(image_b64) < 100:
+        return {"response": "Invalid image data.", "elapsed_seconds": 0}
+
+    t0 = _time.time()
+    result = await analyze_brand_compliance(image_b64, media_type)
+    elapsed = _time.time() - t0
+
+    logger.info("Compliance check completed in %.1fs", elapsed)
+    return {"response": result, "elapsed_seconds": elapsed}
+
+
+# ── Brand Content Generation ─────────────────────────────────
+
+@app.post("/generate-content")
+async def generate_content_endpoint(request: Request):
+    """Generate on-brand content using Brand DNA.
+
+    Expects: {
+        "content_type": "caption|stories|headline|cta|description|hashtags",
+        "context": "what the content is about",
+        "channel": "instagram_feed|instagram_stories|facebook|linkedin|tiktok|email|website",
+        "language": "pt-BR",
+        "variations": 1-5
+    }
+    """
+    import time as _time
+    from brand_content import generate_content
+
+    body = await request.json()
+    t0 = _time.time()
+
+    result = await generate_content(
+        content_type=body.get("content_type", "caption"),
+        context=body.get("context", ""),
+        channel=body.get("channel", "instagram_feed"),
+        language=body.get("language", "pt-BR"),
+        variations=min(body.get("variations", 1), 5),
+    )
+
+    elapsed = _time.time() - t0
+    logger.info("Content generated in %.1fs (type=%s, channel=%s)",
+                elapsed, body.get("content_type"), body.get("channel"))
+
+    return {"content": result, "elapsed_seconds": elapsed}
+
+
 # ── Main ─────────────────────────────────────────────────────
 
 if __name__ == "__main__":

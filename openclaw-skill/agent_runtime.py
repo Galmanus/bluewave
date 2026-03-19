@@ -35,6 +35,23 @@ MAX_TOKENS = int(os.environ.get("OPENCLAW_MAX_TOKENS", "4096"))
 MAX_TURNS = int(os.environ.get("OPENCLAW_MAX_TURNS", "25"))
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 
+# Cognitive protocols loaded once at module level
+_COGNITIVE_BASE = ""
+_COGNITIVE_PROTOCOLS: Dict[str, str] = {}
+
+def _load_cognitive_protocols():
+    global _COGNITIVE_BASE, _COGNITIVE_PROTOCOLS
+    base_path = PROMPTS_DIR / "cognitive_protocol.md"
+    if base_path.exists():
+        _COGNITIVE_BASE = base_path.read_text(encoding="utf-8")
+
+    for name in ("orchestrator", "guardian", "strategist"):
+        path = PROMPTS_DIR / f"cognitive_{name}.md"
+        if path.exists():
+            _COGNITIVE_PROTOCOLS[name] = path.read_text(encoding="utf-8")
+
+_load_cognitive_protocols()
+
 
 # ── Data types ────────────────────────────────────────────────
 
@@ -101,6 +118,16 @@ class AgentRuntime:
         self.model = model or MODEL
         self.messages = []  # type: List[Dict]
 
+        # Enhance system prompt with cognitive protocols
+        self.config = AgentConfig(
+            agent_id=config.agent_id,
+            name=config.name,
+            emoji=config.emoji,
+            system_prompt=enhance_prompt_with_cognition(config.agent_id, config.system_prompt),
+            tool_names=config.tool_names,
+            description=config.description,
+        )
+
         # Filter tools to only those this agent can use
         tool_names_set = set(config.tool_names)
         self.claude_tools = [
@@ -110,7 +137,7 @@ class AgentRuntime:
         ]
 
         logger.info(
-            "%s %s initialized with %d tools, model=%s",
+            "%s %s initialized with %d tools, model=%s, cognitive=True",
             config.emoji, config.name, len(self.claude_tools), self.model,
         )
 
@@ -141,7 +168,11 @@ class AgentRuntime:
             raise
 
     async def execute_tool(self, tool_name: str, tool_input: Dict) -> str:
-        """Execute a tool via BlueWaveHandler or Skills system. Traced via LangSmith."""
+        """Execute a tool with error recovery context.
+
+        If a tool fails, the returned error includes reasoning guidance
+        so Claude can adapt its strategy instead of blindly retrying.
+        """
         import time as _t
         _t0 = _t.time()
         try:
@@ -155,12 +186,30 @@ class AgentRuntime:
             # Otherwise use Bluewave handler
             result = await self.handler.execute(tool_name, tool_input)
             raw = json.dumps(result.to_dict(), ensure_ascii=False, default=str)
-            return compress_tool_result(tool_name, raw)
+            compressed = compress_tool_result(tool_name, raw)
+
+            # Check for API-level errors in the result
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, dict) and not parsed.get("success", True):
+                    error_msg = parsed.get("message", "")
+                    compressed = json.dumps({
+                        "success": False,
+                        "message": error_msg,
+                        "recovery_hint": _get_recovery_hint(tool_name, error_msg),
+                    }, ensure_ascii=False)
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+            return compressed
         except Exception as e:
             logger.error("Tool %s failed: %s", tool_name, e)
-            return json.dumps({"success": False, "data": None, "message": str(e)})
+            return json.dumps({
+                "success": False,
+                "message": str(e),
+                "recovery_hint": _get_recovery_hint(tool_name, str(e)),
+            }, ensure_ascii=False)
         finally:
-            # Trace to LangSmith
             try:
                 from skills.tracing import trace_tool_call
                 _duration = (_t.time() - _t0) * 1000
@@ -397,6 +446,65 @@ def _json_to_prompt(data: dict, depth: int = 0) -> str:
                 lines.append("\n%s**%s:**" % (indent, header))
             lines.append(_json_to_prompt(value, depth + 1))
     return "\n".join(lines)
+
+
+def enhance_prompt_with_cognition(agent_id: str, base_prompt: str) -> str:
+    """Inject cognitive protocols into an agent's system prompt.
+
+    Adds:
+    1. Base cognitive protocol (think-before-act) — all agents
+    2. Domain-specific cognitive protocol — matching agents only
+
+    This is where reasoning quality is structurally enforced.
+    Token cost: ~200-400 tokens (small relative to response quality gain).
+    """
+    parts = [base_prompt]
+
+    # Base protocol for all agents
+    if _COGNITIVE_BASE:
+        parts.append("\n\n" + _COGNITIVE_BASE)
+
+    # Domain-specific protocol
+    agent_type_map = {
+        "bluewave-orchestrator": "orchestrator",
+        "brand-guardian": "guardian",
+        "analytics-strategist": "strategist",
+        "creative-strategist": "strategist",  # reuse strategist's analytical protocol
+    }
+    specific_key = agent_type_map.get(agent_id, "")
+    if specific_key and specific_key in _COGNITIVE_PROTOCOLS:
+        parts.append("\n\n" + _COGNITIVE_PROTOCOLS[specific_key])
+
+    return "\n".join(parts)
+
+
+def _get_recovery_hint(tool_name: str, error_msg: str) -> str:
+    """Generate a recovery hint for the agent when a tool fails.
+
+    This guides Claude's next reasoning step instead of letting it
+    blindly retry or give up.
+    """
+    error_lower = error_msg.lower()
+
+    if "not found" in error_lower or "404" in error_lower:
+        return "Resource not found. Verify the ID is correct, or search for the resource by name instead."
+
+    if "connect" in error_lower or "timeout" in error_lower:
+        return "Connection failed. The service may be temporarily unavailable. Try answering from context or inform the user."
+
+    if "permission" in error_lower or "403" in error_lower or "401" in error_lower:
+        return "Permission denied. This action may require a different role. Inform the user about the access requirement."
+
+    if "limit" in error_lower or "402" in error_lower:
+        return "Plan limit reached. Inform the user they need to upgrade their plan."
+
+    if "500" in error_lower or "internal" in error_lower:
+        return "Server error. Do NOT retry the same call. Try an alternative approach or inform the user."
+
+    if "empty" in error_lower or "no data" in error_lower:
+        return "No data available. The tenant may not have this data yet. Guide the user on how to create it."
+
+    return "Tool failed. Analyze the error, consider an alternative tool or approach, and inform the user if the issue persists."
 
 
 def load_prompt(filename: str) -> str:

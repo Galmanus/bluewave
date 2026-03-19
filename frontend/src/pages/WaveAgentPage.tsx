@@ -14,8 +14,11 @@ import {
   Wallet,
   ExternalLink,
   CheckCircle2,
+  Upload,
 } from "lucide-react";
 import { useWallet } from "../hooks/useWallet";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const WAVE_API = import.meta.env.VITE_WAVE_API_URL || `http://${window.location.hostname}:8300/api/v1/wave`;
 
@@ -40,7 +43,7 @@ export default function WaveAgentPage() {
     },
   ]);
   const [input, setInput] = useState("");
-  const [sessionId] = useState(() => `web_${crypto.randomUUID()}`);
+  const [sessionId] = useState(() => `web_${Date.now()}_${Math.random().toString(36).slice(2)}`);
   const [totalSpent, setTotalSpent] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -292,7 +295,13 @@ export default function WaveAgentPage() {
                   : "bg-surface-raised border border-border"
               }`}
             >
-              <p className="whitespace-pre-wrap">{msg.content}</p>
+              {msg.role === "assistant" ? (
+                <div className="prose prose-sm prose-invert max-w-none [&_table]:text-xs [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1 [&_th]:bg-surface [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm [&_h2]:mt-4 [&_h3]:mt-3 [&_p]:text-sm [&_li]:text-sm [&_hr]:border-border [&_hr]:my-3 [&_strong]:text-text-primary [&_code]:text-accent [&_code]:bg-surface [&_code]:px-1 [&_code]:rounded">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                </div>
+              ) : (
+                <p className="whitespace-pre-wrap">{msg.content}</p>
+              )}
               <p
                 className={`mt-1 text-[10px] ${
                   msg.role === "user"
@@ -363,12 +372,76 @@ export default function WaveAgentPage() {
       {/* Input */}
       <div className="border-t border-border pt-3">
         <div className="flex gap-2">
+          <button
+            onClick={() => {
+              const inp = document.createElement("input");
+              inp.type = "file";
+              inp.accept = "image/*";
+              inp.onchange = async (e: any) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                // Compress image client-side before sending (max 2MB, 1600px)
+                const compressImage = (file: File): Promise<string> => {
+                  return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                      const canvas = document.createElement("canvas");
+                      const MAX = 1600;
+                      let w = img.width, h = img.height;
+                      if (w > MAX || h > MAX) {
+                        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                        else { w = Math.round(w * MAX / h); h = MAX; }
+                      }
+                      canvas.width = w;
+                      canvas.height = h;
+                      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+                      resolve(canvas.toDataURL("image/jpeg", 0.8).split(",")[1]);
+                    };
+                    img.src = URL.createObjectURL(file);
+                  });
+                };
+
+                const base64Data = await compressImage(file);
+                const mediaType = "image/jpeg";
+
+                // Show upload message
+                const msgId = `analysis_${Date.now()}`;
+                setMessages((prev) => [
+                  ...prev,
+                  { id: `user_img_${Date.now()}`, role: "user", content: `[${file.name}]`, timestamp: new Date() },
+                  { id: msgId, role: "assistant", content: "Analyzing against Brand DNA...", timestamp: new Date() },
+                ]);
+
+                try {
+                  const res = await fetch(`${WAVE_API}/compliance-check`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ image_base64: base64Data, media_type: mediaType }),
+                  });
+                  const data = await res.json();
+                  setMessages((prev) =>
+                    prev.map((m) => m.id === msgId ? { ...m, content: data.response || "No result." } : m)
+                  );
+                } catch (err) {
+                  setMessages((prev) =>
+                    prev.map((m) => m.id === msgId ? { ...m, content: "Analysis failed. Guardian may be offline." } : m)
+                  );
+                }
+              };
+              inp.click();
+            }}
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border bg-surface text-text-secondary hover:bg-accent-subtle hover:text-accent hover:border-accent/30 transition-colors"
+            title="Upload image for compliance check"
+          >
+            <Upload className="h-5 w-5" />
+          </button>
           <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Fale com o Wave..."
+            placeholder="Upload an image or ask about your Brand DNA..."
             rows={1}
             className="flex-1 resize-none rounded-xl border border-border bg-surface px-4 py-3 text-body text-text-primary placeholder:text-text-tertiary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30 transition-colors"
           />
