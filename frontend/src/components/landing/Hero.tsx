@@ -1,8 +1,7 @@
 import { motion } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
-import { Waves, ArrowRight, Bot, Search, Eye, Shield, BarChart3, Zap, Wallet } from "lucide-react";
+import { Waves, ArrowRight, Bot, Search, Eye, Shield, BarChart3, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useWallet } from "../../hooks/useWallet";
 
 const TERMINAL_LINES = [
   { type: "input", text: "find creative agencies with content ops problems" },
@@ -23,11 +22,6 @@ const TERMINAL_LINES = [
   { type: "status", text: "Creating skill...", icon: "zap" },
   { type: "output", text: "hacker_news_monitor.py — 4 new tools created" },
   { type: "result", text: "9KB Python, validated, registered. Live now." },
-  { type: "divider", text: "" },
-  { type: "input", text: "Hedera billing status?" },
-  { type: "status", text: "Querying Mirror Node...", icon: "chain" },
-  { type: "result", text: "1,247 actions — $62.35 revenue" },
-  { type: "result", text: "Hedera: $0.12 vs Stripe: $18.14 (99.3% saved)" },
 ];
 
 function HeroTerminal() {
@@ -118,7 +112,6 @@ function HeroTerminal() {
               { label: "9 agents", color: "text-blue-400" },
               { label: "89 tools", color: "text-cyan-400" },
               { label: "Psychometric Utility Theory", color: "text-amber-400" },
-              { label: "Hedera", color: "text-purple-400" },
               { label: "soul-driven", color: "text-green-400" },
             ].map((tag) => (
               <span key={tag.label} className={`text-[9px] sm:text-[10px] font-medium ${tag.color}`}>
@@ -140,47 +133,6 @@ function HeroTerminal() {
   );
 }
 
-function LandingWalletButton() {
-  const wallet = useWallet();
-
-  if (!wallet.hasMetaMask) {
-    return (
-      <a
-        href="https://metamask.io/download/"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-white/10 text-xs font-medium text-white/50 hover:text-white hover:border-white/20 transition-all"
-      >
-        <Wallet className="h-3.5 w-3.5" />
-        MetaMask
-      </a>
-    );
-  }
-
-  if (!wallet.address) {
-    return (
-      <button
-        onClick={wallet.connect}
-        disabled={wallet.isConnecting}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-green-500/30 bg-green-500/10 text-xs font-medium text-green-300 hover:bg-green-500/20 hover:border-green-500/50 transition-all disabled:opacity-50"
-      >
-        <Wallet className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">{wallet.isConnecting ? "Connecting..." : "Connect Wallet"}</span>
-        <span className="sm:hidden">{wallet.isConnecting ? "..." : "Wallet"}</span>
-      </button>
-    );
-  }
-
-  return (
-    <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-green-500/20 bg-green-500/5">
-      <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-      <span className="text-xs font-mono text-green-300">{wallet.shortAddress}</span>
-      <span className="hidden sm:inline text-[10px] text-white/30">
-        {wallet.balance ? `${parseFloat(wallet.balance).toFixed(1)} HBAR` : ""}
-      </span>
-    </div>
-  );
-}
 
 interface HeroProps {
   isAuthenticated?: boolean;
@@ -238,7 +190,6 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           <span className="text-base sm:text-lg font-extrabold tracking-tight bg-gradient-to-r from-cyan-300 via-blue-400 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(34,211,238,0.3)]" style={{backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite'}}>Bluewave</span>
         </Link>
         <div className="flex items-center gap-2 sm:gap-3">
-          <LandingWalletButton />
           {isAuthenticated ? (
             <Link
               to="/assets"
@@ -343,10 +294,10 @@ export default function Hero({ isAuthenticated }: HeroProps) {
         >
           <div className="flex items-center justify-center gap-3 sm:gap-8 flex-wrap">
             {[
-              { text: "Hedera Hackathon 2026", color: "text-purple-400/70" },
               { text: "89 operational tools", color: "text-cyan-400/70" },
               { text: "9 specialist agents", color: "text-blue-400/70" },
-              { text: "On-chain audit trail", color: "text-green-400/70" },
+              { text: "8-dimension brand analysis", color: "text-amber-400/70" },
+              { text: "Soul-driven autonomy", color: "text-green-400/70" },
             ].map((item) => (
               <span
                 key={item.text}

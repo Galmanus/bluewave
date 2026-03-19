@@ -19,7 +19,6 @@ import {
   Bot,
   BarChart3,
   Calendar,
-  Hexagon,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
@@ -29,7 +28,6 @@ import { Badge } from "./ui/Badge";
 import { Tooltip } from "./ui/Tooltip";
 import { CommandPalette } from "./ui/CommandPalette";
 import { cn } from "../lib/cn";
-import WalletButton from "./WalletButton";
 
 const NAV_ITEMS = [
   { to: "/assets", label: "Assets", icon: Images, minRole: "viewer" },
@@ -39,7 +37,6 @@ const NAV_ITEMS = [
   { to: "/calendar", label: "Calendar", icon: Calendar, minRole: "editor" },
   { to: "/brand", label: "Brand", icon: Palette, minRole: "admin" },
   { to: "/analytics", label: "Analytics", icon: BarChart3, minRole: "admin" },
-  { to: "/hedera", label: "Hedera", icon: Hexagon, minRole: "admin" },
   { to: "/team", label: "Team", icon: Users, minRole: "admin" },
   { to: "/integrations", label: "Integrations", icon: Webhook, minRole: "admin" },
 ];
@@ -224,7 +221,6 @@ export default function AppLayout() {
             </kbd>
           </button>
           <div className="flex items-center gap-3">
-            <WalletButton />
             <Badge variant={user.role as "admin" | "editor" | "viewer"} dot>
               {user.role}
             </Badge>
