@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { Waves, ArrowRight, Bot, Search, Eye, Shield, BarChart3, Zap } from "lucide-react";
+import { Waves, ArrowRight, Bot, Search, Eye, Shield, BarChart3, Zap, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useWallet } from "../../hooks/useWallet";
 
 const TERMINAL_LINES = [
   { type: "input", text: "find creative agencies with content ops problems" },
@@ -138,6 +139,48 @@ function HeroTerminal() {
   );
 }
 
+function LandingWalletButton() {
+  const wallet = useWallet();
+
+  if (!wallet.hasMetaMask) {
+    return (
+      <a
+        href="https://metamask.io/download/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-white/10 text-xs font-medium text-white/50 hover:text-white hover:border-white/20 transition-all"
+      >
+        <Wallet className="h-3.5 w-3.5" />
+        MetaMask
+      </a>
+    );
+  }
+
+  if (!wallet.address) {
+    return (
+      <button
+        onClick={wallet.connect}
+        disabled={wallet.isConnecting}
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs font-medium text-purple-300 hover:bg-purple-500/20 hover:border-purple-500/50 transition-all disabled:opacity-50"
+      >
+        <Wallet className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">{wallet.isConnecting ? "Connecting..." : "Connect Wallet"}</span>
+        <span className="sm:hidden">{wallet.isConnecting ? "..." : "Wallet"}</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-green-500/20 bg-green-500/5">
+      <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+      <span className="text-xs font-mono text-green-300">{wallet.shortAddress}</span>
+      <span className="hidden sm:inline text-[10px] text-white/30">
+        {wallet.balance ? `${parseFloat(wallet.balance).toFixed(1)} HBAR` : ""}
+      </span>
+    </div>
+  );
+}
+
 interface HeroProps {
   isAuthenticated?: boolean;
 }
@@ -159,6 +202,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           <span className="text-base sm:text-lg font-bold text-white tracking-tight">Bluewave</span>
         </Link>
         <div className="flex items-center gap-2 sm:gap-3">
+          <LandingWalletButton />
           {isAuthenticated ? (
             <Link
               to="/assets"
@@ -171,7 +215,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
             <>
               <Link
                 to="/login"
-                className="px-3 py-2 text-xs sm:text-sm font-medium text-white/70 hover:text-white transition-colors"
+                className="hidden sm:inline-flex px-3 py-2 text-xs sm:text-sm font-medium text-white/70 hover:text-white transition-colors"
               >
                 Sign in
               </Link>
