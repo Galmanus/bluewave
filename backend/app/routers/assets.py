@@ -84,29 +84,19 @@ async def _run_ai_generation(
             logger.warning("AI rate limit exceeded for tenant %s, skipping generation", tenant_id)
             return
 
-    async with trace_llm_call(
-        "bluewave.asset_pipeline",
-        run_type="chain",
-        inputs={"filename": filename, "file_type": file_type},
-        metadata={
-            "tenant_id": str(tenant_id),
-            "asset_id": str(asset_id),
-            "user_id": str(user_id),
-            "pipeline_steps": ["caption", "hashtags"],
-        },
-        tags=["pipeline", "asset-upload"],
-    ) as pipeline_run:
+    # Generate caption + hashtags (each has its own internal tracing)
+    try:
         caption = await ai_service.generate_caption(
             filename, file_type, file_path=file_path, tenant_id=tenant_id
         )
         hashtags = await ai_service.generate_hashtags(
             filename, file_type, file_path=file_path
         )
-
-        pipeline_run.log_output({
-            "caption": caption,
-            "hashtags": hashtags,
-        })
+        logger.info("AI pipeline complete: caption=%d chars, hashtags=%d", len(caption), len(hashtags))
+    except Exception:
+        logger.exception("AI pipeline failed for asset %s", asset_id)
+        caption = f"Creative asset: {filename}"
+        hashtags = ["#creative", "#content", "#branding"]
 
     # Generate thumbnail for image assets
     thumb_path = await generate_thumbnail(
@@ -341,7 +331,9 @@ async def upload_asset(
     tenant_dir = os.path.join(UPLOAD_ROOT, str(current_user.tenant_id))
     os.makedirs(tenant_dir, exist_ok=True)
 
-    safe_filename = f"{uuid.uuid4()}_{file.filename}"
+    # Sanitize filename: strip path separators to prevent traversal
+    clean_name = file.filename.replace("/", "_").replace("\\", "_").replace("..", "_")
+    safe_filename = f"{uuid.uuid4()}_{clean_name}"
     file_path = os.path.join(tenant_dir, safe_filename)
     with open(file_path, "wb") as f:
         f.write(content)

@@ -21,9 +21,8 @@ export default function AssetThumbnail({ assetId, fileType, className = "" }: Pr
     );
   }
 
-  // Use the thumbnail endpoint
-  const token = localStorage.getItem("access_token") || "";
-  const src = `${import.meta.env.VITE_API_URL || "http://localhost:8300"}/api/v1/assets/${assetId}/thumbnail?token=${token}`;
+  // Use the thumbnail endpoint via proxy (auth via cookie/interceptor)
+  const src = `/api/v1/assets/${assetId}/thumbnail`;
 
   return (
     <img

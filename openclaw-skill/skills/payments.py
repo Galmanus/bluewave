@@ -28,7 +28,7 @@ PAYMENT_INFO = {
     },
     "pix": {
         "method": "PIX (Brazil instant transfer)",
-        "key": os.environ.get("PIX_KEY", "007a1d60-71e0-425f-a5b8-6fa2742b4c70"),
+        "key": os.environ.get("PIX_KEY", ""),
         "instructions": "Send BRL via PIX to the key below. Instant confirmation.",
     },
     "usdt": {

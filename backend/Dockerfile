@@ -12,7 +12,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN chmod +x entrypoint.sh
+RUN chmod +x entrypoint.sh && \
+    useradd -m -u 1000 appuser && \
+    mkdir -p /app/uploads && chown -R appuser:appuser /app/uploads
+
+USER appuser
 
 EXPOSE 8000
 

@@ -14,6 +14,7 @@ function delay(ms: number) {
 const api = axios.create({
   baseURL: "/api/v1",
   withCredentials: true,
+  timeout: 30_000,
 });
 
 // Request interceptor: attach access token

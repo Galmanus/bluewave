@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.core.security import (
     create_access_token,
     create_refresh_token,
+    create_reset_token,
     decode_token,
     hash_password,
     verify_password,
@@ -98,15 +99,22 @@ async def login(
         str(user.id), str(user.tenant_id), user.role.value
     )
 
-    response.set_cookie(
-        key=REFRESH_COOKIE,
-        value=refresh_token,
-        httponly=True,
-        samesite="strict",
-        max_age=7 * 24 * 3600,
-    )
+    _set_refresh_cookie(response, refresh_token)
 
     return TokenResponse(access_token=access_token)
+
+
+def _set_refresh_cookie(response: Response, token: str) -> None:
+    """Set refresh token cookie with proper security flags."""
+    from app.core.config import settings
+    response.set_cookie(
+        key=REFRESH_COOKIE,
+        value=token,
+        httponly=True,
+        samesite="strict",
+        secure=settings.ENV != "development",
+        max_age=7 * 24 * 3600,
+    )
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -132,13 +140,7 @@ async def refresh(request: Request, response: Response):
         payload["sub"], payload["tenant_id"], payload["role"]
     )
 
-    response.set_cookie(
-        key=REFRESH_COOKIE,
-        value=new_refresh,
-        httponly=True,
-        samesite="strict",
-        max_age=7 * 24 * 3600,
-    )
+    _set_refresh_cookie(response, new_refresh)
 
     return TokenResponse(access_token=access_token)
 
@@ -168,7 +170,7 @@ async def request_password_reset(
         return {"message": "If an account with that email exists, a reset link has been sent."}
 
     # Create a short-lived reset token (15 min)
-    reset_token = create_access_token(
+    reset_token = create_reset_token(
         str(user.id), str(user.tenant_id), user.role.value,
     )
 
@@ -190,11 +192,10 @@ async def reset_password(
     if not token or not new_password:
         raise HTTPException(400, "Token and new_password are required")
 
-    if len(new_password) < 6:
-        raise HTTPException(400, "Password must be at least 6 characters")
+    _validate_password_strength(new_password)
 
     payload = decode_token(token)
-    if payload is None or payload.get("type") != "access":
+    if payload is None or payload.get("type") != "reset":
         raise HTTPException(401, "Invalid or expired reset token")
 
     result = await db.execute(select(User).where(User.id == payload["sub"]))

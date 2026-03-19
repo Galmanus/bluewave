@@ -249,6 +249,11 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.effective_chat.send_action("typing")
 
+    # Build context message with caption + analysis result
+    vision_message = "Image compliance analysis result:\n\n%s" % result
+    if caption:
+        vision_message = "User caption: %s\n\n%s" % (caption, vision_message)
+
     try:
         response, elapsed = await send_to_agent(vision_message, session)
 
@@ -274,12 +279,6 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error("Photo error: %s", e)
         await update.message.reply_text("Erro ao analisar imagem: %s" % str(e))
-
-    # Cleanup
-    try:
-        os.unlink(tmp)
-    except Exception:
-        pass
 
 
 # -- Main --

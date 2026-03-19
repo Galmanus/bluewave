@@ -81,6 +81,13 @@ async def trace_llm_call(
             resp = await client.messages.create(...)
             run.log_output({"caption": caption, "tokens": ...})
     """
+    # TEMPORARY: Force NoOp due to LangSmith 0.7.20 async generator bug
+    # Tracing works in openclaw-skill (sync SDK). Backend tracing disabled
+    # until langsmith SDK is updated to >=0.10.x in the Docker image.
+    # The openclaw-skill layer handles all LangSmith tracing.
+    yield _NoOpRun()
+    return
+
     if not _tracing_enabled or not _ls_client:
         yield _NoOpRun()
         return
@@ -103,21 +110,28 @@ async def trace_llm_call(
         t0 = time.perf_counter()
         try:
             yield wrapper
-            duration_ms = round((time.perf_counter() - t0) * 1000, 1)
-            run_tree.end(
-                outputs={**wrapper._outputs, "duration_ms": duration_ms},
-            )
-            run_tree.patch()
         except Exception as exc:
-            duration_ms = round((time.perf_counter() - t0) * 1000, 1)
-            run_tree.end(
-                error=str(exc),
-                outputs={**wrapper._outputs, "duration_ms": duration_ms},
-            )
-            run_tree.patch()
+            # Business code raised an error — trace it, then re-raise
+            try:
+                duration_ms = round((time.perf_counter() - t0) * 1000, 1)
+                run_tree.end(error=str(exc), outputs={**wrapper._outputs, "duration_ms": duration_ms})
+                run_tree.patch()
+            except Exception:
+                pass
             raise
+        else:
+            # Success — record trace
+            try:
+                duration_ms = round((time.perf_counter() - t0) * 1000, 1)
+                run_tree.end(outputs={**wrapper._outputs, "duration_ms": duration_ms})
+                run_tree.patch()
+            except Exception:
+                logger.debug("LangSmith trace end/patch failed for %s", name)
+    except GeneratorExit:
+        # Generator being closed — don't yield again
+        return
     except Exception:
-        # Tracing failure must NEVER break the actual functionality
+        # Tracing init failure must NEVER break business functionality
         logger.debug("LangSmith trace failed for %s — continuing without trace", name)
         yield _NoOpRun()
 

@@ -12,5 +12,5 @@
 | # | Fase | Status | Entregáveis | Notas |
 |---|------|--------|-------------|-------|
 | 1 | Bot Bridge | Concluído | 3/3 | @bluewave_wave_bot operacional |
-| 2 | Photo Handler | Concluído | 2/2 | brand_vision.py direto, $0.005/foto |
+| 2 | Photo Handler | Concluído | 2/2 | brand_vision.py direto, $0.005/foto. Fix v0.4.1: vision_message e tmp undefined |
 | 3 | Wave Personality | Concluído | 2/2 | Wave completo no Telegram |

@@ -195,23 +195,16 @@ class ClaudeAIService:
 
     @retry(max_retries=3, base_delay=1.0, retryable=(anthropic.RateLimitError, anthropic.InternalServerError, anthropic.APIConnectionError))
     async def _call_claude(self, *, model: str, max_tokens: int, system: str, content: list[dict]) -> anthropic.types.Message:
-        """Retryable Claude API call with prompt caching + exponential backoff.
+        """Retryable Claude API call with exponential backoff.
 
-        System prompt is cached across calls within the same session.
-        Saves ~90% on repeated system prompt tokens.
+        Prompt caching (cache_control) is used in the openclaw-skill layer.
+        The backend uses plain system string for compatibility with SDK 0.43.
         """
-        system_blocks = [
-            {
-                "type": "text",
-                "text": system,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ]
         return await self._client.messages.create(
             model=model,
             max_tokens=max_tokens,
             messages=[{"role": "user", "content": content}],
-            system=system_blocks,
+            system=system,
         )
 
     # -- caption --------------------------------------------------------
@@ -278,7 +271,7 @@ class ClaudeAIService:
                 logger.info(
                     "AI caption generated",
                     extra={
-                        "model": self._model, "filename": filename,
+                        "model": self._model, "asset_filename": filename,
                         "duration_ms": duration_ms, "success": True,
                         "input_tokens": input_tokens,
                         "output_tokens": output_tokens,
@@ -293,7 +286,7 @@ class ClaudeAIService:
                 run.add_tags(["fallback"])
                 logger.exception(
                     "AI caption failed",
-                    extra={"model": self._model, "filename": filename, "duration_ms": duration_ms, "success": False},
+                    extra={"model": self._model, "asset_filename": filename, "duration_ms": duration_ms, "success": False},
                 )
                 return fallback
 
@@ -309,7 +302,7 @@ class ClaudeAIService:
 
         async with trace_llm_call(
             "bluewave.generate_hashtags",
-            inputs={"system_prompt": system_prompt, "model": self._model, "filename": filename, "file_type": file_type},
+            inputs={"system_prompt": system_prompt, "model": self._model, "asset_filename": filename, "file_type": file_type},
             metadata={"filename": filename, "file_type": file_type, "has_vision": has_image, "output_format": "json_array"},
             tags=["hashtags", "json-output", "vision" if has_image else "text-only"],
         ) as run:

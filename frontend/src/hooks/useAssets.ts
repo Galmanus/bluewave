@@ -67,8 +67,12 @@ export function useAssetCounts() {
 }
 
 export function getAssetFileUrl(assetId: string): string {
+  return `/api/v1/assets/${assetId}/file`;
+}
+
+export function getAssetAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem("access_token");
-  return `/api/v1/assets/${assetId}/file${token ? `?token=${token}` : ""}`;
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export function useAsset(id: string | undefined) {

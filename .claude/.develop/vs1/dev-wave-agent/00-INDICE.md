@@ -12,3 +12,4 @@
 | 6 | Prompts | System prompts com PUT + Intelligence Theory + Strategic Philosophy | Fase 2 | Alta |
 | 7 | Autonomous | Daemon autônomo com 5 estratégias rotativas | Fases 1-6 | Alta |
 | 8 | API Server | FastAPI server (port 18790) + proxy via backend | Fase 1 | Critica |
+| 9 | Code Quality + Token Opt | Auditoria (26 fixes) + otimização de tokens (8 melhorias) | Fases 1-8 | Alta |

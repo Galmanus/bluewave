@@ -80,7 +80,7 @@ function ColorEditor({
   const [draft, setDraft] = useState("#");
 
   function add() {
-    if (/^#[0-9a-fA-F]{3,8}$/.test(draft) && !colors.includes(draft)) {
+    if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(draft) && !colors.includes(draft)) {
       onChange([...colors, draft]);
       setDraft("#");
     }

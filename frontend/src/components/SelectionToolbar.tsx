@@ -15,7 +15,7 @@ export default function SelectionToolbar({ selectedIds, onClear }: Props) {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const resp = await api.post("/api/v1/assets/export", { asset_ids: selectedIds }, { responseType: "blob" });
+      const resp = await api.post("/assets/export", { asset_ids: selectedIds }, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([resp.data]));
       const a = document.createElement("a");
       a.href = url;

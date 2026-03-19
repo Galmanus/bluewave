@@ -55,13 +55,15 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> dict:
         "free_space_mb": free_space_mb,
     }
 
-    return {
-        "status": overall,
-        "version": "0.3.0",
-        "env": settings.ENV,
-        "uptime_seconds": round(time.time() - _start_time),
-        "checks": checks,
-    }
+    result: dict = {"status": overall, "version": "0.3.0"}
+
+    # Only expose detailed checks in non-production environments
+    if settings.ENV != "production":
+        result["env"] = settings.ENV
+        result["uptime_seconds"] = round(time.time() - _start_time)
+        result["checks"] = checks
+
+    return result
 
 
 @router.get("/health/ready")

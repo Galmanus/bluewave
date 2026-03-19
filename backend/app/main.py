@@ -44,7 +44,9 @@ app.add_middleware(RateLimitMiddleware)
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins or ["*"],
+    allow_origins=settings.cors_origins if settings.cors_origins else (
+        ["*"] if settings.ENV == "development" else []
+    ),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

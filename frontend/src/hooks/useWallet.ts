@@ -19,7 +19,9 @@ const HEDERA_NETWORKS = {
   },
 };
 
-const NETWORK = HEDERA_NETWORKS.mainnet;
+const NETWORK = import.meta.env.VITE_HEDERA_NETWORK === "mainnet"
+  ? HEDERA_NETWORKS.mainnet
+  : HEDERA_NETWORKS.testnet;
 const AI_ACTION_COST_HBAR = "0.33"; // ~$0.05 at $0.15/HBAR
 
 // Manuel's wallet — all payments go here

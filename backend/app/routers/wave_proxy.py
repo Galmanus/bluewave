@@ -80,7 +80,7 @@ async def compliance_check(request: Request):
         return JSONResponse(content={"response": "Guardian offline.", "score": 0})
     except Exception as e:
         logger.error("Compliance check proxy error: %s", e)
-        return JSONResponse(content={"response": "Error: %s" % str(e)[:100], "score": 0})
+        return JSONResponse(content={"response": "Internal error during compliance check.", "score": 0})
 
 
 @router.post("/generate-content")
@@ -95,7 +95,7 @@ async def generate_content(request: Request):
         return JSONResponse(content={"content": "Guardian offline.", "elapsed_seconds": 0})
     except Exception as e:
         logger.error("Content gen proxy error: %s", e)
-        return JSONResponse(content={"content": "Error: %s" % str(e)[:100], "elapsed_seconds": 0})
+        return JSONResponse(content={"content": "Internal error during content generation.", "elapsed_seconds": 0})
 
 
 @router.get("/health")

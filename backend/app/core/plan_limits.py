@@ -78,7 +78,7 @@ async def check_ai_limit(
     if max_ai == 0:
         return  # unlimited
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     result = await db.execute(
         select(func.count(AIUsageLog.id)).where(

@@ -62,7 +62,7 @@ async def scrape_upwork_gigs(params: dict) -> dict:
                             'status': 'Active job postings found',
                             'action': 'Create profile and bid on SEO/competitor analysis jobs'
                         })
-                except:
+                except Exception:
                     continue
         
         return {'success': True, 'data': opportunities, 'message': f'Found {len(opportunities)} Upwork channels'}

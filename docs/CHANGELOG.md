@@ -1,5 +1,55 @@
 # Changelog
 
+## v0.4.1 — Code Quality, Security & Token Optimization (2026-03-19)
+
+Auditoria completa de código (backend, frontend, Wave agent, infra) com 26 correções + 8 otimizações de tokens em 25 arquivos.
+
+### Bugs Críticos Corrigidos
+- **telegram_bridge.py**: variáveis `vision_message` e `tmp` undefined — crash ao enviar fotos ao bot
+- **SelectionToolbar.tsx**: URL duplicada `/api/v1/api/v1/assets/export` — export ZIP não funcionava
+
+### Segurança
+- **CORS**: fallback `["*"]` removido em produção; restrição por ambiente (backend + Wave API)
+- **Cookies**: flag `secure=True` adicionado ao refresh token em produção
+- **Password reset**: token type dedicado `"reset"` (era reutilizado `"access"`); validação de senha consistente (8 chars, uppercase, digit) no reset
+- **Health check**: detalhes do sistema (disk space, uptime, AI config) ocultados em produção
+- **Wave proxy**: mensagens de erro genéricas em produção (sem leak de stack traces)
+- **Filename sanitization**: separadores de path (`/`, `\`, `..`) sanitizados no upload de assets
+- **Token em URL**: removido `?token=` de thumbnails e asset URLs; autenticação agora via headers
+- **IP hardcoded**: `31.97.167.158:18790` removido do frontend — usa proxy `/api/v1/wave`
+- **PIX key hardcoded**: fallback removido de payments.py
+- **CONTEXT_PROMPT.md**: adicionado ao .gitignore (contém API keys)
+
+### Qualidade de Código
+- **brand_suite.py**: `_call()` convertida de sync para async (evita bloquear event loop)
+- **brand_suite.py**: exceções silenciadas agora logam warning
+- **survival_hunter.py**: bare `except:` trocado por `except Exception:`
+- **Wave API endpoints**: validação de input (limites, tipos, campos obrigatórios) em 8 endpoints
+- **BrandPage.tsx**: regex de cor corrigida — aceita apenas `#RGB`, `#RRGGBB`, `#RRGGBBAA`
+- **api.ts**: timeout de 30s adicionado ao axios
+
+### Infraestrutura
+- **Dockerfile backend**: container roda como `appuser` (não root)
+- **docker-compose.prod.yml**: resource limits (CPU + memória) para postgres, backend e redis
+- **useWallet.ts**: Hedera default para testnet (era mainnet — risco de perda financeira)
+- **.gitignore**: adicionados CONTEXT_PROMPT.md, .env.local, .DS_Store, .idea/, *.pem, certs/
+
+### Token Optimization (Sprint 5)
+- **Intent Router**: +15 chat patterns reconhecidos como "simple" (Haiku sem tools)
+- **Intent Router**: perguntas de status/identidade/ajuda agora vão para Haiku (0 tools)
+- **Intent Router**: moltbook leitura (feed, home, karma) → Haiku; só posts/estratégia → Sonnet
+- **Intent Router**: default fallback reduzido de 4 clusters → 2 (delegate + memory)
+- **Embedding Router**: categoria `moltbook_create` separada para posts (Sonnet) vs leitura (Haiku)
+- **wave_autonomous**: `reflect` usa Haiku direto (bypass orchestrator, -14K tokens/ciclo)
+- **wave_autonomous**: `observe` prefixado com hint de moltbook para routing otimizado
+- **wave_autonomous**: prompt caching na deliberação (cache_control ephemeral no soul)
+- **Orchestrator**: tools pré-cacheadas (evita cópia e marcação a cada chamada)
+- **Context manager**: keep_recent reduzido de 10 → 6 mensagens
+
+**Impacto estimado**: -30-40% tokens por sessão, -50% tokens em ciclos autônomos (reflect/observe).
+
+---
+
 ## v0.4.0 — 20 Melhorias: De MVP a Produto Competitivo (2026-03-18)
 
 Release que implementa 20 melhorias em 4 tiers, transformando o MVP funcional em produto competitivo de mercado. Score de maturidade subiu de **9.0/10** para **9.5/10**.

@@ -64,7 +64,7 @@ async def check_ai_rate_limit(
     if max_actions == -1 or max_actions == 0:
         return  # unlimited
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
     result = await db.execute(
@@ -102,7 +102,7 @@ async def check_upload_rate_limit(
 
     from app.models.asset import MediaAsset
 
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     result = await db.execute(
         select(func.count(MediaAsset.id)).where(
             MediaAsset.tenant_id == tenant_id,

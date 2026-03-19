@@ -26,7 +26,8 @@ async def _get_guidelines() -> Optional[dict]:
         async with httpx.AsyncClient(timeout=10) as client:
             r = await client.get(f"{api_url}/brand/guidelines", headers={"X-API-Key": api_key})
             return r.json() if r.status_code == 200 and r.json() else None
-    except Exception:
+    except Exception as e:
+        logger.warning("Failed to fetch brand guidelines: %s", e)
         return None
 
 
@@ -47,12 +48,13 @@ def _voice(g: dict) -> str:
     return "\n".join(parts)
 
 
-def _call(system: str, user: str, model: str = HAIKU, max_tokens: int = 2000) -> str:
-    client = anthropic.Anthropic()
+async def _call(system: str, user: str, model: str = HAIKU, max_tokens: int = 2000) -> str:
+    client = anthropic.AsyncAnthropic()
     try:
-        r = client.messages.create(model=model, max_tokens=max_tokens, system=system, messages=[{"role": "user", "content": user}])
+        r = await client.messages.create(model=model, max_tokens=max_tokens, system=system, messages=[{"role": "user", "content": user}])
         return r.content[0].text
     except Exception as e:
+        logger.error("Claude API call failed: %s", e)
         return f"Error: {str(e)[:200]}"
 
 
@@ -73,7 +75,7 @@ async def extract_brand_dna(pdf_base64: str) -> str:
         "Be precise. Extract exact hex codes, exact font names, exact rules.\n"
         "Return ONLY valid JSON. No explanation."
     )
-    return _call(system, f"Extract brand DNA from this document:\n[PDF content provided as base64]", model=SONNET, max_tokens=3000)
+    return await _call(system, f"Extract brand DNA from this document:\n[PDF content provided as base64]", model=SONNET, max_tokens=3000)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -103,7 +105,7 @@ async def batch_compliance_summary(image_count: int, scores: list) -> str:
         f"Individual scores: {scores}\n"
         "Write executive summary with key findings and recommended actions."
     )
-    return _call(system, user)
+    return await _call(system, user)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -138,7 +140,7 @@ async def generate_social_calendar(
         user += f"Monthly themes/campaigns: {themes}\n"
     user += f"Generate {weeks * posts_per_week} posts total."
 
-    return _call(system, user, model=SONNET, max_tokens=4000)
+    return await _call(system, user, model=SONNET, max_tokens=4000)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -175,7 +177,7 @@ async def repurpose_content(
         "6. Email subject + preview\n"
         "7. Website copy"
     )
-    return _call(system, user, max_tokens=3000)
+    return await _call(system, user, max_tokens=3000)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -209,7 +211,7 @@ async def generate_ad_copy(
         f"Target audience: {audience or 'brand personas'}\n"
         f"Generate {variations} ad variations."
     )
-    return _call(system, user)
+    return await _call(system, user)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -247,7 +249,7 @@ async def generate_email_sequence(
         f"BRAND VOICE:\n{voice}"
     )
     user = f"Product/context: {product or brand}\nGenerate {emails_count} emails."
-    return _call(system, user, max_tokens=3000)
+    return await _call(system, user, max_tokens=3000)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -280,7 +282,7 @@ async def generate_product_descriptions(
         f"BRAND VOICE:\n{voice}"
     )
     user = "Products:\n" + "\n".join(f"- {p}" for p in products)
-    return _call(system, user)
+    return await _call(system, user)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -309,7 +311,7 @@ async def research_hashtags(
         f"Language: {language}. No emojis.\n\n"
         f"BRAND HASHTAGS: {(g.get('custom_rules') or {}).get('hashtags', [])}"
     )
-    return _call(system, f"Topic: {topic}")
+    return await _call(system, f"Topic: {topic}")
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -340,7 +342,7 @@ async def audit_competitor_content(
         f"Description: {competitor_description or 'analyze based on name and industry context'}\n"
         "Deliver: positioning comparison, content gap analysis, 5 content opportunities."
     )
-    return _call(system, user, model=SONNET)
+    return await _call(system, user, model=SONNET)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -380,4 +382,4 @@ async def generate_brand_report(
         f"Content pieces generated: {content_generated}\n"
         "Generate the full report."
     )
-    return _call(system, user, model=SONNET, max_tokens=3000)
+    return await _call(system, user, model=SONNET, max_tokens=3000)

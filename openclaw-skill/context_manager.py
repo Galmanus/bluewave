@@ -22,7 +22,7 @@ logger = logging.getLogger("openclaw.context")
 # Configurable limits
 MAX_CONTEXT_TOKENS = int(os.environ.get("OPENCLAW_MAX_CONTEXT_TOKENS", "120000"))
 SUMMARIZE_THRESHOLD = int(MAX_CONTEXT_TOKENS * 0.75)  # Trigger at 75%
-KEEP_RECENT_MESSAGES = int(os.environ.get("OPENCLAW_KEEP_RECENT", "10"))
+KEEP_RECENT_MESSAGES = int(os.environ.get("OPENCLAW_KEEP_RECENT", "6"))
 SUMMARY_MAX_TOKENS = 500
 
 

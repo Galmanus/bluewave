@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 .env
+.env.local
 *.log
 node_modules/
 uploads/
@@ -12,3 +13,9 @@ venv/
 *.egg-info/
 dist/
 build/
+CONTEXT_PROMPT.md
+.DS_Store
+Thumbs.db
+.idea/
+*.pem
+certs/

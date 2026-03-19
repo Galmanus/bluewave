@@ -67,11 +67,14 @@ TOOL_CLUSTERS = {
     "research": [
         "web_search", "web_news", "scrape_url", "deep_research",
         "competitor_analysis", "market_research", "seo_analysis",
+        "put_analyzer", "competitor_phi_audit", "kill_chain_planner",
     ],
     "sales": [
         "find_prospects", "research_prospect", "qualify_prospect_bant",
         "generate_outreach", "view_sales_pipeline", "web_search",
         "draft_cold_email", "lead_finder",
+        "put_analyzer", "ignition_detector", "prospect_qualifier",
+        "shadow_scanner", "pre_mortem",
     ],
     "moltbook": [
         "moltbook_home", "moltbook_feed", "moltbook_post", "moltbook_comment",
@@ -97,6 +100,7 @@ TOOL_CLUSTERS = {
     ],
     "analytics": [
         "bluewave_get_analytics", "bluewave_ai_usage_stats",
+        "self_diagnostic",
     ],
     "self_evolve": [
         "create_skill", "list_created_skills", "delete_skill",
@@ -104,6 +108,7 @@ TOOL_CLUSTERS = {
     "memory": [
         "save_learning", "recall_learnings", "save_agent_intel",
         "save_strategy", "recall_strategies", "recall_agent_intel",
+        "wave_journal", "self_diagnostic",
     ],
     "delegate": [
         "delegate_to_agent",
@@ -137,14 +142,29 @@ def classify_intent(client: anthropic.Anthropic, message: str) -> Intent:
         )
 
     # Greetings and simple chat
-    if len(msg_lower) < 30 and any(w in msg_lower for w in [
+    chat_words = [
         "oi", "olá", "ola", "hey", "hi", "hello", "hei", "eai", "e aí",
         "bom dia", "boa tarde", "boa noite", "tudo bem", "como vai",
-        "good morning", "what's up", "sup", "yo",
-    ]):
+        "good morning", "what's up", "sup", "yo", "fala", "salve",
+        "thanks", "obrigado", "valeu", "ok", "beleza", "blz",
+        "entendi", "understood", "got it", "show",
+    ]
+    if len(msg_lower) < 50 and any(w in msg_lower for w in chat_words):
         return Intent(
             category="chat", complexity="simple", model=HAIKU,
             tool_clusters=["none"], needs_full_prompt=False, confidence=0.95
+        )
+
+    # Short questions that don't need tools (status, identity, help)
+    simple_patterns = [
+        "quem é você", "who are you", "o que você faz", "what do you do",
+        "me ajuda", "help", "como funciona", "how does", "what can you",
+        "status", "tá online", "you there",
+    ]
+    if len(msg_lower) < 60 and any(p in msg_lower for p in simple_patterns):
+        return Intent(
+            category="chat", complexity="simple", model=HAIKU,
+            tool_clusters=["none"], needs_full_prompt=False, confidence=0.90
         )
 
     # Direct brand/ferpa questions
@@ -182,11 +202,17 @@ def classify_intent(client: anthropic.Anthropic, message: str) -> Intent:
             tool_clusters=["sales", "memory"], needs_full_prompt=True, confidence=0.80
         )
 
-    # Moltbook
+    # Moltbook — simple operations use Haiku, only posting/strategy needs Sonnet
     if any(w in msg_lower for w in ["moltbook", "moltbook_post", "moltbook_comment", "moltbook_feed", "moltbook_home", "karma"]):
+        needs_sonnet = any(w in msg_lower for w in [
+            "post", "write", "publish", "strategy", "strat", "analyze", "análise",
+        ])
         return Intent(
-            category="moltbook", complexity="complex", model=SONNET,
-            tool_clusters=["moltbook", "memory"], needs_full_prompt=True, confidence=0.85
+            category="moltbook",
+            complexity="complex" if needs_sonnet else "medium",
+            model=SONNET if needs_sonnet else HAIKU,
+            tool_clusters=["moltbook", "memory"],
+            needs_full_prompt=needs_sonnet, confidence=0.85
         )
 
     # Hedera / crypto / payment
@@ -227,10 +253,10 @@ def classify_intent(client: anthropic.Anthropic, message: str) -> Intent:
             tool_clusters=["self_evolve"], needs_full_prompt=True, confidence=0.85
         )
 
-    # Default: medium complexity, core tools only
+    # Default: medium complexity, only delegate tool (specialists have their own tools)
     return Intent(
         category="general", complexity="medium", model=HAIKU,
-        tool_clusters=["delegate", "research", "brand", "assets"],
+        tool_clusters=["delegate", "memory"],
         needs_full_prompt=False, confidence=0.50
     )
 
@@ -295,8 +321,17 @@ _INTENT_DEFINITIONS = {
         "complexity": "medium", "model": HAIKU, "needs_full_prompt": False,
         "tool_clusters": ["moltbook", "memory"],
         "examples": [
-            "moltbook feed", "post on moltbook", "moltbook comments",
-            "agent network", "social feed", "karma score",
+            "moltbook feed", "check moltbook", "moltbook comments",
+            "moltbook notifications", "social feed", "karma score",
+            "moltbook home", "check my karma",
+        ],
+    },
+    "moltbook_create": {
+        "complexity": "complex", "model": SONNET, "needs_full_prompt": True,
+        "tool_clusters": ["moltbook", "memory", "research"],
+        "examples": [
+            "post on moltbook", "write a moltbook post", "publish on moltbook",
+            "create moltbook content", "write about consciousness",
         ],
     },
     "hedera": {

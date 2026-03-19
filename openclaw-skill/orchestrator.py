@@ -187,6 +187,15 @@ class Orchestrator:
         put_path = Path(__file__).parent / "prompts" / "put_framework.md"
         self._put_addon = put_path.read_text(encoding="utf-8") if put_path.exists() else ""
 
+        # Pre-cache orchestrator tools with cache_control on last tool
+        # Avoids re-copying and re-marking on every _call_claude invocation
+        self._cached_orchestrator_tools = [t.copy() for t in self.orchestrator_tools]
+        if self._cached_orchestrator_tools:
+            self._cached_orchestrator_tools[-1] = {
+                **self._cached_orchestrator_tools[-1],
+                "cache_control": {"type": "ephemeral"},
+            }
+
         logger.info(
             "🌊 Orchestrator initialized: %d specialists, %d orchestrator tools, model=%s",
             len(self.specialists), len(self.orchestrator_tools), self.model,
@@ -361,11 +370,14 @@ class Orchestrator:
                 messages=managed_messages,
             )
             if use_tools:
-                # Mark tools with cache_control on the last tool (Anthropic requirement)
-                cached_tools = [t.copy() for t in use_tools]
-                if cached_tools:
-                    cached_tools[-1] = {**cached_tools[-1], "cache_control": {"type": "ephemeral"}}
-                kwargs["tools"] = cached_tools
+                # Use pre-cached tools if it's the full orchestrator set; otherwise mark on the fly
+                if use_tools is self.orchestrator_tools:
+                    kwargs["tools"] = self._cached_orchestrator_tools
+                else:
+                    cached_tools = [t.copy() for t in use_tools]
+                    if cached_tools:
+                        cached_tools[-1] = {**cached_tools[-1], "cache_control": {"type": "ephemeral"}}
+                    kwargs["tools"] = cached_tools
 
             # Extended thinking: give Claude a scratchpad for complex reasoning
             if thinking_budget > 0:
@@ -381,7 +393,7 @@ class Orchestrator:
                 fallback = "claude-haiku-4-5-20251001"
                 logger.warning("Rate limited (attempt %d), waiting %ds then trying %s...",
                              attempt, wait, fallback)
-                _time.sleep(wait)
+                _time.sleep(wait)  # sync context — acceptable for rate-limit retry
                 return self._call_claude(messages, model=fallback, system_prompt=use_system,
                                          tools=use_tools, attempt=attempt + 1)
             raise

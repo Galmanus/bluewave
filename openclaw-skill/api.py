@@ -74,9 +74,10 @@ app = FastAPI(
     version="1.0.0",
 )
 
+CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS if CORS_ORIGINS[0] else ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -352,67 +353,109 @@ async def generate_content_endpoint(request: Request):
 
 @app.post("/brand/social-calendar")
 async def social_calendar(request: Request):
-    import time as _t; t=_t.time()
     from brand_suite import generate_social_calendar
     b = await request.json()
-    r = await generate_social_calendar(b.get("weeks",4), b.get("posts_per_week",5), b.get("channels","instagram_feed,instagram_stories"), b.get("themes",""), b.get("language","pt-BR"))
-    return {"content": r, "elapsed_seconds": _t.time()-t}
+    weeks = max(1, min(int(b.get("weeks", 4)), 12))
+    posts_per_week = max(1, min(int(b.get("posts_per_week", 5)), 14))
+    t0 = time.time()
+    r = await generate_social_calendar(
+        weeks, posts_per_week,
+        b.get("channels", "instagram_feed,instagram_stories"),
+        b.get("themes", ""), b.get("language", "pt-BR"),
+    )
+    return {"content": r, "elapsed_seconds": time.time() - t0}
+
 
 @app.post("/brand/repurpose")
 async def repurpose(request: Request):
-    import time as _t; t=_t.time()
     from brand_suite import repurpose_content
     b = await request.json()
-    r = await repurpose_content(b.get("content",""), b.get("channel","instagram_feed"), b.get("language","pt-BR"))
-    return {"content": r, "elapsed_seconds": _t.time()-t}
+    content = b.get("content", "")
+    if not content:
+        raise HTTPException(400, "content is required")
+    t0 = time.time()
+    r = await repurpose_content(content, b.get("channel", "instagram_feed"), b.get("language", "pt-BR"))
+    return {"content": r, "elapsed_seconds": time.time() - t0}
+
 
 @app.post("/brand/ad-copy")
 async def ad_copy(request: Request):
-    import time as _t; t=_t.time()
     from brand_suite import generate_ad_copy
     b = await request.json()
-    r = await generate_ad_copy(b.get("product",""), b.get("objective","conversions"), b.get("audience",""), b.get("variations",3), b.get("language","pt-BR"))
-    return {"content": r, "elapsed_seconds": _t.time()-t}
+    product = b.get("product", "")
+    if not product:
+        raise HTTPException(400, "product is required")
+    variations = max(1, min(int(b.get("variations", 3)), 10))
+    t0 = time.time()
+    r = await generate_ad_copy(
+        product, b.get("objective", "conversions"),
+        b.get("audience", ""), variations, b.get("language", "pt-BR"),
+    )
+    return {"content": r, "elapsed_seconds": time.time() - t0}
+
 
 @app.post("/brand/email-sequence")
 async def email_seq(request: Request):
-    import time as _t; t=_t.time()
     from brand_suite import generate_email_sequence
     b = await request.json()
-    r = await generate_email_sequence(b.get("type","welcome"), b.get("count",5), b.get("product",""), b.get("language","pt-BR"))
-    return {"content": r, "elapsed_seconds": _t.time()-t}
+    count = max(1, min(int(b.get("count", 5)), 20))
+    t0 = time.time()
+    r = await generate_email_sequence(
+        b.get("type", "welcome"), count,
+        b.get("product", ""), b.get("language", "pt-BR"),
+    )
+    return {"content": r, "elapsed_seconds": time.time() - t0}
+
 
 @app.post("/brand/product-descriptions")
 async def prod_desc(request: Request):
-    import time as _t; t=_t.time()
     from brand_suite import generate_product_descriptions
     b = await request.json()
-    r = await generate_product_descriptions(b.get("products",[]), b.get("style","short"), b.get("language","pt-BR"))
-    return {"content": r, "elapsed_seconds": _t.time()-t}
+    products = b.get("products", [])
+    if not products or not isinstance(products, list):
+        raise HTTPException(400, "products must be a non-empty list")
+    if len(products) > 50:
+        raise HTTPException(400, "Maximum 50 products per request")
+    t0 = time.time()
+    r = await generate_product_descriptions(products, b.get("style", "short"), b.get("language", "pt-BR"))
+    return {"content": r, "elapsed_seconds": time.time() - t0}
+
 
 @app.post("/brand/hashtags")
 async def hashtags(request: Request):
-    import time as _t; t=_t.time()
     from brand_suite import research_hashtags
     b = await request.json()
-    r = await research_hashtags(b.get("topic",""), b.get("count",15), b.get("language","pt-BR"))
-    return {"content": r, "elapsed_seconds": _t.time()-t}
+    topic = b.get("topic", "")
+    if not topic:
+        raise HTTPException(400, "topic is required")
+    count = max(1, min(int(b.get("count", 15)), 50))
+    t0 = time.time()
+    r = await research_hashtags(topic, count, b.get("language", "pt-BR"))
+    return {"content": r, "elapsed_seconds": time.time() - t0}
+
 
 @app.post("/brand/competitor-audit")
 async def comp_audit(request: Request):
-    import time as _t; t=_t.time()
     from brand_suite import audit_competitor_content
     b = await request.json()
-    r = await audit_competitor_content(b.get("competitor",""), b.get("description",""), b.get("language","pt-BR"))
-    return {"content": r, "elapsed_seconds": _t.time()-t}
+    competitor = b.get("competitor", "")
+    if not competitor:
+        raise HTTPException(400, "competitor is required")
+    t0 = time.time()
+    r = await audit_competitor_content(competitor, b.get("description", ""), b.get("language", "pt-BR"))
+    return {"content": r, "elapsed_seconds": time.time() - t0}
+
 
 @app.post("/brand/report")
 async def brand_report(request: Request):
-    import time as _t; t=_t.time()
     from brand_suite import generate_brand_report
     b = await request.json()
-    r = await generate_brand_report(b.get("period","monthly"), b.get("scores",[]), b.get("content_generated",0), b.get("language","pt-BR"))
-    return {"content": r, "elapsed_seconds": _t.time()-t}
+    t0 = time.time()
+    r = await generate_brand_report(
+        b.get("period", "monthly"), b.get("scores", []),
+        max(0, int(b.get("content_generated", 0))), b.get("language", "pt-BR"),
+    )
+    return {"content": r, "elapsed_seconds": time.time() - t0}
 
 
 # ── Main ─────────────────────────────────────────────────────
