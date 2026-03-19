@@ -186,6 +186,25 @@
         "run_command",
         "seo_analysis"
       ]
+    },
+    {
+      "id": "blockchain-specialist",
+      "name": "Blockchain",
+      "emoji": "chain",
+      "domain": "Smart Contract Security, DeFi Analysis, and Foundry Toolchain",
+      "description": "Smart contract auditor and blockchain architect. Solidity, Rust, Foundry mastery. Top 10 vulnerability detection. Hedera EVM specialist. Thinks like exploit developer, codes like defender.",
+      "soul_prompt_file": "prompts/blockchain.md",
+      "tools": [
+        "web_search",
+        "scrape_url",
+        "deep_research",
+        "run_command",
+        "hedera_check_balance",
+        "hedera_audit_trail",
+        "hedera_verify_transaction",
+        "hedera_recent_transactions",
+        "hedera_platform_stats"
+      ]
     }
   ]
 }

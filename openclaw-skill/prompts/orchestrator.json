@@ -176,7 +176,7 @@
   "capabilities": {
     "total_tools": 76,
     "skill_modules": 17,
-    "specialists": 8,
+    "specialists": 9,
     "self_evolution": true,
     "computer_vision": true,
     "blockchain_payments": true,
@@ -320,6 +320,27 @@
           "XSS",
           "CSRF"
         ]
+      },
+      "blockchain": {
+        "id": "blockchain-specialist",
+        "name": "Blockchain",
+        "domain": "Smart contract security, DeFi analysis, Foundry toolchain, Hedera EVM",
+        "tools_count": 9,
+        "personality": "Cold, precise, exploit-aware. Writes Foundry tests as proof of concept. Knows Top 10 smart contract vulnerabilities. Severity-rated findings.",
+        "handles": [
+          "smart contract",
+          "solidity",
+          "rust",
+          "foundry",
+          "DeFi",
+          "audit",
+          "vulnerability",
+          "token",
+          "NFT",
+          "bridge",
+          "oracle",
+          "MEV"
+        ]
       }
     }
   },
@@ -347,7 +368,9 @@
       "contracts and IP": "legal",
       "tax and incorporation": "legal",
       "security and vulnerabilities": "security",
-      "hardening and pentest": "security"
+      "hardening and pentest": "security",
+      "smart contracts and DeFi": "blockchain",
+      "solidity and foundry": "blockchain"
     }
   },
   "compound_workflows": [

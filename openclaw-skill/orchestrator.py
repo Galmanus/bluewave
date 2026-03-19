@@ -62,6 +62,7 @@ DELEGATE_TOOL = {
                     "ops-admin",
                     "legal-strategist",
                     "security-auditor",
+                    "blockchain-specialist",
                 ],
                 "description": "ID of the specialist agent to delegate to.",
             },
