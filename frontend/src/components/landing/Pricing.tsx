@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useGeo } from "../../contexts/GeoContext";
 
 const plans = [
   {
@@ -64,6 +65,7 @@ interface PricingProps {
 }
 
 export default function Pricing({ isAuthenticated }: PricingProps) {
+  const { t } = useGeo();
   const [annual, setAnnual] = useState(true);
 
   return (
@@ -77,13 +79,13 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
           className="text-center mb-12"
         >
           <span className="text-sm font-semibold text-blue-400 uppercase tracking-wider">
-            Pricing
+            {t.pricingEyebrow}
           </span>
           <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-white leading-tight">
-            Simple, transparent pricing
+            {t.pricingTitle}
           </h2>
           <p className="mt-4 text-lg text-white/50">
-            No hidden fees. No sales calls. Start free, upgrade when ready.
+            {t.pricingSub}
           </p>
         </motion.div>
 

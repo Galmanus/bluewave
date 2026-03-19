@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Check, X } from "lucide-react";
+import { useGeo } from "../../contexts/GeoContext";
 
 interface CellValue {
   type: "check" | "x" | "partial" | "text";
@@ -121,6 +122,7 @@ function CellContent({ cell }: { cell: CellValue }) {
 }
 
 export default function Comparison() {
+  const { t } = useGeo();
   return (
     <section className="py-24 sm:py-32 bg-[#0a0a1a]">
       <div className="max-w-6xl mx-auto px-6">
@@ -132,7 +134,7 @@ export default function Comparison() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight">
-            Why teams switch to Bluewave
+            {t.compTitle}
           </h2>
         </motion.div>
 

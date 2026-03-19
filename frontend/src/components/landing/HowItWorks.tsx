@@ -1,34 +1,16 @@
 import { motion } from "framer-motion";
 import { Upload, Shield, Sparkles, CheckCircle2 } from "lucide-react";
-
-const steps = [
-  {
-    icon: Upload,
-    title: "Upload your brand DNA",
-    description:
-      "Set your colors, fonts, tone, and rules. The agent learns your brand identity.",
-  },
-  {
-    icon: Sparkles,
-    title: "Upload any asset",
-    description:
-      "Drag and drop images. AI generates captions and hashtags automatically on upload.",
-  },
-  {
-    icon: Shield,
-    title: "Instant compliance check",
-    description:
-      "8-dimension analysis: colors (Delta-E), typography, logo, tone, composition, photography, strategy, channel fit.",
-  },
-  {
-    icon: CheckCircle2,
-    title: "Ship on-brand. Every time.",
-    description:
-      "Score 0-100 with specific fixes. Only compliant content goes live.",
-  },
-];
+import { useGeo } from "../../contexts/GeoContext";
 
 export default function HowItWorks() {
+  const { t } = useGeo();
+
+  const steps = [
+    { icon: Upload, title: t.how1, description: t.how1d },
+    { icon: Sparkles, title: t.how2, description: t.how2d },
+    { icon: Shield, title: t.how3, description: t.how3d },
+    { icon: CheckCircle2, title: t.how4, description: t.how4d },
+  ];
   return (
     <section className="py-24 sm:py-32 bg-[#0d1117]">
       <div className="max-w-6xl mx-auto px-6">
@@ -40,7 +22,7 @@ export default function HowItWorks() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight">
-            Up and running in 5 minutes
+            {t.howTitle}
           </h2>
         </motion.div>
 
@@ -83,7 +65,7 @@ export default function HowItWorks() {
             href="/register"
             className="inline-flex items-center px-8 py-3.5 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition-all duration-150 hover:scale-[1.02] hover:shadow-[0_0_24px_rgba(37,99,235,0.4)]"
           >
-            Start free — no credit card required
+            {t.howCta}
           </a>
         </motion.div>
       </div>

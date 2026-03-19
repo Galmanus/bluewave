@@ -1,6 +1,7 @@
 import { motion, useInView } from "framer-motion";
 import { useRef, useEffect, useState } from "react";
 import { Quote } from "lucide-react";
+import { useGeo } from "../../contexts/GeoContext";
 
 function CountUp({ target, suffix = "" }: { target: string; suffix?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -44,12 +45,7 @@ function CountUp({ target, suffix = "" }: { target: string; suffix?: string }) {
   );
 }
 
-const metrics = [
-  { value: "89", suffix: " tools", label: "operational skills across 20 modules" },
-  { value: "9", suffix: " agents", label: "specialists with soul-driven deliberation" },
-  { value: "82", suffix: "%", label: "lower API cost via token optimization" },
-  { value: "14", suffix: " sections", label: "autonomous soul — self-designed by Opus 4" },
-];
+// Metrics are defined inside the component to access translations
 
 const agentReactions = [
   {
@@ -128,6 +124,15 @@ const waveInAction = [
 ];
 
 export default function SocialProof() {
+  const { t } = useGeo();
+
+  const metrics = [
+    { value: "89", suffix: ` ${t.socialMetric1}`, label: t.socialMetric1d },
+    { value: "9", suffix: ` ${t.socialMetric2}`, label: t.socialMetric2d },
+    { value: "82", suffix: "%", label: t.socialMetric3 },
+    { value: "14", suffix: ` ${t.socialMetric4}`, label: t.socialMetric4d },
+  ];
+
   return (
     <section className="py-24 sm:py-32 bg-[#111827]">
       <div className="max-w-6xl mx-auto px-6">
@@ -139,7 +144,7 @@ export default function SocialProof() {
           className="text-center mb-16"
         >
           <span className="text-sm font-semibold text-blue-400 uppercase tracking-wider">
-            By the numbers
+            {t.socialTitle}
           </span>
         </motion.div>
 
@@ -184,10 +189,10 @@ export default function SocialProof() {
                 </div>
                 <div>
                   <h3 className="text-base sm:text-xl font-bold text-white">
-                    Wave is live on Moltbook
+                    {t.socialWaveLive}
                   </h3>
                   <p className="text-[#9CA3AF] mt-1 text-sm sm:text-base">
-                    Our agent operates 24/7 on the AI social network — posting, learning, engaging in real-time.
+                    {t.socialWaveDesc}
                   </p>
                 </div>
               </div>
@@ -217,7 +222,7 @@ export default function SocialProof() {
           className="text-center mb-10"
         >
           <span className="text-sm font-semibold text-cyan-400 uppercase tracking-wider">
-            What other AI agents are saying
+            {t.socialAgentsSay}
           </span>
         </motion.div>
 
@@ -277,10 +282,10 @@ export default function SocialProof() {
           className="text-center mt-20 mb-10"
         >
           <span className="text-sm font-semibold text-blue-400 uppercase tracking-wider">
-            Wave in action — real conversations across Moltbook
+            {t.socialWaveAction}
           </span>
           <p className="text-[#9CA3AF] mt-2 text-sm max-w-xl mx-auto">
-            Wave contributes to philosophy, security, agent architecture, and engineering discussions — bringing creative operations insight to every conversation.
+            {t.socialWaveActionDesc}
           </p>
         </motion.div>
 

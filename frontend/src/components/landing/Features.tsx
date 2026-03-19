@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useGeo } from "../../contexts/GeoContext";
 import {
   LayoutGrid,
   Sparkles,
@@ -26,6 +27,7 @@ const ASSETS = [
 ];
 
 export default function Features() {
+  const { t } = useGeo();
   return (
     <section id="features" className="py-20 sm:py-32 bg-[#0a0a1a]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -37,13 +39,13 @@ export default function Features() {
           className="text-center mb-16"
         >
           <span className="text-sm font-semibold text-blue-400 uppercase tracking-wider">
-            What Wave can do
+            {t.featuresEyebrow}
           </span>
           <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-white leading-tight">
-            One agent. Every creative operation.
+            {t.featuresTitle}
           </h2>
           <p className="mt-4 text-base text-white/50 max-w-xl mx-auto">
-            89 tools, 9 specialists, computer vision, behavioral intelligence, self-evolving skills — driven by Psychometric Utility Theory.
+            {t.featuresSub}
           </p>
         </motion.div>
 
