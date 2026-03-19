@@ -189,13 +189,43 @@ interface HeroProps {
 export default function Hero({ isAuthenticated }: HeroProps) {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#0a0a1a] to-[#111827]">
-      {/* Subtle ambient glow */}
+      {/* Animated ambient gradient */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute w-[800px] h-[800px] rounded-full blur-[200px] opacity-20"
-          style={{ background: "radial-gradient(circle, rgba(34,211,238,0.3) 0%, transparent 60%)", top: "10%", left: "25%" }} />
-        <div className="absolute w-[600px] h-[600px] rounded-full blur-[180px] opacity-15"
-          style={{ background: "radial-gradient(circle, rgba(59,130,246,0.25) 0%, transparent 60%)", bottom: "10%", right: "20%" }} />
+        <div className="absolute w-[900px] h-[900px] rounded-full blur-[200px] opacity-20"
+          style={{
+            background: "radial-gradient(circle, rgba(34,211,238,0.35) 0%, transparent 60%)",
+            top: "5%", left: "20%",
+            animation: "drift1 20s ease-in-out infinite",
+          }} />
+        <div className="absolute w-[700px] h-[700px] rounded-full blur-[180px] opacity-15"
+          style={{
+            background: "radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 55%)",
+            bottom: "5%", right: "15%",
+            animation: "drift2 25s ease-in-out infinite",
+          }} />
+        <div className="absolute w-[500px] h-[500px] rounded-full blur-[160px] opacity-10"
+          style={{
+            background: "radial-gradient(circle, rgba(6,182,212,0.3) 0%, transparent 60%)",
+            top: "40%", left: "50%",
+            animation: "drift3 18s ease-in-out infinite",
+          }} />
       </div>
+      <style>{`
+        @keyframes drift1 {
+          0%, 100% { transform: translate(0, 0); }
+          33% { transform: translate(4%, -3%); }
+          66% { transform: translate(-3%, 4%); }
+        }
+        @keyframes drift2 {
+          0%, 100% { transform: translate(0, 0); }
+          33% { transform: translate(-5%, 2%); }
+          66% { transform: translate(3%, -4%); }
+        }
+        @keyframes drift3 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(-4%, 3%) scale(1.1); }
+        }
+      `}</style>
 
       {/* Top nav bar */}
       <nav className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-10 py-4 sm:py-5">
