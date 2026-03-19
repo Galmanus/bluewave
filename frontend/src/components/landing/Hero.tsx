@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Waves, ArrowRight, Bot, Search, Eye, Shield, BarChart3, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useGeo } from "../../contexts/GeoContext";
 
 const TERMINAL_LINES = [
   { type: "input", text: "find creative agencies with content ops problems" },
@@ -31,7 +32,6 @@ function HeroTerminal() {
     const timer = setInterval(() => {
       setVisibleLines((prev) => {
         if (prev >= TERMINAL_LINES.length) {
-          // Reset after showing all
           setTimeout(() => setVisibleLines(0), 3000);
           return prev;
         }
@@ -58,7 +58,6 @@ function HeroTerminal() {
       className="mt-10 sm:mt-16 mx-auto max-w-3xl px-2 sm:px-0"
     >
       <div className="relative rounded-lg sm:rounded-xl border border-white/10 bg-[#0d1117] shadow-2xl shadow-blue-500/5 overflow-hidden">
-        {/* Terminal chrome */}
         <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-[#161b22] border-b border-white/5">
           <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500/70" />
           <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500/70" />
@@ -70,7 +69,6 @@ function HeroTerminal() {
           </div>
         </div>
 
-        {/* Terminal content */}
         <div className="p-3 sm:p-5 font-mono text-[10px] sm:text-[13px] leading-relaxed h-[280px] sm:h-[340px] overflow-hidden">
           {TERMINAL_LINES.slice(0, visibleLines).map((line, i) => (
             <motion.div
@@ -105,7 +103,6 @@ function HeroTerminal() {
           )}
         </div>
 
-        {/* Bottom bar */}
         <div className="px-3 sm:px-4 py-2 bg-[#161b22] border-t border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
             {[
@@ -133,15 +130,39 @@ function HeroTerminal() {
   );
 }
 
+/* Floating particles for depth */
+function Particles() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {Array.from({ length: 40 }).map((_, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full bg-cyan-400/20"
+          style={{
+            width: `${Math.random() * 3 + 1}px`,
+            height: `${Math.random() * 3 + 1}px`,
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            animation: `float${i % 3} ${12 + Math.random() * 20}s ease-in-out infinite`,
+            animationDelay: `${Math.random() * 10}s`,
+            opacity: Math.random() * 0.5 + 0.1,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 interface HeroProps {
   isAuthenticated?: boolean;
 }
 
 export default function Hero({ isAuthenticated }: HeroProps) {
+  const { t, geo } = useGeo();
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#0a0a1a] to-[#111827]">
-      {/* Animated ambient gradient */}
+      {/* Animated ambient gradients */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute w-[900px] h-[900px] rounded-full blur-[200px] opacity-20"
           style={{
@@ -162,25 +183,19 @@ export default function Hero({ isAuthenticated }: HeroProps) {
             animation: "drift3 18s ease-in-out infinite",
           }} />
       </div>
+
+      {/* Floating particles */}
+      <Particles />
+
       <style>{`
-        @keyframes drift1 {
-          0%, 100% { transform: translate(0, 0); }
-          33% { transform: translate(4%, -3%); }
-          66% { transform: translate(-3%, 4%); }
-        }
-        @keyframes drift2 {
-          0%, 100% { transform: translate(0, 0); }
-          33% { transform: translate(-5%, 2%); }
-          66% { transform: translate(3%, -4%); }
-        }
-        @keyframes drift3 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(-4%, 3%) scale(1.1); }
-        }
-        @keyframes shimmer {
-          0% { background-position: 200% center; }
-          100% { background-position: -200% center; }
-        }
+        @keyframes drift1 { 0%, 100% { transform: translate(0, 0); } 33% { transform: translate(4%, -3%); } 66% { transform: translate(-3%, 4%); } }
+        @keyframes drift2 { 0%, 100% { transform: translate(0, 0); } 33% { transform: translate(-5%, 2%); } 66% { transform: translate(3%, -4%); } }
+        @keyframes drift3 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-4%, 3%) scale(1.1); } }
+        @keyframes float0 { 0%, 100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(-30px) translateX(10px); } }
+        @keyframes float1 { 0%, 100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(20px) translateX(-15px); } }
+        @keyframes float2 { 0%, 100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(-15px) translateX(-8px); } }
+        @keyframes shimmer { 0% { background-position: 200% center; } 100% { background-position: -200% center; } }
+        @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(59,130,246,0.3); } 50% { box-shadow: 0 0 40px rgba(59,130,246,0.6); } }
       `}</style>
 
       {/* Top nav bar */}
@@ -195,7 +210,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
               to="/assets"
               className="inline-flex items-center gap-1.5 px-3 sm:px-5 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs sm:text-sm hover:bg-blue-700 transition-all duration-150"
             >
-              Dashboard
+              {t.ctaDashboard}
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           ) : (
@@ -204,13 +219,13 @@ export default function Hero({ isAuthenticated }: HeroProps) {
                 to="/login"
                 className="hidden sm:inline-flex px-3 py-2 text-xs sm:text-sm font-medium text-white/70 hover:text-white transition-colors"
               >
-                Sign in
+                {t.signIn}
               </Link>
               <Link
                 to="/register"
                 className="inline-flex items-center px-3 sm:px-5 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs sm:text-sm hover:bg-blue-700 transition-all duration-150"
               >
-                Start free
+                {t.cta}
               </Link>
             </>
           )}
@@ -218,39 +233,43 @@ export default function Hero({ isAuthenticated }: HeroProps) {
       </nav>
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center pt-20 sm:pt-0">
-        {/* Eyebrow */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-        >
-          <span className="inline-flex items-center px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-            Wave, The Autonomous AI Agent
-          </span>
-        </motion.div>
-
-        {/* Headline */}
+        {/* Headline — translated */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mt-6 sm:mt-8 text-3xl sm:text-5xl lg:text-[56px] font-bold text-[#F9FAFB] leading-tight tracking-tight"
+          transition={{ duration: 0.6, delay: 0.15 }}
+          className="text-3xl sm:text-5xl lg:text-[56px] font-bold text-[#F9FAFB] leading-tight tracking-tight"
         >
-          You upload.
+          {t.heroHeadline1}
           <br />
-          The agent does the rest.
+          <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-cyan-300 bg-clip-text text-transparent" style={{backgroundSize: '200% auto', animation: 'shimmer 4s linear infinite'}}>
+            {t.heroHeadline2}
+          </span>
         </motion.h1>
 
         {/* Subheadline */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
+          transition={{ duration: 0.6, delay: 0.25 }}
           className="mt-4 sm:mt-6 text-base sm:text-xl text-[#9CA3AF] max-w-2xl mx-auto leading-relaxed px-2"
         >
-          Brand compliance, content generation, and creative operations
-          — all checked against your Brand DNA automatically. Every asset on-brand. Every time.
+          {t.heroSub}
         </motion.p>
+
+        {/* Regional context banner */}
+        {geo.regionalData && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.35 }}
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20"
+          >
+            <span className="text-xs sm:text-sm text-amber-400">
+              {geo.isLocal ? "📍" : "🇧🇷"} {geo.regionalData.stat}
+            </span>
+          </motion.div>
+        )}
 
         {/* CTAs */}
         <motion.div
@@ -262,24 +281,26 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           {isAuthenticated ? (
             <Link
               to="/assets"
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition-all duration-150 hover:scale-[1.02] hover:shadow-[0_0_24px_rgba(37,99,235,0.4)]"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition-all duration-150 hover:scale-[1.02]"
+              style={{ animation: "glow-pulse 3s ease-in-out infinite" }}
             >
-              Open Dashboard
+              {t.ctaDashboard}
               <ArrowRight className="w-5 h-5" />
             </Link>
           ) : (
             <>
               <Link
                 to="/register"
-                className="inline-flex items-center px-8 py-3.5 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition-all duration-150 hover:scale-[1.02] hover:shadow-[0_0_24px_rgba(37,99,235,0.4)]"
+                className="inline-flex items-center px-8 py-3.5 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition-all duration-150 hover:scale-[1.02]"
+                style={{ animation: "glow-pulse 3s ease-in-out infinite" }}
               >
-                Start free
+                {t.cta}
               </Link>
               <a
                 href="#features"
                 className="inline-flex items-center px-8 py-3.5 rounded-lg border border-white/20 text-white font-semibold text-lg hover:bg-white/5 transition-all duration-150"
               >
-                Watch demo
+                {t.ctaDemo}
               </a>
             </>
           )}
@@ -294,10 +315,10 @@ export default function Hero({ isAuthenticated }: HeroProps) {
         >
           <div className="flex items-center justify-center gap-3 sm:gap-8 flex-wrap">
             {[
-              { text: "89 operational tools", color: "text-cyan-400/70" },
-              { text: "9 specialist agents", color: "text-blue-400/70" },
-              { text: "8-dimension brand analysis", color: "text-amber-400/70" },
-              { text: "Soul-driven autonomy", color: "text-green-400/70" },
+              { text: t.credentialTools, color: "text-cyan-400/70" },
+              { text: t.credentialAgents, color: "text-blue-400/70" },
+              { text: t.credentialBrand, color: "text-amber-400/70" },
+              { text: t.credentialSoul, color: "text-green-400/70" },
             ].map((item) => (
               <span
                 key={item.text}

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { GeoProvider } from "./contexts/GeoContext";
 import AuthGuard from "./components/AuthGuard";
 import RoleGuard from "./components/RoleGuard";
 import AppLayout from "./components/AppLayout";
@@ -42,6 +43,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
+        <GeoProvider>
         <AuthProvider>
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
@@ -80,6 +82,7 @@ export default function App() {
           theme="system"
           richColors
         />
+      </GeoProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
