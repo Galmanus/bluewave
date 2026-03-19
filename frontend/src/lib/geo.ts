@@ -48,17 +48,18 @@ export function detectGeo(): GeoContext {
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const browserLang = navigator.language.toLowerCase();
 
-  // Detect language
-  const isPt = browserLang.startsWith("pt");
-  const lang: "pt" | "en" = isPt ? "pt" : "en";
-
   // Detect country from timezone
   const isBR = BR_TIMEZONES.includes(tz);
+
+  // Detect language — if in Brazil, ALWAYS use Portuguese
+  const isPt = browserLang.startsWith("pt") || isBR;
+  const lang: "pt" | "en" = isPt ? "pt" : "en";
   const country = isBR ? "BR" : "US"; // simplified
 
   // Detect SC region (timezone + language heuristic)
   // SC is in America/Sao_Paulo timezone — we'll also check for pt-BR
-  const isSC = isBR && tz === "America/Sao_Paulo" && browserLang === "pt-br";
+  // SC is in America/Sao_Paulo timezone — best heuristic without IP geolocation
+  const isSC = isBR && tz === "America/Sao_Paulo";
 
   // Regional data
   let regionalData: RegionalData | null = null;
