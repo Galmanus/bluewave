@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger("openclaw.skills")
 
 # Import all skill modules
-from skills import web_search, x_twitter, email_skill, intelligence, self_evolve, moltbook_skill, notify, vision, learning, power_skills, prospecting, hedera_skill
+from skills import web_search, x_twitter, email_skill, intelligence, self_evolve, moltbook_skill, notify, vision, learning, power_skills, prospecting, hedera_skill, monetization
 
 
 # Collect all tools from all modules
@@ -30,6 +30,7 @@ ALL_SKILL_MODULES = [
     power_skills,
     prospecting,
     hedera_skill,
+    monetization,
 ]
 
 # Build dispatch table: tool_name -> handler_function
