@@ -156,7 +156,7 @@ export default function Comparison() {
                     key={c}
                     className={`py-4 px-4 text-center text-sm font-semibold ${
                       i === 0
-                        ? "text-blue-600 bg-blue-50/50 rounded-t-lg"
+                        ? "text-cyan-600 bg-blue-50/50 rounded-t-lg"
                         : "text-[#374151]"
                     }`}
                   >

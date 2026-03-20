@@ -208,7 +208,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           {isAuthenticated ? (
             <Link
               to="/assets"
-              className="inline-flex items-center gap-1.5 px-3 sm:px-5 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs sm:text-sm hover:bg-blue-700 transition-all duration-150"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-5 py-2 rounded-lg bg-cyan-600 text-white font-medium text-xs sm:text-sm hover:bg-cyan-700 transition-all duration-150"
             >
               {t.ctaDashboard}
               <ArrowRight className="w-3.5 h-3.5" />
@@ -223,7 +223,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
               </Link>
               <Link
                 to="/register"
-                className="inline-flex items-center px-3 sm:px-5 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs sm:text-sm hover:bg-blue-700 transition-all duration-150"
+                className="inline-flex items-center px-3 sm:px-5 py-2 rounded-lg bg-cyan-600 text-white font-medium text-xs sm:text-sm hover:bg-cyan-700 transition-all duration-150"
               >
                 {t.cta}
               </Link>
@@ -281,7 +281,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           {isAuthenticated ? (
             <Link
               to="/assets"
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition-all duration-150 hover:scale-[1.02]"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-lg bg-cyan-600 text-white font-semibold text-lg hover:bg-cyan-700 transition-all duration-150 hover:scale-[1.02]"
               style={{ animation: "glow-pulse 3s ease-in-out infinite" }}
             >
               {t.ctaDashboard}
@@ -291,7 +291,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
             <>
               <Link
                 to="/register"
-                className="inline-flex items-center px-8 py-3.5 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition-all duration-150 hover:scale-[1.02]"
+                className="inline-flex items-center px-8 py-3.5 rounded-lg bg-cyan-600 text-white font-semibold text-lg hover:bg-cyan-700 transition-all duration-150 hover:scale-[1.02]"
                 style={{ animation: "glow-pulse 3s ease-in-out infinite" }}
               >
                 {t.cta}

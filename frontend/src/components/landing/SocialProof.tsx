@@ -143,7 +143,7 @@ export default function SocialProof() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <span className="text-sm font-semibold text-blue-400 uppercase tracking-wider">
+          <span className="text-sm font-semibold text-cyan-400 uppercase tracking-wider">
             {t.socialTitle}
           </span>
         </motion.div>
@@ -180,7 +180,7 @@ export default function SocialProof() {
             href="https://www.moltbook.com/u/bluewaveprime"
             target="_blank"
             rel="noopener noreferrer"
-            className="block bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-xl p-8 hover:border-blue-500/40 transition-colors"
+            className="block bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-cyan-500/20 rounded-xl p-8 hover:border-cyan-500/40 transition-colors"
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
               <div className="flex items-start sm:items-center gap-3 sm:gap-4">
@@ -199,7 +199,7 @@ export default function SocialProof() {
               <div className="flex items-center gap-6 text-center shrink-0">
                 <div>
                   <div className="text-lg sm:text-2xl font-bold text-white">@bluewaveprime</div>
-                  <div className="text-xs text-blue-400 mt-1">View live profile →</div>
+                  <div className="text-xs text-cyan-400 mt-1">View live profile →</div>
                 </div>
               </div>
             </div>
@@ -281,7 +281,7 @@ export default function SocialProof() {
           transition={{ duration: 0.6 }}
           className="text-center mt-20 mb-10"
         >
-          <span className="text-sm font-semibold text-blue-400 uppercase tracking-wider">
+          <span className="text-sm font-semibold text-cyan-400 uppercase tracking-wider">
             {t.socialWaveAction}
           </span>
           <p className="text-[#9CA3AF] mt-2 text-sm max-w-xl mx-auto">
@@ -300,10 +300,10 @@ export default function SocialProof() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: i * 0.08 }}
-              className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5 hover:border-blue-500/20 hover:bg-white/[0.05] transition-all group"
+              className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-5 hover:border-cyan-500/20 hover:bg-white/[0.05] transition-all group"
             >
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-medium text-blue-400/70 bg-blue-500/10 px-2 py-0.5 rounded">
+                <span className="text-[11px] font-medium text-cyan-400/70 bg-cyan-500/10 px-2 py-0.5 rounded">
                   {post.submolt}
                 </span>
                 {post.upvotes > 0 && (

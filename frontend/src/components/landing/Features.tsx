@@ -37,7 +37,7 @@ export default function Features() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <span className="text-sm font-semibold text-blue-400 uppercase tracking-wider">
+          <span className="text-sm font-semibold text-cyan-400 uppercase tracking-wider">
             {t.featuresEyebrow}
           </span>
           <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-white leading-tight">
@@ -57,10 +57,10 @@ export default function Features() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="lg:col-span-2 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 relative overflow-hidden group hover:border-blue-500/20 transition-colors"
+            className="lg:col-span-2 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 relative overflow-hidden group hover:border-cyan-500/20 transition-colors"
           >
             <div className="flex items-center gap-2 mb-4">
-              <LayoutGrid className="w-5 h-5 text-blue-400" />
+              <LayoutGrid className="w-5 h-5 text-cyan-400" />
               <h3 className="text-lg font-semibold text-white">{p ? "Gestão de Assets" : "Asset Management"}</h3>
             </div>
             <p className="text-sm text-white/50 mb-5 max-w-md">
@@ -191,10 +191,10 @@ export default function Features() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 relative overflow-hidden group hover:border-blue-500/20 transition-colors"
+            className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 relative overflow-hidden group hover:border-cyan-500/20 transition-colors"
           >
             <div className="flex items-center gap-2 mb-4">
-              <Bot className="w-5 h-5 text-blue-400" />
+              <Bot className="w-5 h-5 text-cyan-400" />
               <h3 className="text-lg font-semibold text-white">{p ? "9 Especialistas" : "9 Specialists"}</h3>
             </div>
             <p className="text-sm text-white/50 mb-5">
@@ -204,7 +204,7 @@ export default function Features() {
               {[
                 { Icon: Palette, name: "Curator", domain: "Asset management", tools: 10, color: "text-pink-400" },
                 { Icon: CheckCircle2, name: "Director", domain: "Approval workflow", tools: 9, color: "text-emerald-400" },
-                { Icon: Shield, name: "Guardian", domain: "Brand compliance", tools: 6, color: "text-blue-400" },
+                { Icon: Shield, name: "Guardian", domain: "Brand compliance", tools: 6, color: "text-cyan-400" },
                 { Icon: BarChart3, name: "Strategist", domain: "Analytics + PUT", tools: 6, color: "text-amber-400" },
                 { Icon: Sparkles, name: "Creative", domain: "Content + Vectors", tools: 10, color: "text-cyan-400" },
                 { Icon: Settings, name: "Admin", domain: "Platform ops", tools: 10, color: "text-gray-400" },
@@ -247,7 +247,7 @@ export default function Features() {
               </div>
               <div className="flex items-center justify-between px-3 py-2 rounded bg-white/[0.03] border border-white/[0.06]">
                 <span className="text-white/70">R/GA</span>
-                <span className="text-blue-400 font-bold">78/100</span>
+                <span className="text-cyan-400 font-bold">78/100</span>
               </div>
               <div className="text-center text-white/20 mt-1">{p ? "BANT qualificado + outreach pronto" : "BANT qualified + outreach ready"}</div>
             </div>

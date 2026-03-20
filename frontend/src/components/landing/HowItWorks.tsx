@@ -38,11 +38,11 @@ export default function HowItWorks() {
               transition={{ duration: 0.6, delay: i * 0.15 }}
               className="relative text-center"
             >
-              <div className="relative z-10 w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-6">
-                <span className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+              <div className="relative z-10 w-20 h-20 rounded-full bg-cyan-500/10 flex items-center justify-center mx-auto mb-6">
+                <span className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center">
                   {i + 1}
                 </span>
-                <step.icon className="w-8 h-8 text-blue-400" />
+                <step.icon className="w-8 h-8 text-cyan-400" />
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">
                 {step.title}
@@ -63,7 +63,7 @@ export default function HowItWorks() {
         >
           <a
             href="/register"
-            className="inline-flex items-center px-8 py-3.5 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition-all duration-150 hover:scale-[1.02] hover:shadow-[0_0_24px_rgba(37,99,235,0.4)]"
+            className="inline-flex items-center px-8 py-3.5 rounded-lg bg-cyan-600 text-white font-semibold text-lg hover:bg-cyan-700 transition-all duration-150 hover:scale-[1.02] hover:shadow-[0_0_24px_rgba(6,182,212,0.4)]"
           >
             {t.howCta}
           </a>

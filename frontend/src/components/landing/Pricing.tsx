@@ -105,7 +105,7 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <span className="text-sm font-semibold text-blue-400 uppercase tracking-wider">
+          <span className="text-sm font-semibold text-cyan-400 uppercase tracking-wider">
             {t.pricingEyebrow}
           </span>
           <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-white leading-tight">
@@ -128,7 +128,7 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
           <button
             onClick={() => setAnnual(!annual)}
             className={`relative w-12 h-6 rounded-full transition-colors ${
-              annual ? "bg-blue-600" : "bg-white/20"
+              annual ? "bg-cyan-600" : "bg-white/20"
             }`}
           >
             <div
@@ -160,12 +160,12 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
               transition={{ duration: 0.6, delay: i * 0.15 }}
               className={`relative rounded-xl p-8 ${
                 plan.highlighted
-                  ? "bg-white/[0.06] border-2 border-blue-500/50 shadow-lg shadow-blue-500/10 scale-[1.02]"
+                  ? "bg-white/[0.06] border-2 border-cyan-500/50 shadow-lg shadow-blue-500/10 scale-[1.02]"
                   : "bg-white/[0.03] border border-white/[0.06]"
               }`}
             >
               {plan.badge && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-semibold bg-blue-600 text-white">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-semibold bg-cyan-600 text-white">
                   {plan.badge}
                 </span>
               )}
@@ -212,7 +212,7 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
                 to={isAuthenticated ? "/assets" : plan.ctaLink}
                 className={`block text-center px-6 py-3 rounded-lg font-semibold transition-all duration-150 ${
                   plan.highlighted
-                    ? "bg-blue-600 text-white hover:bg-blue-700 hover:scale-[1.02] hover:shadow-[0_0_24px_rgba(37,99,235,0.3)]"
+                    ? "bg-cyan-600 text-white hover:bg-cyan-700 hover:scale-[1.02] hover:shadow-[0_0_24px_rgba(6,182,212,0.3)]"
                     : "bg-white/10 text-white hover:bg-white/20"
                 }`}
               >

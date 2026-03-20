@@ -54,7 +54,7 @@ export default {
         sm: "0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)",
         md: "0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06)",
         lg: "0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05)",
-        focus: "0 0 0 2px var(--accent), 0 0 0 4px rgba(37,99,235,0.2)",
+        focus: "0 0 0 2px var(--accent), 0 0 0 4px rgba(6,182,212,0.2)",
       },
       spacing: {
         xs: "4px",

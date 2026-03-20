@@ -13,7 +13,7 @@ export default function FinalCTA({ isAuthenticated }: FinalCTAProps) {
   return (
     <section className="relative py-24 sm:py-32 bg-gradient-to-b from-[#111827] to-[#0a0a1a] overflow-hidden">
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-blue-500/8 blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-cyan-500/8 blur-[120px]" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full bg-indigo-500/5 blur-[100px]" />
       </div>
 
@@ -48,7 +48,7 @@ export default function FinalCTA({ isAuthenticated }: FinalCTAProps) {
           {isAuthenticated ? (
             <Link
               to="/assets"
-              className="inline-flex items-center gap-2 px-10 py-4 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition-all duration-150 hover:scale-[1.02] hover:shadow-[0_0_32px_rgba(37,99,235,0.5)]"
+              className="inline-flex items-center gap-2 px-10 py-4 rounded-lg bg-cyan-600 text-white font-semibold text-lg hover:bg-cyan-700 transition-all duration-150 hover:scale-[1.02] hover:shadow-[0_0_32px_rgba(6,182,212,0.5)]"
             >
               {t.ctaDashboard}
               <ArrowRight className="w-5 h-5" />
@@ -57,7 +57,7 @@ export default function FinalCTA({ isAuthenticated }: FinalCTAProps) {
             <>
               <Link
                 to="/register"
-                className="inline-flex items-center px-10 py-4 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition-all duration-150 hover:scale-[1.02] hover:shadow-[0_0_32px_rgba(37,99,235,0.5)]"
+                className="inline-flex items-center px-10 py-4 rounded-lg bg-cyan-600 text-white font-semibold text-lg hover:bg-cyan-700 transition-all duration-150 hover:scale-[1.02] hover:shadow-[0_0_32px_rgba(6,182,212,0.5)]"
               >
                 {t.finalCta}
               </Link>
