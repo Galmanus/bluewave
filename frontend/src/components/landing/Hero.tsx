@@ -157,11 +157,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
           <span className="text-base font-extrabold tracking-tight bg-gradient-to-r from-cyan-300 via-teal-400 to-cyan-300 bg-clip-text text-transparent" style={{backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite'}}>Bluewave</span>
         </Link>
         <div className="flex items-center gap-3">
-          {isAuthenticated ? (
-            <Link to="/assets" className="px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700 transition-all inline-flex items-center gap-1.5">
-              {t.ctaDashboard} <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          ) : (
+          {isAuthenticated ? null : (
             <>
               <Link to="/login" className="hidden sm:inline-flex px-3 py-2 text-sm text-white/60 hover:text-white transition-colors">{t.signIn}</Link>
               <Link to="/register" className="px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700 transition-all">{t.cta}</Link>
