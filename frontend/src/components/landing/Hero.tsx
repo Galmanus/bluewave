@@ -197,15 +197,15 @@ export default function Hero({ isAuthenticated }: HeroProps) {
             {t.heroSub}
           </motion.p>
 
-          {/* Regional context */}
-          {geo.regionalData && (
+          {/* Regional context — only show if stat is non-empty */}
+          {geo.regionalData?.stat && (
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
               className="mt-3 text-sm text-cyan-400/60"
             >
-              {geo.isLocal ? "📍" : ""} {geo.regionalData.stat}
+              {geo.regionalData.stat}
             </motion.p>
           )}
 
