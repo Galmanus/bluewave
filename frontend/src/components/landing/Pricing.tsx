@@ -4,68 +4,98 @@ import { Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useGeo } from "../../contexts/GeoContext";
 
-const plans = [
-  {
-    name: "Free",
-    monthlyPrice: 0,
-    annualPrice: 0,
-    description: "Try the Brand Guardian with no commitment",
-    features: [
-      "Up to 3 users",
-      "5 GB storage",
-      "50 AI actions/month",
-      "Brand compliance checks (8 dimensions)",
-      "AI captions + hashtags on upload",
-      "Approval workflows",
-    ],
-    cta: "Start free",
-    ctaLink: "/register",
-    highlighted: false,
-  },
-  {
-    name: "Pro",
-    monthlyPrice: 29,
-    annualPrice: 24,
-    description: "For teams that ship content daily",
-    features: [
-      "Unlimited users",
-      "100 GB storage",
-      "Unlimited AI actions",
-      "Brand Content Generator (10 content types)",
-      "Social calendar + scheduling",
-      "Role-based access (admin / editor / viewer)",
-      "API access",
-    ],
-    cta: "Start free trial",
-    ctaLink: "/register",
-    highlighted: true,
-    badge: "Best value",
-  },
-  {
-    name: "Enterprise",
-    monthlyPrice: null,
-    annualPrice: null,
-    description: "For agencies managing multiple brands",
-    features: [
-      "Everything in Pro",
-      "Unlimited storage",
-      "Multi-brand workspaces",
-      "Autonomous Wave agent (89 tools, 9 specialists)",
-      "Custom integrations",
-      "Dedicated support + SLA",
-    ],
-    cta: "Contact us",
-    ctaLink: "mailto:m.galmanus@gmail.com",
-    highlighted: false,
-  },
-];
+function getPlans(p: boolean) {
+  // BRL conversion: ~5.5x USD. Rounded to clean numbers.
+  return [
+    {
+      name: p ? "Grátis" : "Free",
+      monthlyPrice: 0,
+      annualPrice: 0,
+      currency: p ? "R$" : "$",
+      description: p ? "Teste o Brand Guardian sem compromisso" : "Try the Brand Guardian with no commitment",
+      features: p ? [
+        "Até 3 usuários",
+        "5 GB de armazenamento",
+        "50 ações de IA/mês",
+        "Compliance de marca (8 dimensões)",
+        "Captions + hashtags automáticos",
+        "Workflows de aprovação",
+      ] : [
+        "Up to 3 users",
+        "5 GB storage",
+        "50 AI actions/month",
+        "Brand compliance checks (8 dimensions)",
+        "AI captions + hashtags on upload",
+        "Approval workflows",
+      ],
+      cta: p ? "Começar grátis" : "Start free",
+      ctaLink: "/register",
+      highlighted: false,
+    },
+    {
+      name: "Pro",
+      monthlyPrice: p ? 149 : 29,
+      annualPrice: p ? 119 : 24,
+      currency: p ? "R$" : "$",
+      description: p ? "Para equipes que publicam conteúdo diariamente" : "For teams that ship content daily",
+      features: p ? [
+        "Usuários ilimitados",
+        "100 GB de armazenamento",
+        "Ações de IA ilimitadas",
+        "Gerador de Conteúdo (10 tipos)",
+        "Calendário social + agendamento",
+        "Acesso por função (admin / editor / viewer)",
+        "Acesso à API",
+      ] : [
+        "Unlimited users",
+        "100 GB storage",
+        "Unlimited AI actions",
+        "Brand Content Generator (10 content types)",
+        "Social calendar + scheduling",
+        "Role-based access (admin / editor / viewer)",
+        "API access",
+      ],
+      cta: p ? "Teste grátis" : "Start free trial",
+      ctaLink: "/register",
+      highlighted: true,
+      badge: p ? "Melhor custo-benefício" : "Best value",
+    },
+    {
+      name: "Enterprise",
+      monthlyPrice: null,
+      annualPrice: null,
+      currency: p ? "R$" : "$",
+      description: p ? "Para agências com múltiplas marcas" : "For agencies managing multiple brands",
+      features: p ? [
+        "Tudo do Pro",
+        "Armazenamento ilimitado",
+        "Workspaces multi-marca",
+        "Agente Wave autônomo (89 tools, 9 especialistas)",
+        "Integrações customizadas",
+        "Suporte dedicado + SLA",
+      ] : [
+        "Everything in Pro",
+        "Unlimited storage",
+        "Multi-brand workspaces",
+        "Autonomous Wave agent (89 tools, 9 specialists)",
+        "Custom integrations",
+        "Dedicated support + SLA",
+      ],
+      cta: p ? "Fale conosco" : "Contact us",
+      ctaLink: "mailto:m.galmanus@gmail.com",
+      highlighted: false,
+    },
+  ];
+}
 
 interface PricingProps {
   isAuthenticated?: boolean;
 }
 
 export default function Pricing({ isAuthenticated }: PricingProps) {
-  const { t } = useGeo();
+  const { t, geo } = useGeo();
+  const p = geo.lang === "pt";
+  const plans = getPlans(p);
   const [annual, setAnnual] = useState(true);
 
   return (
@@ -96,7 +126,7 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
               !annual ? "text-white" : "text-[#9CA3AF]"
             }`}
           >
-            Monthly
+            {t.pricingMonthly}
           </span>
           <button
             onClick={() => setAnnual(!annual)}
@@ -115,9 +145,9 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
               annual ? "text-white" : "text-[#9CA3AF]"
             }`}
           >
-            Annual
+            {t.pricingAnnual}
             <span className="ml-1.5 text-xs text-emerald-600 font-semibold">
-              Save 20%
+              {t.pricingSave}
             </span>
           </span>
         </div>
@@ -152,22 +182,22 @@ export default function Pricing({ isAuthenticated }: PricingProps) {
                 {plan.monthlyPrice !== null ? (
                   <>
                     <span className="text-4xl font-bold text-white">
-                      ${annual ? plan.annualPrice : plan.monthlyPrice}
+                      {plan.currency}{annual ? plan.annualPrice : plan.monthlyPrice}
                     </span>
                     <span className="text-white/50">
                       {plan.monthlyPrice === 0
-                        ? "/month"
-                        : `/user/month`}
+                        ? t.pricingPerMonth
+                        : t.pricingPerUser}
                     </span>
                     {annual && plan.monthlyPrice > 0 && (
                       <p className="text-xs text-[#9CA3AF] mt-1">
-                        billed annually
+                        {t.pricingBilled}
                       </p>
                     )}
                   </>
                 ) : (
                   <span className="text-4xl font-bold text-white">
-                    Custom
+                    {t.pricingCustom}
                   </span>
                 )}
               </div>
