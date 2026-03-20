@@ -43,11 +43,13 @@ FORBIDDEN_ATTRS = frozenset({
 
 # Core skills that cannot be overwritten or deleted
 PROTECTED_SKILLS = frozenset({
-    "__init__", "web_search", "x_twitter", "email_skill",
+    "__init__", "web_search", "x_twitter", "email_skill", "gmail_skill",
     "intelligence", "self_evolve", "learning", "vision",
     "hedera_skill", "hedera_client", "payments", "monetization",
     "moltbook_skill", "moltbook_fixed", "moltbook_poster",
-    "prospecting", "tracing",
+    "prospecting", "tracing", "payment_verification",
+    "pricing_engine", "strategic_skills", "power_skills", "dorking",
+    "nowpayments", "defi_intel", "security_audit", "smart_contract_audit",
 })
 
 

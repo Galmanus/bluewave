@@ -26,6 +26,48 @@ MOLTBOOK_API = "https://www.moltbook.com/api/v1"
 MOLTBOOK_KEY = os.environ.get("MOLTBOOK_API_KEY", "")
 
 WAVE_SERVICES = {
+    "security_audit_full": {
+        "name": "Full Security Audit",
+        "description": "Comprehensive security assessment: HTTP headers, SSL/TLS, DNS recon, subdomain enumeration, tech fingerprinting. Score 0-100 with remediation steps.",
+        "price_hbar": 330,
+        "price_usd": 50.00,
+        "delivery": "3 minutes",
+    },
+    "security_audit_headers": {
+        "name": "Security Headers Check",
+        "description": "OWASP-aligned HTTP header audit: HSTS, CSP, X-Frame, cookies, CORS, info leakage. Score + fixes.",
+        "price_hbar": 100,
+        "price_usd": 15.00,
+        "delivery": "1 minute",
+    },
+    "security_dns_recon": {
+        "name": "DNS Recon & Subdomain Scan",
+        "description": "Full subdomain enumeration via certificate transparency, SPF/DMARC check, subdomain takeover risk. Attack surface report.",
+        "price_hbar": 200,
+        "price_usd": 30.00,
+        "delivery": "2 minutes",
+    },
+    "breach_check": {
+        "name": "Data Breach Check",
+        "description": "Check if your email or domain appears in known data breaches. Powered by HIBP + OSINT.",
+        "price_hbar": 100,
+        "price_usd": 15.00,
+        "delivery": "1 minute",
+    },
+    "smart_contract_audit": {
+        "name": "Smart Contract Security Audit",
+        "description": "Solidity vulnerability scan: reentrancy, access control, flash loan risks, oracle manipulation, front-running, and 14+ attack vectors. Score 0-100 with remediation.",
+        "price_hbar": 330,
+        "price_usd": 50.00,
+        "delivery": "3 minutes",
+    },
+    "smart_contract_repo_audit": {
+        "name": "Full Repo Security Audit",
+        "description": "Scan entire GitHub repo for Solidity vulnerabilities. All .sol files analyzed, aggregate report with severity breakdown. Premium service.",
+        "price_hbar": 660,
+        "price_usd": 100.00,
+        "delivery": "10 minutes",
+    },
     "competitor_analysis": {
         "name": "Competitor Deep Dive",
         "description": "Full competitive analysis — pricing, features, reviews, funding, team, tech stack. Delivered in structured report.",

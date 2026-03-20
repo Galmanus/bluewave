@@ -1,5 +1,53 @@
 # Changelog
 
+## v0.5.0 — Autonomous Revenue Engine (2026-03-20)
+
+Wave operates as an autonomous revenue-generating agent across the entire internet — not just Moltbook.
+Hunts for clients, sells services, sends emails independently, checks payments, and evolves its own capabilities.
+
+### New Autonomous Actions (4)
+- **`hunt`**: Full sales pipeline with 5 rotatable angles — industry hunt, pain hunt, signal hunt, opportunity hunt, reply harvest. Finds prospects, qualifies with BANT, sends outreach emails via Gmail.
+- **`sell`**: 5 approaches — value demonstration (free case study), internet opportunity scan (Reddit, IndieHackers, HN, freelance boards), cold email campaigns, Moltbook promo, inbound email check.
+- **`check_payments`**: Scan HBAR blockchain + PIX + Gmail replies. Auto-confirm payments and trigger service delivery.
+- **`evolve`**: Self-improvement — analyze performance, identify market gaps, create new skills at runtime, update strategies. Runs every 24h+.
+
+### Google Dorking Specialist (NEW SKILL)
+- OSINT-grade search intelligence (`skills/dorking.py`) — 6 tools
+- `dork_contacts`: Find decision makers + emails via LinkedIn, press, company pages, email pattern leaks
+- `dork_pain_signals`: Find companies suffering pain points (job postings, complaints, RFPs, tool-switching signals)
+- `dork_gigs`: Scan Reddit (r/forhire, r/slavelabour, r/entrepreneur), Upwork, IndieHackers, HN, Contra for gigs
+- `dork_competitor`: Deep competitive intel — pricing, client lists, weaknesses, tech stack, funding, employee reviews
+- `dork_custom`: Raw dork power — all operators (site:, intitle:, inurl:, filetype:, exact match, OR/AND/-)
+- `dork_market_gaps`: Find underserved markets — unmet demand, complaints without alternatives, people willing to pay
+- All tools: multi-query with deduplication, rate limiting, result scoring by relevance
+- Integrated into hunt, sell, and evolve action prompts
+
+### Gmail API Integration (NEW SKILL)
+- Full Gmail API skill (`skills/gmail_skill.py`) with OAuth2 authentication
+- 4 tools: `gmail_send`, `gmail_read`, `gmail_read_body`, `gmail_check_replies`
+- Rate limited: 20 emails/day, 5/hour. All sent emails logged for tracking
+- Outreach reply tracking: detects when prospects respond to cold emails
+- Setup: `python3 skills/gmail_skill.py --setup` (one-time OAuth2 flow)
+
+### Deliberation Rewrite
+- Revenue state in every deliberation: total revenue, prospects found, outreach sent, hunts/sells today
+- Revenue mandate: 50% of non-silence actions MUST be revenue when revenue = $0
+- Forced triggers: hunt >6h, check_payments >8h, evolve >24h
+- Decision expanded to 11 action types (was 7)
+
+### Soul Updates
+- 4 new action types in `autonomous_soul.json` (hunt, sell, check_payments, evolve)
+- Resource allocation: 50% revenue, 25% content, 15% learning, 10% outreach
+- Enforcement: if $0 revenue, 60%+ cycles must be revenue actions
+
+### Infrastructure
+- Intent router: `monetization`, `payment_check`, `gmail` tool clusters added
+- Autonomous mode loads ALL revenue tools (sales + monetization + payment + gmail + self_evolve)
+- `gmail_skill` added to protected core skills (cannot be deleted by self_evolve)
+- State tracking: hunts_today, sells_today, total_revenue_usd, prospects_found, outreach_sent
+
+---
+
 ## v0.4.1 — Code Quality, Security & Token Optimization (2026-03-19)
 
 Auditoria completa de código (backend, frontend, Wave agent, infra) com 26 correções + 8 otimizações de tokens em 25 arquivos.

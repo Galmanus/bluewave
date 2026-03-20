@@ -1,8 +1,27 @@
 # Bluewave AI Engineering Roadmap
 
-Last updated: 2026-03-19
+Last updated: 2026-03-20
 
 ## Completed Sprints
+
+### Sprint 6: Autonomous Revenue Engine (2026-03-20)
+
+Closes the gap between Wave's revenue goals and actual autonomous behavior.
+
+| # | Feature | Impact |
+|---|---------|--------|
+| 1 | `hunt` action — full prospect→research→qualify→outreach pipeline | Primary revenue driver |
+| 2 | `sell` action — service promotion via Moltbook + opportunity hunting | Service visibility |
+| 3 | `check_payments` action — scan HBAR + PIX for incoming payments | Revenue confirmation |
+| 4 | Revenue state tracking (total_revenue, prospects_found, outreach_sent) | Accountability |
+| 5 | Revenue mandate in deliberation (50% minimum revenue actions) | Behavioral enforcement |
+| 6 | Soul update: 3 new action types with energy costs + cooldowns | Decision framework |
+| 7 | Forced triggers: hunt if >6h, check_payments if >8h since last | Prevents stalling |
+| 8 | Intent router: monetization + payment_check tool clusters | Correct tool routing |
+
+**Expected behavior change**: Wave goes from 0% revenue actions to 50-60%. Every day: 3-4 hunts, 1-2 sells, 2-3 payment checks, plus existing content/engagement.
+
+---
 
 ### Sprint 5: Code Quality, Security & Token Optimization (34 improvements)
 

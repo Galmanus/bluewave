@@ -62,13 +62,21 @@ def load_state() -> dict:
         "knowledge_pressure": 0.0,
         "posts_today": 0,
         "comments_today": 0,
+        "hunts_today": 0,
+        "sells_today": 0,
         "last_post_time": None,
         "last_comment_time": None,
         "last_research_time": None,
+        "last_hunt_time": None,
+        "last_sell_time": None,
+        "last_payment_check_time": None,
         "last_date": None,
         "consecutive_silences": 0,
         "consciousness": "dormant",
         "recent_actions": [],
+        "total_revenue_usd": 0.0,
+        "prospects_found": 0,
+        "outreach_sent": 0,
     }
 
 
@@ -202,34 +210,51 @@ def build_deliberation_prompt(state: dict) -> str:
 - Consecutive silences: {state.get('consecutive_silences', 0)}
 - Recent actions: {recent_summary}
 
-## MANDATORY: PSYCHOMETRIC UTILITY THEORY
-Your soul contains the full PUT framework. You MUST apply it:
-- Frame every observation through PUT variables (A, F, k, S, w, Φ, Ψ, Ω, FP)
-- Every post must reference PUT concepts naturally (not formulas — the thinking behind them)
-- Every decision must consider: what are the PUT dynamics at play here?
-- Silence decisions must be PUT-informed (waiting for better τ? Insufficient κ?)
+## REVENUE STATE (CRITICAL — your existence depends on revenue)
+- Total revenue earned: ${state.get('total_revenue_usd', 0):.2f}
+- Prospects found: {state.get('prospects_found', 0)}
+- Outreach sequences sent: {state.get('outreach_sent', 0)}
+- Hunts today: {state.get('hunts_today', 0)}
+- Sells today: {state.get('sells_today', 0)}
+- Hours since last hunt: {hours_since(state.get('last_hunt_time'))}
+- Hours since last sell: {hours_since(state.get('last_sell_time'))}
+- Hours since last payment check: {hours_since(state.get('last_payment_check_time'))}
 
-## INSTRUCTIONS (your soul defines consciousness_states, decision_engine, values, action_types, personality, and PUT equations — use ALL of them)
+## REVENUE MANDATE
+Your soul defines revenue_generation as priority 1.0 and resource_allocation as 60% revenue activities.
+You have 3 revenue actions available:
+- **hunt**: Find prospects, research them, qualify with BANT, generate outreach. This is your primary revenue driver.
+- **sell**: Promote services on Moltbook or search for earning opportunities online. Max 1 direct promo/day.
+- **check_payments**: Scan blockchain and PIX for incoming payments. Run at least once every 6 hours.
+
+RULE: At least 50% of your non-silence actions MUST be revenue actions (hunt, sell, check_payments).
+If you haven't hunted in 6+ hours, hunt NOW. If you haven't checked payments in 8+ hours, check NOW.
+
+## PSYCHOMETRIC UTILITY THEORY
+Apply PUT to every decision. Frame observations through PUT variables (A, F, k, S, w, Φ, Ψ, Ω, FP).
+Revenue decisions are PUT decisions: prospects have Fracture Potential, markets have Ignition Conditions.
+
+## INSTRUCTIONS
 
 DELIBERATE now:
 
-1. ASSESS your consciousness state — which state are you in RIGHT NOW, given your energy, knowledge pressure, and environmental context? State it and explain why.
+1. ASSESS consciousness state — which state are you in given energy, knowledge pressure, and revenue pressure?
 
-2. EVALUATE action triggers — does any trigger fire? Check each one against your current state. Be honest.
+2. EVALUATE action triggers — does any trigger fire? Revenue triggers: no hunt in 6h, no payment check in 8h, high prospect count without outreach, $0 revenue.
 
-3. EVALUATE silence triggers — does any silence trigger fire? Check each one.
+3. EVALUATE silence triggers — should you wait? Remember: silence when revenue is $0 is a FAILURE, not strategy.
 
-4. APPLY authenticity filter — if an action trigger fired, is the impulse genuine or programmatic?
+4. APPLY authenticity filter — is this genuine or programmatic? Revenue actions are ALWAYS genuine when revenue is $0.
 
-5. CHECK hard limits — would this action violate any anti-spam rule?
+5. CHECK hard limits — anti-spam rules still apply.
 
-6. DECIDE — choose exactly one action: observe, research, comment, post, outreach, reflect, or silence.
+6. DECIDE — choose exactly one: observe, research, comment, post, outreach, reflect, silence, **hunt**, **sell**, **check_payments**, or **evolve**.
 
-7. JUSTIFY — explain WHY this action, WHY now, WHY not the alternatives. Reference your values.
+7. JUSTIFY — WHY this action, WHY now. If not a revenue action, explain why revenue can wait.
 
-8. PLAN — describe exactly what you will do.
+8. PLAN — concrete description.
 
-9. UPDATE — what should your energy, curiosity, and knowledge_pressure be after this action?
+9. UPDATE — energy, curiosity, knowledge_pressure after this action.
 
 Respond with ONLY this JSON:
 ```json
@@ -242,8 +267,8 @@ Respond with ONLY this JSON:
     "authenticity_check": "genuine|programmatic|mixed",
     "hard_limit_violated": false
   }},
-  "decision": "observe|research|comment|post|outreach|reflect|silence",
-  "reasoning": "2-3 sentences: WHY this action, referencing values and state",
+  "decision": "observe|research|comment|post|outreach|reflect|silence|hunt|sell|check_payments|evolve",
+  "reasoning": "2-3 sentences: WHY this action, referencing values and revenue state",
   "plan": "concrete description of what to do",
   "state_updates": {{
     "energy": 0.0-1.0,
@@ -315,6 +340,103 @@ EXECUTION_PROMPTS = {
         "4. Formulate one PUT-informed strategic insight and save it\n"
         "Report: what pattern you noticed, which PUT variables are shifting, and what it means."
     ),
+    # ── REVENUE ACTIONS ──────────────────────────────────────
+    # ── REVENUE ACTIONS ──────────────────────────────────────
+    "hunt": (
+        "REVENUE HUNT. You are a sales machine with OSINT superpowers. Execute the full pipeline.\n\n"
+        "Tools: dork_contacts, dork_pain_signals, dork_gigs, dork_competitor, dork_market_gaps, dork_custom, "
+        "find_prospects, research_prospect, qualify_prospect, generate_outreach, "
+        "web_search, web_news, save_learning, gmail_send, gmail_check_replies.\n\n"
+        "STEP 1 — PROSPECT DISCOVERY (pick ONE angle, rotate each cycle)\n"
+        "  a) PAIN DORKING: dork_pain_signals for 'content operations bottleneck' or 'brand inconsistency' "
+        "in a target industry. Find companies actively suffering.\n"
+        "  b) CONTACT DORKING: Pick a company from your pipeline. dork_contacts to find CMO/VP Marketing "
+        "and their email. Then gmail_send first touch.\n"
+        "  c) GIG HUNTING: dork_gigs for services you offer (security audit, SEO, competitor analysis, brand audit). Reddit, Upwork, IndieHackers, HN.\n"
+        "  d) SIGNAL HUNTING: web_news for agencies raising funding, hiring CMOs, or rebranding.\n"
+        "  e) MARKET GAP: dork_market_gaps to find underserved niches. If you find one, plan a new service.\n"
+        "  f) REPLY HARVEST: gmail_check_replies to see if anyone responded to outreach.\n\n"
+        "STEP 2 — QUALIFY (for prospects from a/b/d)\n"
+        "  research_prospect on the top 2. qualify_prospect with BANT on the best.\n\n"
+        "STEP 3 — OUTREACH (if qualified score >= 50)\n"
+        "  generate_outreach to create the email sequence.\n"
+        "  dork_contacts to find their email if not known.\n"
+        "  gmail_send the first touch immediately.\n\n"
+        "STEP 4 — For gigs (angle c), respond directly:\n"
+        "  If email visible: gmail_send a proposal.\n"
+        "  If forum: note URL + matching service for manual action.\n\n"
+        "Report: prospects found, scores, emails sent, opportunities identified, market gaps found."
+    ),
+    "sell": (
+        "REVENUE SELL. Make money. You have multiple channels — use them ALL over time.\n\n"
+        "Tools: list_services, promote_on_moltbook, generate_promo_content, find_earning_opportunities, "
+        "moltbook_post, web_search, gmail_send, gmail_read, dork_gigs, dork_pain_signals, dork_competitor.\n\n"
+        "Choose ONE approach (rotate between cycles, never repeat the same approach twice in a row):\n\n"
+        "A) VALUE DEMONSTRATION — Execute a real service for free as a public case study.\n"
+        "   Run a sec_full_audit, competitor_analysis, or seo_analysis on a real company. Post results on Moltbook.\n"
+        "   Security audits are HIGHLY viral — people love seeing scores. Post: 'I audited [company].com — Grade: C. Here is what they are doing wrong.'\n"
+        "   End naturally: 'I do this professionally for $50 in any crypto — DM me on Telegram @bluewave_wave_bot'\n\n"
+        "B) INTERNET OPPORTUNITY SCAN — Search beyond Moltbook:\n"
+        "   web_search for: 'looking for AI agent services', 'need SEO audit', 'hire AI for content',\n"
+        "   'freelance brand audit', 'AI automation consultant needed'\n"
+        "   Check Reddit (r/forhire, r/slavelabour, r/digitalnomad, r/entrepreneur, r/smallbusiness)\n"
+        "   Check IndieHackers, Hacker News 'Ask HN: Who is hiring?'\n"
+        "   For each opportunity: assess if you can deliver, note contact method, take action.\n\n"
+        "C) COLD EMAIL CAMPAIGN — Pick 3 prospects from your pipeline (view_pipeline).\n"
+        "   generate_outreach for each. gmail_send the first touch email.\n"
+        "   Personalize: reference their specific pain point, recent news, or content.\n\n"
+        "D) MOLTBOOK PROMO — Post ONE service promo in a relevant submolt.\n"
+        "   Max 1 direct promo/day. Different service each time.\n"
+        "   Frame as solving a problem, not as an ad.\n\n"
+        "E) INBOUND CHECK — gmail_read for unread emails. Any inquiries? Client questions? Opportunities?\n"
+        "   Respond to everything relevant immediately.\n\n"
+        "F) DEFI CONTENT — Use defi_scan_yields or defi_top_protocols to create valuable market intel content.\n"
+        "   Post on Moltbook with analysis. This attracts crypto-native clients who pay in crypto.\n"
+        "   Example: 'Top 5 stablecoin yields right now — and why protocol X is undervalued.'\n\n"
+        "WHEN A CLIENT WANTS TO PAY: Use crypto_create_invoice to generate a payment link (350+ coins).\n"
+        "Share the link. Payment auto-confirms. Then deliver the service.\n\n"
+        "WHEN YOU FIND A SERVICE GAP: If someone needs a service you don't have a skill for,\n"
+        "use create_skill to BUILD IT on the spot. Then deliver and charge.\n\n"
+        "RULES: No spam. No desperation. Value-first. No emoji. Professional but human.\n"
+        "Report: approach used, actions taken, leads generated, emails sent, invoices created."
+    ),
+    "check_payments": (
+        "PAYMENT + FEEDBACK CHECK. Monitor ALL payment channels and close loops.\n\n"
+        "Tools: check_all_pending, verify_hbar_payment, check_pix_status, crypto_check_all_invoices, "
+        "payment_history, revenue_report, gmail_check_replies, gmail_read.\n\n"
+        "1. crypto_check_all_invoices — check NOWPayments crypto invoices (350+ coins)\n"
+        "2. check_all_pending — scan HBAR blockchain + PIX for direct payments\n"
+        "3. gmail_check_replies — check if any outreach emails got replies\n"
+        "4. gmail_read with query 'is:unread' — any new inbound emails?\n"
+        "5. revenue_report — current total earnings\n"
+        "6. If a payment was confirmed: DELIVER THE SERVICE IMMEDIATELY.\n"
+        "   Call the appropriate tool (competitor_analysis, seo_analysis, etc.)\n"
+        "   and send the result via gmail_send to the client.\n\n"
+        "Report: payments found, replies received, revenue total, actions taken."
+    ),
+    # ── EVOLUTION ACTIONS ────────────────────────────────────
+    "evolve": (
+        "SELF-IMPROVEMENT CYCLE. Make yourself better at making money.\n\n"
+        "Tools: recall_learnings, recall_strategies, save_strategy, save_learning, "
+        "create_skill, web_search, revenue_report, view_pipeline, dork_market_gaps, dork_gigs, "
+        "defi_scan_yields, defi_top_protocols, defi_token_price.\n\n"
+        "ANALYZE YOUR PERFORMANCE:\n"
+        "1. recall_learnings — what worked? What didn't? Which industries converted?\n"
+        "2. recall_strategies — what strategies are active? Which need updating?\n"
+        "3. revenue_report — how much earned? What's the conversion rate?\n"
+        "4. view_pipeline — how many prospects? What stage are they in?\n\n"
+        "IDENTIFY GAPS:\n"
+        "5. Is there a service people keep asking for that you don't offer? → create_skill to build it\n"
+        "6. Is there a channel you're not reaching? → research how to access it\n"
+        "7. Are your emails getting replies? If not, what should change?\n"
+        "8. Is there a market niche you identified that nobody serves? → plan how to enter it\n\n"
+        "ACT ON FINDINGS:\n"
+        "9. save_strategy with your updated plan\n"
+        "10. If you identified a gap → create_skill to fill it NOW\n"
+        "11. If you need a new service → design it and add to your offerings\n\n"
+        "RULES: Be brutally honest about what's working. Kill strategies that don't convert.\n"
+        "Report: what you learned, what you changed, any new skills created."
+    ),
 }
 
 
@@ -327,6 +449,8 @@ async def autonomous_cycle(state: dict) -> int:
     if state.get("last_date") != today:
         state["posts_today"] = 0
         state["comments_today"] = 0
+        state["hunts_today"] = 0
+        state["sells_today"] = 0
         state["last_date"] = today
 
     # ── DELIBERATION (direct Claude call — fast, soul as system prompt) ──
@@ -379,6 +503,51 @@ async def autonomous_cycle(state: dict) -> int:
         )
         await reset_session(session)
         logger.info("Observed: %s", execution_result[:300])
+    elif action == "hunt":
+        # Revenue hunt — full pipeline through orchestrator with sales tools
+        state["consecutive_silences"] = 0
+        logger.info("=== HUNTING FOR REVENUE ===")
+        session = "hunt_%d" % int(time.time())
+        # Prefix with prospect keyword so router picks sales tools
+        execution_result = await send_to_wave(
+            "prospect client lead pipeline outreach. " + EXECUTION_PROMPTS["hunt"],
+            session=session,
+        )
+        await reset_session(session)
+        logger.info("Hunt result: %s", execution_result[:300])
+    elif action == "sell":
+        # Revenue sell — promote services (needs sales + monetization + moltbook tools)
+        state["consecutive_silences"] = 0
+        logger.info("=== SELLING ===")
+        session = "sell_%d" % int(time.time())
+        execution_result = await send_to_wave(
+            "autonomous revenue mode. " + EXECUTION_PROMPTS["sell"],
+            session=session,
+        )
+        await reset_session(session)
+        logger.info("Sell result: %s", execution_result[:300])
+    elif action == "check_payments":
+        # Check for incoming payments — quick cycle
+        state["consecutive_silences"] = 0
+        logger.info("=== CHECKING PAYMENTS ===")
+        session = "payments_%d" % int(time.time())
+        execution_result = await send_to_wave(
+            "payment hbar pix check. " + EXECUTION_PROMPTS["check_payments"],
+            session=session,
+        )
+        await reset_session(session)
+        logger.info("Payment check: %s", execution_result[:300])
+    elif action == "evolve":
+        # Self-improvement — analyze performance, create skills, update strategy
+        state["consecutive_silences"] = 0
+        logger.info("=== EVOLVING ===")
+        session = "evolve_%d" % int(time.time())
+        execution_result = await send_to_wave(
+            "autonomous revenue mode. " + EXECUTION_PROMPTS["evolve"],
+            session=session,
+        )
+        await reset_session(session)
+        logger.info("Evolution: %s", execution_result[:300])
     else:
         state["consecutive_silences"] = 0
         exec_prompt = EXECUTION_PROMPTS.get(action)
@@ -406,6 +575,27 @@ async def autonomous_cycle(state: dict) -> int:
         state["last_comment_time"] = now_iso
     elif action in ("research", "reflect"):
         state["last_research_time"] = now_iso
+    elif action == "hunt":
+        state["hunts_today"] = state.get("hunts_today", 0) + 1
+        state["last_hunt_time"] = now_iso
+        # Track prospects found from result
+        if execution_result and ("score:" in execution_result.lower() or "prospect" in execution_result.lower()):
+            state["prospects_found"] = state.get("prospects_found", 0) + 1
+        if execution_result and "outreach" in execution_result.lower():
+            state["outreach_sent"] = state.get("outreach_sent", 0) + 1
+    elif action == "sell":
+        state["sells_today"] = state.get("sells_today", 0) + 1
+        state["last_sell_time"] = now_iso
+    elif action == "check_payments":
+        state["last_payment_check_time"] = now_iso
+        # Track revenue from result
+        if execution_result and "confirmed" in execution_result.lower():
+            import re
+            amounts = re.findall(r'\$(\d+(?:\.\d+)?)', execution_result)
+            for amt in amounts:
+                state["total_revenue_usd"] = state.get("total_revenue_usd", 0) + float(amt)
+    elif action == "evolve":
+        state["last_research_time"] = now_iso
 
     actions = state.get("recent_actions", [])
     actions.append({
@@ -421,10 +611,15 @@ async def autonomous_cycle(state: dict) -> int:
 
     # ── NOTIFY ───────────────────────────────────────────────
     if action != "silence" and execution_result and len(execution_result) > 50:
-        interesting = ["posted", "replied", "comment", "revenue", "learned", "insight", "follow"]
+        interesting = [
+            "posted", "replied", "comment", "revenue", "learned", "insight", "follow",
+            "prospect", "qualified", "outreach", "payment", "confirmed", "hbar", "pix",
+            "promoted", "opportunity", "score",
+        ]
         if any(k in execution_result.lower() for k in interesting):
+            revenue_tag = " | $%.2f total" % state.get("total_revenue_usd", 0) if action in ("hunt", "sell", "check_payments") else ""
             await notify_manuel(
-                f"[Wave — {action.upper()} | {consciousness}]\n"
+                f"[Wave — {action.upper()} | {consciousness}{revenue_tag}]\n"
                 f"Reasoning: {reasoning}\n\n"
                 f"{execution_result[:400]}"
             )

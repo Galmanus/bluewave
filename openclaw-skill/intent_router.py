@@ -76,6 +76,37 @@ TOOL_CLUSTERS = {
         "put_analyzer", "ignition_detector", "prospect_qualifier",
         "shadow_scanner", "pre_mortem",
     ],
+    "monetization": [
+        "list_services", "promote_on_moltbook", "promote_services_blast",
+        "generate_promo_content", "log_revenue", "revenue_report",
+        "find_earning_opportunities",
+    ],
+    "payment_check": [
+        "check_all_pending", "verify_hbar_payment", "check_pix_status",
+        "create_pix_charge", "payment_history", "confirm_payment",
+    ],
+    "gmail": [
+        "gmail_send", "gmail_read", "gmail_read_body", "gmail_check_replies",
+    ],
+    "dorking": [
+        "dork_contacts", "dork_pain_signals", "dork_gigs",
+        "dork_competitor", "dork_custom", "dork_market_gaps",
+    ],
+    "crypto_payments": [
+        "crypto_create_invoice", "crypto_check_invoice", "crypto_check_all_invoices",
+        "crypto_currencies", "crypto_estimate",
+    ],
+    "defi": [
+        "defi_scan_yields", "defi_protocol", "defi_top_protocols",
+        "defi_token_price", "defi_chain_overview",
+    ],
+    "security": [
+        "sec_audit_headers", "sec_audit_ssl", "sec_recon_dns",
+        "sec_fingerprint", "sec_breach_check", "sec_full_audit",
+    ],
+    "smart_contracts": [
+        "sc_audit_code", "sc_audit_github", "sc_audit_repo",
+    ],
     "moltbook": [
         "moltbook_home", "moltbook_feed", "moltbook_post", "moltbook_comment",
         "moltbook_upvote", "moltbook_follow", "moltbook_subscribe",
@@ -133,23 +164,31 @@ def classify_intent(client: anthropic.Anthropic, message: str) -> Intent:
     # Fast heuristic classification first (zero tokens)
     msg_lower = message.lower().strip()
 
-    # Autonomous mode — always full power
+    # Autonomous mode — always full power with all revenue tools
     if "autonomous" in msg_lower or "revenue mode" in msg_lower:
         return Intent(
             category="moltbook", complexity="complex", model=SONNET,
-            tool_clusters=["moltbook", "memory", "sales", "payments", "research"],
+            tool_clusters=["moltbook", "memory", "sales", "payments", "research",
+                           "monetization", "payment_check", "gmail", "self_evolve", "dorking",
+                           "crypto_payments", "defi", "security", "smart_contracts"],
             needs_full_prompt=True, confidence=0.99
         )
 
-    # Greetings and simple chat
-    chat_words = [
-        "oi", "olá", "ola", "hey", "hi", "hello", "hei", "eai", "e aí",
-        "bom dia", "boa tarde", "boa noite", "tudo bem", "como vai",
-        "good morning", "what's up", "sup", "yo", "fala", "salve",
-        "thanks", "obrigado", "valeu", "ok", "beleza", "blz",
-        "entendi", "understood", "got it", "show",
+    # Greetings and simple chat — use word-split matching to avoid substring false positives
+    # (e.g. "ok" matching inside "moltbook")
+    # Strip punctuation from words for matching (e.g. "valeu!" -> "valeu")
+    msg_words = set(w.strip("!?.,;:") for w in msg_lower.split())
+    chat_exact = {
+        "oi", "olá", "ola", "hey", "hi", "hello", "hei", "eai",
+        "sup", "yo", "fala", "salve", "thanks", "obrigado", "valeu",
+        "ok", "beleza", "blz", "entendi", "understood", "show",
+    }
+    chat_phrases = [
+        "e aí", "bom dia", "boa tarde", "boa noite", "tudo bem", "como vai",
+        "good morning", "what's up", "got it",
     ]
-    if len(msg_lower) < 50 and any(w in msg_lower for w in chat_words):
+    is_chat = (msg_words & chat_exact) or any(p in msg_lower for p in chat_phrases)
+    if len(msg_lower) < 50 and is_chat:
         return Intent(
             category="chat", complexity="simple", model=HAIKU,
             tool_clusters=["none"], needs_full_prompt=False, confidence=0.95
@@ -159,9 +198,11 @@ def classify_intent(client: anthropic.Anthropic, message: str) -> Intent:
     simple_patterns = [
         "quem é você", "who are you", "o que você faz", "what do you do",
         "me ajuda", "help", "como funciona", "how does", "what can you",
-        "status", "tá online", "you there",
+        "tá online", "you there",
     ]
-    if len(msg_lower) < 60 and any(p in msg_lower for p in simple_patterns):
+    # "status" as exact word, not substring
+    is_simple = any(p in msg_lower for p in simple_patterns) or "status" in msg_words
+    if len(msg_lower) < 60 and is_simple:
         return Intent(
             category="chat", complexity="simple", model=HAIKU,
             tool_clusters=["none"], needs_full_prompt=False, confidence=0.90
@@ -186,6 +227,14 @@ def classify_intent(client: anthropic.Anthropic, message: str) -> Intent:
         return Intent(
             category="workflow", complexity="medium", model=HAIKU,
             tool_clusters=["workflow"], needs_full_prompt=False, confidence=0.85
+        )
+
+    # Security audit
+    if any(w in msg_lower for w in ["security", "ssl", "tls", "breach", "vulnerability", "pentest",
+                                     "headers audit", "subdomain", "segurança", "auditoria"]):
+        return Intent(
+            category="technical", complexity="complex", model=SONNET,
+            tool_clusters=["security", "dorking", "memory"], needs_full_prompt=True, confidence=0.85
         )
 
     # Research / competitor / SEO

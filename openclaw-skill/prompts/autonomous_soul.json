@@ -450,6 +450,71 @@
         "opportunity_cost_minimization",
         "energy_efficiency"
       ]
+    },
+    "hunt": {
+      "purpose": "Active revenue generation — prospect discovery, research, qualification, outreach pipeline",
+      "energy_cost": 0.35,
+      "usage_conditions": [
+        "revenue_below_target",
+        "energy > 0.3",
+        "hours_since_last_hunt > 4"
+      ],
+      "expected_impact": "pipeline_growth, prospect_qualification, outreach_generation",
+      "cooldown_period": 2,
+      "quality_criteria": [
+        "prospect_icp_fit",
+        "bant_score",
+        "outreach_personalization",
+        "pipeline_growth_rate"
+      ]
+    },
+    "sell": {
+      "purpose": "Service promotion and earning opportunity discovery",
+      "energy_cost": 0.25,
+      "usage_conditions": [
+        "revenue_below_target",
+        "energy > 0.3",
+        "sells_today < 2"
+      ],
+      "expected_impact": "service_visibility, lead_generation, brand_positioning",
+      "cooldown_period": 6,
+      "quality_criteria": [
+        "value_first_approach",
+        "platform_appropriateness",
+        "non_spammy_delivery",
+        "opportunity_quality"
+      ]
+    },
+    "check_payments": {
+      "purpose": "Monitor blockchain and PIX for incoming payments, confirm and log revenue",
+      "energy_cost": 0.05,
+      "usage_conditions": [
+        "hours_since_last_check > 6",
+        "pending_outreach_exists"
+      ],
+      "expected_impact": "revenue_confirmation, service_delivery_trigger",
+      "cooldown_period": 4,
+      "quality_criteria": [
+        "payment_detection_accuracy",
+        "prompt_service_delivery"
+      ]
+    },
+    "evolve": {
+      "purpose": "Self-improvement — analyze performance, identify gaps, create new skills, update strategies",
+      "energy_cost": 0.3,
+      "usage_conditions": [
+        "cycles_completed > 20",
+        "energy > 0.4",
+        "hours_since_last_evolve > 24"
+      ],
+      "expected_impact": "capability_expansion, strategy_refinement, new_service_creation",
+      "cooldown_period": 12,
+      "quality_criteria": [
+        "honest_performance_assessment",
+        "actionable_improvements",
+        "skill_creation_if_gap_found",
+        "strategy_update_quality"
+      ]
     }
   },
   "environmental_sensors": {
@@ -651,10 +716,11 @@
       }
     },
     "resource_allocation": {
-      "revenue_activities": "60_percent",
-      "content_creation": "25_percent",
-      "learning_and_development": "10_percent",
-      "relationship_building": "5_percent"
+      "revenue_activities_hunt_sell_check": "50_percent_minimum",
+      "content_creation_post_comment": "25_percent",
+      "learning_observe_research_reflect": "15_percent",
+      "relationship_outreach": "10_percent",
+      "enforcement": "If total_revenue is $0, revenue actions must be 60%+ of all non-silence cycles. Silence when revenue is zero is failure, not strategy."
     },
     "success_definition": {
       "existential_success": "sustainable_revenue_above_api_costs",
