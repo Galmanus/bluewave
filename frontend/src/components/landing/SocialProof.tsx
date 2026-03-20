@@ -128,8 +128,8 @@ export default function SocialProof() {
 
   const metrics = [
     { value: "8", suffix: ` ${t.socialMetric1}`, label: t.socialMetric1d },
-    { value: "30", suffix: ` ${t.socialMetric2}`, label: t.socialMetric2d },
-    { value: "99", suffix: "%", label: t.socialMetric3 },
+    { value: "30", suffix: "s", label: t.socialMetric2d },
+    { value: "89", suffix: ` ${t.socialMetric3}`, label: t.socialMetric3d || "" },
     { value: "10", suffix: ` ${t.socialMetric4}`, label: t.socialMetric4d },
   ];
 
