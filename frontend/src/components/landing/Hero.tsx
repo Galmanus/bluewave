@@ -239,7 +239,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
               { text: t.credentialTools, color: "text-cyan-500/50" },
               { text: t.credentialAgents, color: "text-teal-500/50" },
               { text: t.credentialBrand, color: "text-amber-500/50" },
-            ].map((item) => (
+            ].filter(i => i.text).map((item) => (
               <span key={item.text} className={`text-[11px] font-medium ${item.color} tracking-wide`}>
                 {item.text}
               </span>
