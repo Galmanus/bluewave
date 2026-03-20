@@ -20,6 +20,7 @@ from app.routers import (
     calendar,
     comments,
     health,
+    payments,
     permissions,
     resize,
     portals,
@@ -75,6 +76,8 @@ app.include_router(versions.router, prefix="/api/v1")
 app.include_router(resize.router, prefix="/api/v1")
 app.include_router(sso.router, prefix="/api/v1")
 app.include_router(permissions.router, prefix="/api/v1")
+app.include_router(payments.router, prefix="/api/v1")
+app.include_router(payments.webhook_router, prefix="/api/v1")
 
 from app.routers import wave_proxy
 app.include_router(wave_proxy.router, prefix="/api/v1")

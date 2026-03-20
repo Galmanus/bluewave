@@ -68,11 +68,16 @@ class Settings(BaseSettings):
     # Redis (optional)
     REDIS_URL: str = "redis://redis:6379/0"
 
-    # Stripe (optional in dev, required in production)
+    # Stripe (international payments)
     STRIPE_SECRET_KEY: str = ""
     STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
     STRIPE_PRICE_IDS: str = ""  # JSON: {"pro":"price_xxx","business":"price_yyy"}
+
+    # Mercado Pago (Brazilian payments — Pix, cartão, boleto)
+    MERCADOPAGO_ACCESS_TOKEN: str = ""
+    MERCADOPAGO_PUBLIC_KEY: str = ""
+    MERCADOPAGO_WEBHOOK_SECRET: str = ""
 
     class Config:
         env_file = ".env"
