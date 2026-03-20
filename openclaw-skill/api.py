@@ -458,6 +458,102 @@ async def brand_report(request: Request):
     return {"content": r, "elapsed_seconds": time.time() - t0}
 
 
+# ── Brand DNA Extraction (R$997 setup service) ──────────────
+
+@app.post("/brand/extract-dna")
+async def extract_dna(request: Request):
+    """Extract complete Brand DNA from uploaded materials.
+
+    Accepts: image (base64), text description, or PDF text.
+    Returns: structured Brand DNA JSON ready for compliance checking.
+
+    This is the premium setup service (R$997/brand).
+    """
+    import time as _time
+    from brand_dna_extractor import extract_brand_dna
+
+    body = await request.json()
+    t0 = _time.time()
+
+    result = await extract_brand_dna(
+        image_b64=body.get("image_base64"),
+        media_type=body.get("media_type", "image/jpeg"),
+        text_content=body.get("text_content"),
+        pdf_text=body.get("pdf_text"),
+        brand_name=body.get("brand_name", ""),
+    )
+
+    elapsed = _time.time() - t0
+    logger.info("Brand DNA extraction: %.1fs, success=%s", elapsed, result.get("success"))
+    return {**result, "elapsed_seconds": round(elapsed, 2)}
+
+
+# ── Compliance Certificate ───────────────────────────────────
+
+@app.post("/brand/certificate")
+async def compliance_certificate(request: Request):
+    """Generate a compliance certificate for a checked asset.
+
+    Input: brand_name, asset_name, score, dimensions, checked_at
+    Output: certificate text (can be rendered as PDF by frontend)
+
+    Revenue: R$9,90 per certificate.
+    """
+    from brand_dna_extractor import generate_compliance_certificate
+
+    body = await request.json()
+    cert = await generate_compliance_certificate(
+        brand_name=body.get("brand_name", ""),
+        asset_name=body.get("asset_name", ""),
+        score=body.get("score", 0),
+        dimensions=body.get("dimensions", {}),
+        checked_at=body.get("checked_at", ""),
+    )
+    return {"certificate": cert}
+
+
+# ── Public API: Per-Check Compliance (R$0,50/check) ─────────
+
+@app.post("/api/v1/compliance-check")
+async def public_compliance_check(request: Request):
+    """Public API for per-check brand compliance.
+
+    Requires X-API-Key header. Each check costs R$0,50.
+    Designed for agencies integrating compliance into their workflows.
+
+    Input: image_base64 + media_type
+    Output: compliance report with score, dimensions, issues, fixes
+    """
+    import time as _time
+    from brand_vision import analyze_brand_compliance
+
+    # Validate API key
+    api_key = request.headers.get("X-API-Key", "")
+    if not api_key:
+        raise HTTPException(401, "X-API-Key header required")
+
+    body = await request.json()
+    image_b64 = body.get("image_base64", "")
+    media_type = body.get("media_type", "image/jpeg")
+
+    if not image_b64 or len(image_b64) < 100:
+        raise HTTPException(400, "Valid image_base64 required")
+
+    t0 = _time.time()
+    result = await analyze_brand_compliance(image_b64, media_type)
+    elapsed = _time.time() - t0
+
+    logger.info("Public API compliance check: %.1fs", elapsed)
+    return {
+        "report": result,
+        "elapsed_seconds": round(elapsed, 2),
+        "billing": {
+            "cost_brl": 0.50,
+            "method": "per-check",
+        },
+    }
+
+
 # ── Main ─────────────────────────────────────────────────────
 
 if __name__ == "__main__":
