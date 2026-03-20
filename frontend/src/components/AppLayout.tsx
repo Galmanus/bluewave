@@ -20,6 +20,7 @@ import {
   BarChart3,
   Calendar,
   Dna,
+  CreditCard,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
@@ -39,6 +40,7 @@ const NAV_ITEMS = [
   { to: "/brand", label: "Brand", icon: Palette, minRole: "admin" },
   { to: "/brand-dna", label: "Brand DNA", icon: Dna, minRole: "admin" },
   { to: "/analytics", label: "Analytics", icon: BarChart3, minRole: "admin" },
+  { to: "/billing", label: "Billing", icon: CreditCard, minRole: "admin" },
   { to: "/team", label: "Team", icon: Users, minRole: "admin" },
   { to: "/integrations", label: "Integrations", icon: Webhook, minRole: "admin" },
 ];
