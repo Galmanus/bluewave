@@ -116,7 +116,7 @@ function CellContent({ cell }: { cell: CellValue }) {
       );
     case "text":
       return (
-        <span className="text-sm font-medium text-[#374151]">{cell.label}</span>
+        <span className="text-sm font-medium text-white/70">{cell.label}</span>
       );
   }
 }
@@ -156,13 +156,13 @@ export default function Comparison() {
                     key={c}
                     className={`py-4 px-4 text-center text-sm font-semibold ${
                       i === 0
-                        ? "text-cyan-600 bg-blue-50/50 rounded-t-lg"
-                        : "text-[#374151]"
+                        ? "text-cyan-400 bg-cyan-500/5 rounded-t-lg"
+                        : "text-white/70"
                     }`}
                   >
                     {c}
                     {i === 0 && (
-                      <span className="block text-[10px] font-medium text-blue-500 mt-0.5">
+                      <span className="block text-[10px] font-medium text-cyan-400 mt-0.5">
                         Recommended
                       </span>
                     )}
@@ -180,14 +180,14 @@ export default function Comparison() {
                   transition={{ duration: 0.3, delay: 0.3 + ri * 0.05 }}
                   className="border-t border-white/[0.06]"
                 >
-                  <td className="py-4 px-4 text-sm font-medium text-[#374151]">
+                  <td className="py-4 px-4 text-sm font-medium text-white/70">
                     {row.name}
                   </td>
                   {row.values.map((cell, ci) => (
                     <td
                       key={ci}
                       className={`py-4 px-4 text-center ${
-                        ci === 0 ? "bg-blue-50/50" : ""
+                        ci === 0 ? "bg-cyan-500/5" : ""
                       }${
                         ri === features.length - 1 && ci === 0
                           ? " rounded-b-lg"

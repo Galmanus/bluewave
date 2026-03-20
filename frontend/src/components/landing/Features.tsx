@@ -48,8 +48,8 @@ export default function Features() {
           </p>
         </motion.div>
 
-        {/* Bento Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Bento Grid — 12 grid units across 4 rows: (2+1), (1+1+1), (2+1), (1+1+1) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
 
           {/* Card 1 — Asset Management (large) */}
           <motion.div
@@ -221,39 +221,7 @@ export default function Features() {
             </div>
           </motion.div>
 
-          {/* Card 7 — Prospecting */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.35 }}
-            className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 relative overflow-hidden group hover:border-amber-500/20 transition-colors"
-          >
-            <div className="flex items-center gap-2 mb-4">
-              <Globe className="w-5 h-5 text-amber-400" />
-              <h3 className="text-lg font-semibold text-white">{p ? "Prospecção de Vendas" : "Sales Prospecting"}</h3>
-            </div>
-            <p className="text-sm text-white/50 mb-5">
-              {p ? "Pipeline autônomo — encontrar, pesquisar, qualificar e abordar. Tudo via chat." : "Autonomous pipeline — find, research, qualify, and outreach. All from a chat message."}
-            </p>
-            <div className="space-y-2 font-mono text-[10px]">
-              <div className="flex items-center justify-between px-3 py-2 rounded bg-white/[0.03] border border-white/[0.06]">
-                <span className="text-white/70">Yard NYC</span>
-                <span className="text-emerald-400 font-bold">95/100</span>
-              </div>
-              <div className="flex items-center justify-between px-3 py-2 rounded bg-white/[0.03] border border-white/[0.06]">
-                <span className="text-white/70">Anomaly</span>
-                <span className="text-cyan-400 font-bold">82/100</span>
-              </div>
-              <div className="flex items-center justify-between px-3 py-2 rounded bg-white/[0.03] border border-white/[0.06]">
-                <span className="text-white/70">R/GA</span>
-                <span className="text-cyan-400 font-bold">78/100</span>
-              </div>
-              <div className="text-center text-white/20 mt-1">{p ? "BANT qualificado + outreach pronto" : "BANT qualified + outreach ready"}</div>
-            </div>
-          </motion.div>
-
-          {/* Card 8 — Behavioral Intelligence (PUT) */}
+          {/* Card 7 — Behavioral Intelligence (PUT) — 2 col */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -288,7 +256,70 @@ export default function Features() {
             </div>
           </motion.div>
 
-          {/* Card 9 — Security */}
+          {/* Card 8 — Brand DNA Extraction (fills the row after PUT 2-col) */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.35 }}
+            className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-cyan-500/[0.03] to-teal-500/[0.03] p-6 relative overflow-hidden group hover:border-cyan-500/20 transition-colors"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="w-5 h-5 text-cyan-400" />
+              <h3 className="text-lg font-semibold text-white">{p ? "Extração de Brand DNA" : "Brand DNA Extraction"}</h3>
+            </div>
+            <p className="text-sm text-white/50 mb-5">
+              {p ? "Envie um PDF ou imagem das guidelines. A IA extrai cores, fontes, tom, regras — tudo em JSON estruturado." : "Upload a PDF or guideline image. AI extracts colors, fonts, tone, rules — all as structured JSON."}
+            </p>
+            <div className="space-y-2 text-[10px] font-mono">
+              <div className="flex items-center gap-2 px-3 py-2 rounded bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-cyan-400">01</span>
+                <span className="text-white/50">{p ? "Upload → Análise por IA" : "Upload → AI Analysis"}</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 rounded bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-cyan-400">02</span>
+                <span className="text-white/50">{p ? "Extração → Brand DNA JSON" : "Extraction → Brand DNA JSON"}</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 rounded bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-cyan-400">03</span>
+                <span className="text-white/50">{p ? "Ativação → Compliance automático" : "Activation → Auto compliance"}</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Card 9 — Sales Prospecting */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.38 }}
+            className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 relative overflow-hidden group hover:border-amber-500/20 transition-colors"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Globe className="w-5 h-5 text-amber-400" />
+              <h3 className="text-lg font-semibold text-white">{p ? "Prospecção de Vendas" : "Sales Prospecting"}</h3>
+            </div>
+            <p className="text-sm text-white/50 mb-5">
+              {p ? "Pipeline autônomo — encontrar, pesquisar, qualificar e abordar. Tudo via chat." : "Autonomous pipeline — find, research, qualify, and outreach. All from a chat message."}
+            </p>
+            <div className="space-y-2 font-mono text-[10px]">
+              <div className="flex items-center justify-between px-3 py-2 rounded bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-white/70">Yard NYC</span>
+                <span className="text-emerald-400 font-bold">95/100</span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2 rounded bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-white/70">Anomaly</span>
+                <span className="text-cyan-400 font-bold">82/100</span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2 rounded bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-white/70">R/GA</span>
+                <span className="text-cyan-400 font-bold">78/100</span>
+              </div>
+              <div className="text-center text-white/20 mt-1">{p ? "BANT qualificado + outreach pronto" : "BANT qualified + outreach ready"}</div>
+            </div>
+          </motion.div>
+
+          {/* Card 10 — Security */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
