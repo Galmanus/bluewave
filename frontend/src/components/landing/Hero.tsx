@@ -1,151 +1,122 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { Waves, ArrowRight, Bot, Search, Eye, Shield, BarChart3, Zap } from "lucide-react";
+import { Waves, ArrowRight, ShieldCheck, Palette, Type, Image, Sparkles, Layout, Eye, Target, Monitor } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useGeo } from "../../contexts/GeoContext";
 
-const TERMINAL_LINES = [
-  { type: "input", text: "find creative agencies with content ops problems" },
-  { type: "status", text: "Searching web + LinkedIn...", icon: "search" },
-  { type: "status", text: "Delegating to Strategist...", icon: "agent" },
-  { type: "output", text: "Found 5 prospects. Top match:" },
-  { type: "result", text: "Yard NYC — 95/100 (AdAge Small Agency of the Year)" },
-  { type: "result", text: "CEO: Ruth Bernstein | 96 employees" },
-  { type: "status", text: "Generating outreach...", icon: "zap" },
-  { type: "output", text: "4-touch sequence ready (email + LinkedIn)" },
-  { type: "divider", text: "" },
-  { type: "input", text: "check brand compliance on this image" },
-  { type: "status", text: "Claude Vision analyzing...", icon: "eye" },
-  { type: "result", text: "Compliance: 87/100 — typography off-brand" },
-  { type: "result", text: "Fix: Helvetica → Inter (x-height differs 7%)" },
-  { type: "divider", text: "" },
-  { type: "input", text: "I need a Hacker News monitor" },
-  { type: "status", text: "Creating skill...", icon: "zap" },
-  { type: "output", text: "hacker_news_monitor.py — 4 new tools created" },
-  { type: "result", text: "9KB Python, validated, registered. Live now." },
-];
-
-function HeroTerminal() {
-  const [visibleLines, setVisibleLines] = useState(0);
+/* ── Animated Compliance Ring (the hero visual) ── */
+function HeroComplianceRing() {
+  const [score, setScore] = useState(0);
+  const [phase, setPhase] = useState(0); // 0=scanning, 1=scored, 2=dimensions
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setVisibleLines((prev) => {
-        if (prev >= TERMINAL_LINES.length) {
-          setTimeout(() => setVisibleLines(0), 3000);
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, 600);
-    return () => clearInterval(timer);
+    // Phase 0: scanning animation
+    const t1 = setTimeout(() => { setScore(87); setPhase(1); }, 1800);
+    // Phase 2: show dimensions
+    const t2 = setTimeout(() => setPhase(2), 2800);
+    // Reset cycle
+    const t3 = setTimeout(() => { setScore(0); setPhase(0); }, 9000);
+    const loop = setInterval(() => {
+      setScore(0); setPhase(0);
+      setTimeout(() => { setScore(87); setPhase(1); }, 1800);
+      setTimeout(() => setPhase(2), 2800);
+    }, 9000);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearInterval(loop); };
   }, []);
 
-  const iconMap: Record<string, React.ReactNode> = {
-    search: <Search className="w-3 h-3" />,
-    agent: <Bot className="w-3 h-3" />,
-    eye: <Eye className="w-3 h-3" />,
-    zap: <Zap className="w-3 h-3" />,
-    shield: <Shield className="w-3 h-3" />,
-    chain: <BarChart3 className="w-3 h-3" />,
-  };
+  const size = 200;
+  const radius = (size - 14) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = (score / 100) * circumference;
+
+  const dimensions = [
+    { icon: Palette, label: "Cores", score: 92 },
+    { icon: Type, label: "Tipografia", score: 78 },
+    { icon: Image, label: "Logo", score: 95 },
+    { icon: Sparkles, label: "Tom", score: 88 },
+    { icon: Layout, label: "Composição", score: 82 },
+    { icon: Eye, label: "Fotografia", score: 90 },
+    { icon: Target, label: "Estratégia", score: 85 },
+    { icon: Monitor, label: "Canal", score: 88 },
+  ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 40 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, delay: 0.7 }}
-      className="mt-10 sm:mt-16 mx-auto max-w-3xl px-2 sm:px-0"
-    >
-      <div className="relative rounded-lg sm:rounded-xl border border-white/10 bg-[#0d1117] shadow-2xl shadow-blue-500/5 overflow-hidden">
-        <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-[#161b22] border-b border-white/5">
-          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500/70" />
-          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500/70" />
-          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500/70" />
-          <div className="ml-2 sm:ml-3 flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
-            <Bot className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-400 shrink-0" />
-            <span className="text-[10px] sm:text-xs text-white/40 font-mono truncate">wave@bluewave</span>
-            <span className="text-[9px] sm:text-[10px] text-green-400/60 ml-auto font-mono shrink-0 hidden sm:inline">89 tools active</span>
+    <div className="relative">
+      {/* Glow behind ring */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-cyan-500/10 blur-[80px]" />
+
+      <div className="relative flex flex-col items-center gap-6">
+        {/* Ring */}
+        <div className="relative" style={{ width: size, height: size }}>
+          <svg width={size} height={size} className="-rotate-90">
+            <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={8} />
+            <motion.circle
+              cx={size/2} cy={size/2} r={radius} fill="none"
+              stroke="#06b6d4" strokeWidth={8} strokeLinecap="round"
+              strokeDasharray={circumference}
+              animate={{ strokeDashoffset: circumference - progress }}
+              transition={{ duration: 1.2, ease: "easeOut" }}
+              style={{ filter: "drop-shadow(0 0 12px rgba(6,182,212,0.4))" }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            {phase === 0 ? (
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
+                <ShieldCheck className="h-10 w-10 text-cyan-400/50" strokeWidth={1} />
+              </motion.div>
+            ) : (
+              <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center">
+                <span className="text-5xl font-bold text-white">{score}</span>
+                <span className="text-lg text-white/30">/100</span>
+              </motion.div>
+            )}
           </div>
         </div>
 
-        <div className="p-3 sm:p-5 font-mono text-[10px] sm:text-[13px] leading-relaxed h-[280px] sm:h-[340px] overflow-hidden">
-          {TERMINAL_LINES.slice(0, visibleLines).map((line, i) => (
+        {/* 8 Dimensions */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: phase >= 2 ? 1 : 0, y: phase >= 2 ? 0 : 10 }}
+          transition={{ duration: 0.5 }}
+          className="grid grid-cols-4 gap-x-4 gap-y-2"
+        >
+          {dimensions.map((d, i) => (
             <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.2 }}
-              className={`${line.type === "divider" ? "my-3 border-t border-white/5" : "mb-1"}`}
+              key={d.label}
+              initial={{ opacity: 0, x: -5 }}
+              animate={{ opacity: phase >= 2 ? 1 : 0, x: phase >= 2 ? 0 : -5 }}
+              transition={{ delay: i * 0.06, duration: 0.3 }}
+              className="flex items-center gap-1.5"
             >
-              {line.type === "input" && (
-                <div className="flex items-start gap-2">
-                  <span className="text-cyan-400 shrink-0">{">"}</span>
-                  <span className="text-white/90">{line.text}</span>
-                </div>
-              )}
-              {line.type === "status" && (
-                <div className="flex items-center gap-2 text-yellow-400/70">
-                  {line.icon && iconMap[line.icon]}
-                  <span>{line.text}</span>
-                </div>
-              )}
-              {line.type === "output" && (
-                <div className="text-green-400/90 mt-1">{line.text}</div>
-              )}
-              {line.type === "result" && (
-                <div className="text-white/60 pl-4">{line.text}</div>
-              )}
+              <d.icon className="h-3 w-3 text-cyan-400/50" strokeWidth={1.5} />
+              <span className="text-[10px] text-white/40">{d.label}</span>
+              <span className={`text-[10px] font-medium ${d.score >= 90 ? "text-emerald-400" : d.score >= 80 ? "text-cyan-400" : "text-amber-400"}`}>
+                {d.score}
+              </span>
             </motion.div>
           ))}
-          {visibleLines < TERMINAL_LINES.length && (
-            <span className="inline-block w-2 h-4 bg-cyan-400/80 animate-pulse" />
-          )}
-        </div>
-
-        <div className="px-3 sm:px-4 py-2 bg-[#161b22] border-t border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-            {[
-              { label: "9 agents", color: "text-blue-400" },
-              { label: "89 tools", color: "text-cyan-400" },
-              { label: "Psychometric Utility Theory", color: "text-amber-400" },
-              { label: "soul-driven", color: "text-green-400" },
-            ].map((tag) => (
-              <span key={tag.label} className={`text-[9px] sm:text-[10px] font-medium ${tag.color}`}>
-                {tag.label}
-              </span>
-            ))}
-          </div>
-          <a
-            href="https://t.me/bluewave_wave_bot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[9px] sm:text-[10px] text-white/30 hover:text-cyan-400 transition-colors shrink-0"
-          >
-            try on Telegram →
-          </a>
-        </div>
+        </motion.div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-/* Floating particles for depth */
+/* ── Floating particles ── */
 function Particles() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {Array.from({ length: 40 }).map((_, i) => (
+      {Array.from({ length: 30 }).map((_, i) => (
         <div
           key={i}
           className="absolute rounded-full bg-cyan-400/20"
           style={{
-            width: `${Math.random() * 3 + 1}px`,
-            height: `${Math.random() * 3 + 1}px`,
+            width: `${Math.random() * 2 + 1}px`,
+            height: `${Math.random() * 2 + 1}px`,
             left: `${Math.random() * 100}%`,
             top: `${Math.random() * 100}%`,
-            animation: `float${i % 3} ${12 + Math.random() * 20}s ease-in-out infinite`,
-            animationDelay: `${Math.random() * 10}s`,
-            opacity: Math.random() * 0.5 + 0.1,
+            animation: `float${i % 3} ${14 + Math.random() * 18}s ease-in-out infinite`,
+            animationDelay: `${Math.random() * 8}s`,
+            opacity: Math.random() * 0.4 + 0.1,
           }}
         />
       ))}
@@ -153,185 +124,159 @@ function Particles() {
   );
 }
 
-interface HeroProps {
-  isAuthenticated?: boolean;
-}
+interface HeroProps { isAuthenticated?: boolean; }
 
 export default function Hero({ isAuthenticated }: HeroProps) {
   const { t, geo } = useGeo();
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#0a0a1a] to-[#111827]">
-      {/* Animated ambient gradients */}
+    <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-b from-[#040810] via-[#060d16] to-[#0a1420]">
+      {/* Ambient gradients */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute w-[900px] h-[900px] rounded-full blur-[200px] opacity-20"
-          style={{
-            background: "radial-gradient(circle, rgba(34,211,238,0.35) 0%, transparent 60%)",
-            top: "5%", left: "20%",
-            animation: "drift1 20s ease-in-out infinite",
-          }} />
-        <div className="absolute w-[700px] h-[700px] rounded-full blur-[180px] opacity-15"
-          style={{
-            background: "radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 55%)",
-            bottom: "5%", right: "15%",
-            animation: "drift2 25s ease-in-out infinite",
-          }} />
-        <div className="absolute w-[500px] h-[500px] rounded-full blur-[160px] opacity-10"
-          style={{
-            background: "radial-gradient(circle, rgba(6,182,212,0.3) 0%, transparent 60%)",
-            top: "40%", left: "50%",
-            animation: "drift3 18s ease-in-out infinite",
-          }} />
+        <div className="absolute w-[800px] h-[800px] rounded-full blur-[200px] opacity-15"
+          style={{ background: "radial-gradient(circle, rgba(6,182,212,0.3) 0%, transparent 60%)", top: "10%", left: "15%", animation: "drift1 22s ease-in-out infinite" }} />
+        <div className="absolute w-[600px] h-[600px] rounded-full blur-[180px] opacity-10"
+          style={{ background: "radial-gradient(circle, rgba(8,145,178,0.25) 0%, transparent 55%)", bottom: "10%", right: "10%", animation: "drift2 28s ease-in-out infinite" }} />
       </div>
 
-      {/* Floating particles */}
       <Particles />
 
       <style>{`
-        @keyframes drift1 { 0%, 100% { transform: translate(0, 0); } 33% { transform: translate(4%, -3%); } 66% { transform: translate(-3%, 4%); } }
-        @keyframes drift2 { 0%, 100% { transform: translate(0, 0); } 33% { transform: translate(-5%, 2%); } 66% { transform: translate(3%, -4%); } }
-        @keyframes drift3 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-4%, 3%) scale(1.1); } }
-        @keyframes float0 { 0%, 100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(-30px) translateX(10px); } }
-        @keyframes float1 { 0%, 100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(20px) translateX(-15px); } }
-        @keyframes float2 { 0%, 100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(-15px) translateX(-8px); } }
+        @keyframes drift1 { 0%, 100% { transform: translate(0, 0); } 33% { transform: translate(3%, -2%); } 66% { transform: translate(-2%, 3%); } }
+        @keyframes drift2 { 0%, 100% { transform: translate(0, 0); } 33% { transform: translate(-4%, 2%); } 66% { transform: translate(2%, -3%); } }
+        @keyframes float0 { 0%, 100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(-25px) translateX(8px); } }
+        @keyframes float1 { 0%, 100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(18px) translateX(-12px); } }
+        @keyframes float2 { 0%, 100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(-12px) translateX(-6px); } }
         @keyframes shimmer { 0% { background-position: 200% center; } 100% { background-position: -200% center; } }
-        @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(59,130,246,0.3); } 50% { box-shadow: 0 0 40px rgba(59,130,246,0.6); } }
       `}</style>
 
-      {/* Top nav bar */}
-      <nav className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-10 py-4 sm:py-5">
+      {/* Nav */}
+      <nav className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-5 sm:px-10 py-5">
         <Link to="/" className="flex items-center gap-2">
-          <Waves className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
-          <span className="text-base sm:text-lg font-extrabold tracking-tight bg-gradient-to-r from-cyan-300 via-blue-400 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(34,211,238,0.3)]" style={{backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite'}}>Bluewave</span>
+          <Waves className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]" />
+          <span className="text-base font-extrabold tracking-tight bg-gradient-to-r from-cyan-300 via-teal-400 to-cyan-300 bg-clip-text text-transparent" style={{backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite'}}>Bluewave</span>
         </Link>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-3">
           {isAuthenticated ? (
-            <Link
-              to="/assets"
-              className="inline-flex items-center gap-1.5 px-3 sm:px-5 py-2 rounded-lg bg-cyan-600 text-white font-medium text-xs sm:text-sm hover:bg-cyan-700 transition-all duration-150"
-            >
-              {t.ctaDashboard}
-              <ArrowRight className="w-3.5 h-3.5" />
+            <Link to="/assets" className="px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700 transition-all inline-flex items-center gap-1.5">
+              {t.ctaDashboard} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           ) : (
             <>
-              <Link
-                to="/login"
-                className="hidden sm:inline-flex px-3 py-2 text-xs sm:text-sm font-medium text-white/70 hover:text-white transition-colors"
-              >
-                {t.signIn}
-              </Link>
-              <Link
-                to="/register"
-                className="inline-flex items-center px-3 sm:px-5 py-2 rounded-lg bg-cyan-600 text-white font-medium text-xs sm:text-sm hover:bg-cyan-700 transition-all duration-150"
-              >
-                {t.cta}
-              </Link>
+              <Link to="/login" className="hidden sm:inline-flex px-3 py-2 text-sm text-white/60 hover:text-white transition-colors">{t.signIn}</Link>
+              <Link to="/register" className="px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700 transition-all">{t.cta}</Link>
             </>
           )}
         </div>
       </nav>
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center pt-20 sm:pt-0">
-        {/* Headline — translated */}
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-          className="text-3xl sm:text-5xl lg:text-[56px] font-bold text-[#F9FAFB] leading-tight tracking-tight"
-        >
-          {t.heroHeadline1}
-          <br />
-          <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-cyan-300 bg-clip-text text-transparent" style={{backgroundSize: '200% auto', animation: 'shimmer 4s linear infinite'}}>
-            {t.heroHeadline2}
-          </span>
-        </motion.h1>
+      {/* Content — 2 column: copy left, product right */}
+      <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-10 w-full grid lg:grid-cols-2 gap-12 lg:gap-16 items-center pt-28 sm:pt-20">
 
-        {/* Subheadline */}
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.25 }}
-          className="mt-4 sm:mt-6 text-base sm:text-xl text-[#9CA3AF] max-w-2xl mx-auto leading-relaxed px-2"
-        >
-          {t.heroSub}
-        </motion.p>
-
-        {/* Regional context banner */}
-        {geo.regionalData && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
+        {/* Left — Copy */}
+        <div>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.35 }}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20"
+            transition={{ duration: 0.6 }}
+            className="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold text-white leading-[1.1] tracking-tight"
           >
-            <span className="text-xs sm:text-sm text-amber-400">
-              {geo.isLocal ? "📍" : "🇧🇷"} {geo.regionalData.stat}
+            {t.heroHeadline1}
+            <br />
+            <span className="bg-gradient-to-r from-cyan-300 via-teal-400 to-cyan-300 bg-clip-text text-transparent" style={{backgroundSize: '200% auto', animation: 'shimmer 4s linear infinite'}}>
+              {t.heroHeadline2}
             </span>
-          </motion.div>
-        )}
+          </motion.h1>
 
-        {/* CTAs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 px-4"
-        >
-          {isAuthenticated ? (
-            <Link
-              to="/assets"
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-lg bg-cyan-600 text-white font-semibold text-lg hover:bg-cyan-700 transition-all duration-150 hover:scale-[1.02]"
-              style={{ animation: "glow-pulse 3s ease-in-out infinite" }}
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="mt-5 text-lg text-white/50 max-w-lg leading-relaxed"
+          >
+            {t.heroSub}
+          </motion.p>
+
+          {/* Regional context */}
+          {geo.regionalData && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="mt-3 text-sm text-cyan-400/60"
             >
-              {t.ctaDashboard}
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-          ) : (
-            <>
-              <Link
-                to="/register"
-                className="inline-flex items-center px-8 py-3.5 rounded-lg bg-cyan-600 text-white font-semibold text-lg hover:bg-cyan-700 transition-all duration-150 hover:scale-[1.02]"
-                style={{ animation: "glow-pulse 3s ease-in-out infinite" }}
-              >
-                {t.cta}
-              </Link>
-              <a
-                href="#features"
-                className="inline-flex items-center px-8 py-3.5 rounded-lg border border-white/20 text-white font-semibold text-lg hover:bg-white/5 transition-all duration-150"
-              >
-                {t.ctaDemo}
-              </a>
-            </>
+              {geo.isLocal ? "📍" : ""} {geo.regionalData.stat}
+            </motion.p>
           )}
-        </motion.div>
 
-        {/* Real credentials strip */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="mt-16"
-        >
-          <div className="flex items-center justify-center gap-3 sm:gap-8 flex-wrap">
+          {/* CTA */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.25 }}
+            className="mt-8 flex flex-col sm:flex-row gap-3"
+          >
+            {isAuthenticated ? (
+              <Link to="/assets" className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-cyan-600 text-white font-semibold text-base hover:bg-cyan-700 transition-all hover:shadow-[0_0_30px_rgba(6,182,212,0.3)]">
+                {t.ctaDashboard} <ArrowRight className="w-4 h-4" />
+              </Link>
+            ) : (
+              <>
+                <Link to="/register" className="inline-flex items-center justify-center px-7 py-3.5 rounded-xl bg-cyan-600 text-white font-semibold text-base hover:bg-cyan-700 transition-all hover:shadow-[0_0_30px_rgba(6,182,212,0.3)]">
+                  {t.cta}
+                </Link>
+                <a href="#features" className="inline-flex items-center justify-center px-7 py-3.5 rounded-xl border border-white/10 text-white/70 font-medium text-base hover:bg-white/5 transition-all">
+                  {t.ctaDemo}
+                </a>
+              </>
+            )}
+          </motion.div>
+
+          {/* Credentials */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="mt-10 flex flex-wrap gap-x-6 gap-y-2"
+          >
             {[
-              { text: t.credentialTools, color: "text-cyan-400/70" },
-              { text: t.credentialAgents, color: "text-blue-400/70" },
-              { text: t.credentialBrand, color: "text-amber-400/70" },
-              { text: t.credentialSoul, color: "text-green-400/70" },
+              { text: t.credentialTools, color: "text-cyan-500/50" },
+              { text: t.credentialAgents, color: "text-teal-500/50" },
+              { text: t.credentialBrand, color: "text-amber-500/50" },
             ].map((item) => (
-              <span
-                key={item.text}
-                className={`text-[10px] sm:text-xs font-medium ${item.color} tracking-wide`}
-              >
+              <span key={item.text} className={`text-[11px] font-medium ${item.color} tracking-wide`}>
                 {item.text}
               </span>
             ))}
+          </motion.div>
+        </div>
+
+        {/* Right — Product in action */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.3 }}
+          className="flex justify-center lg:justify-end"
+        >
+          <div className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-8 sm:p-10 max-w-sm w-full">
+            {/* Card header */}
+            <div className="flex items-center gap-2 mb-6">
+              <ShieldCheck className="h-4 w-4 text-cyan-400" />
+              <span className="text-xs font-medium text-white/50">Brand Guardian</span>
+              <span className="ml-auto text-[10px] text-cyan-400/40 font-mono">8 dimensions</span>
+            </div>
+
+            {/* Compliance Ring */}
+            <HeroComplianceRing />
+
+            {/* Bottom bar */}
+            <div className="mt-6 pt-4 border-t border-white/[0.04] flex items-center justify-between">
+              <span className="text-[10px] text-white/20">Powered by Claude Vision + PUT</span>
+              <span className="text-[10px] text-emerald-400/50 font-medium">LIVE</span>
+            </div>
           </div>
         </motion.div>
 
-        {/* Hero visual — Wave agent live terminal */}
-        <HeroTerminal />
       </div>
     </section>
   );
