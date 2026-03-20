@@ -27,6 +27,7 @@ const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const BriefsPage = lazy(() => import("./pages/BriefsPage"));
 const WaveAgentPage = lazy(() => import("./pages/WaveAgentPage"));
+const BrandDNAPage = lazy(() => import("./pages/BrandDNAPage"));
 const HederaPage = lazy(() => import("./pages/HederaPage"));
 
 const queryClient = new QueryClient();
@@ -65,6 +66,7 @@ export default function App() {
                     <Route element={<RoleGuard role="admin" />}>
                       <Route path="/team" element={<TeamPage />} />
                       <Route path="/brand" element={<BrandPage />} />
+                      <Route path="/brand-dna" element={<BrandDNAPage />} />
                       <Route path="/integrations" element={<IntegrationsPage />} />
                       <Route path="/billing" element={<BillingPage />} />
                       <Route path="/analytics" element={<AnalyticsPage />} />

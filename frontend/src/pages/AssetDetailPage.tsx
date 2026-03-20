@@ -13,6 +13,8 @@ import {
   AlertTriangle,
   Info,
   Copy,
+  Award,
+  Download,
 } from "lucide-react";
 import {
   useAsset,
@@ -25,6 +27,7 @@ import {
 } from "../hooks/useAssets";
 import { useComplianceCheck } from "../hooks/useBrand";
 import { useAuth } from "../contexts/AuthContext";
+import { useGeo } from "../contexts/GeoContext";
 import CommentsSection from "../components/CommentsSection";
 import VersionHistory from "../components/VersionHistory";
 import { Button } from "../components/ui/Button";
@@ -51,10 +54,44 @@ const SEVERITY_COLOR: Record<string, string> = {
   info: "text-accent",
 };
 
+const WAVE_API = import.meta.env.VITE_WAVE_API_URL || `http://${window.location.hostname}:8300/api/v1/wave`;
+
+async function downloadCertificate(brandName: string, assetName: string, score: number, checkedAt: string) {
+  try {
+    const waveBase = WAVE_API.replace("/wave", "").replace("/api/v1", "");
+    const apiUrl = `${waveBase || `http://${window.location.hostname}:18790`}/brand/certificate`;
+    const res = await fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        brand_name: brandName,
+        asset_name: assetName,
+        score,
+        dimensions: {},
+        checked_at: checkedAt,
+      }),
+    });
+    const data = await res.json();
+    if (data.certificate) {
+      const blob = new Blob([data.certificate], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `certificado-${assetName.replace(/\s+/g, "-")}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  } catch {
+    // silent fail
+  }
+}
+
 export default function AssetDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { geo } = useGeo();
+  const p = geo.lang === "pt";
   const { data: asset, isLoading, refetch } = useAsset(id);
 
   const updateAsset = useUpdateAsset();
@@ -145,7 +182,7 @@ export default function AssetDetailPage() {
         className="mb-xl inline-flex items-center gap-1.5 text-body text-text-secondary hover:text-text-primary transition-colors"
       >
         <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
-        Back to assets
+        {p ? "Voltar aos assets" : "Back to assets"}
       </Link>
 
       <div className="grid gap-xl lg:grid-cols-5">
@@ -187,6 +224,12 @@ export default function AssetDetailPage() {
               <span className={`inline-flex items-center gap-1 text-body-medium ${complianceColor}`}>
                 <ShieldCheck className="h-4 w-4" />
                 {complianceScore}/100
+                {complianceScore >= 70 && (
+                  <span className="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-success/10 text-success border border-success/20">
+                    <Award className="h-2.5 w-2.5" />
+                    {p ? "Certificável" : "Certified"}
+                  </span>
+                )}
               </span>
             )}
             <span className="text-caption text-text-tertiary font-mono">
@@ -273,7 +316,7 @@ export default function AssetDetailPage() {
                 loading={submitAsset.isPending}
               >
                 <Send className="h-4 w-4" strokeWidth={1.5} />
-                Submit for approval
+                {p ? "Enviar para aprovação" : "Submit for approval"}
               </Button>
             )}
             {isAdmin && asset.status === "pending_approval" && (
@@ -308,7 +351,21 @@ export default function AssetDetailPage() {
                 loading={complianceCheck.isPending}
               >
                 <ShieldCheck className="h-4 w-4" strokeWidth={1.5} />
-                Check Compliance
+                {p ? "Verificar Compliance" : "Check Compliance"}
+              </Button>
+            )}
+            {asset.compliance_score !== null && asset.compliance_score >= 70 && (
+              <Button
+                variant="secondary"
+                onClick={() => downloadCertificate(
+                  "Brand",
+                  asset.file_path?.split("/").pop() || asset.id.slice(0, 8),
+                  asset.compliance_score!,
+                  new Date().toISOString(),
+                )}
+              >
+                <Award className="h-4 w-4" strokeWidth={1.5} />
+                {p ? "Certificado" : "Certificate"}
               </Button>
             )}
             {isAdmin && (
