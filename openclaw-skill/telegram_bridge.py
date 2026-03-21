@@ -153,6 +153,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session, user_name, user_text[:100],
     )
 
+    # ── MIDAS mainnet deploy approval gate ────────────────────
+    if user_text.lower().strip() in ("deploy midas", "deploy midas!"):
+        try:
+            from skills.starknet_deploy import approve_mainnet_deploy
+            approve_mainnet_deploy()
+            await update.message.reply_text(
+                "MIDAS mainnet deployment APPROVED.\n\n"
+                "Wave can now deploy contracts to Starknet mainnet.\n"
+                "Approval expires in 1 hour.\n\n"
+                "Wave will proceed on the next autonomous cycle."
+            )
+            logger.info("MAINNET DEPLOY APPROVED by %s via Telegram", user_name)
+            return
+        except Exception as e:
+            logger.warning("Approval handler error: %s", e)
+
     # Wave full mode — send everything to orchestrator
     await update.effective_chat.send_action("typing")
 
