@@ -100,11 +100,13 @@
 
 ## 5. PARTICIPACAO SOCIETARIA
 
-5.1. **EQUITY.** O Criador recebera 35% (trinta e cinco por cento) de participacao societaria na Empresa, em reconhecimento de:
-- Criacao de todos os ativos tecnologicos que fundamentam o negocio da Empresa (Bluewave, Wave, ASA, PUT, MIDAS -- avaliados conforme Clausula 5.5)
+5.1. **EQUITY.** O Criador recebera 50% (cinquenta por cento) de participacao societaria na Empresa, em reconhecimento de:
+- Criacao de 100% dos ativos tecnologicos que fundamentam o negocio da Empresa (Bluewave, Wave, ASA, PUT, MIDAS -- avaliados conforme Clausula 5.5)
+- Autoria de dois frameworks originais (ASA e PUT) sem equivalente na literatura mundial
 - Posicao de Co-Fundador Tecnico e unico engenheiro de IA
-- Contribuicao intelectual equivalente a aporte de capital em forma de IP
+- Contribuicao intelectual equivalente a aporte de capital em forma de IP -- a IP e o produto; sem ela, a Empresa nao tem oferta comercial
 - Responsabilidade exclusiva pelo desenvolvimento, manutencao e evolucao de todos os sistemas tecnicos
+- Justificativa: a Empresa contribui com infraestrutura (GPU) e capital, que sao substituiveis e alugareis no mercado; o Criador contribui com propriedade intelectual original, unica e insubstituivel, que constitui a totalidade do produto da Empresa
 
 5.2. **VESTING.** A participacao societaria tera vesting de:
 - Cliff: 6 meses (equity liberado apos 6 meses de vinculo ativo)
