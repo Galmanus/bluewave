@@ -7,7 +7,7 @@ interface GeoValue {
 }
 
 const Ctx = createContext<GeoValue>({
-  geo: { lang: "en", country: "US", region: "", isLocal: false, regionalData: null },
+  geo: { lang: "en", country: "US", region: "", isLocal: false, isBrazil: false, regionalData: null },
   t: t.en,
 });
 

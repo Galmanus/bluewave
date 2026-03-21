@@ -10,8 +10,24 @@ export interface GeoContext {
   country: string;         // "BR", "US", etc.
   region: string;          // "SC", "SP", "CA", etc.
   isLocal: boolean;        // true if Santa Catarina
+  isBrazil: boolean;       // true if in Brazil — gates payment methods
   regionalData: RegionalData | null;
 }
+
+/**
+ * Payment method availability by region:
+ *
+ * BRAZIL (isBrazil=true):
+ *   - Mercado Pago (PIX, credit card, boleto)
+ *   - NO Hedera/HBAR, NO crypto, NO DeFi
+ *   - Reason: Brazilian regulatory compliance (CVM, Banco Central)
+ *
+ * INTERNATIONAL (isBrazil=false):
+ *   - Hedera (HBAR micropayments, $WAVE token)
+ *   - Crypto payments (USDT, USDC via NOWPayments)
+ *   - DeFi features (MIDAS integration)
+ *   - Stripe (credit card)
+ */
 
 export interface RegionalData {
   marketName: string;
@@ -74,6 +90,7 @@ export function detectGeo(): GeoContext {
     country,
     region: isSC ? "SC" : isBR ? "BR" : "",
     isLocal: isSC,
+    isBrazil: isBR,
     regionalData,
   };
 }

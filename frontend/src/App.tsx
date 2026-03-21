@@ -7,6 +7,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { GeoProvider } from "./contexts/GeoContext";
 import AuthGuard from "./components/AuthGuard";
 import RoleGuard from "./components/RoleGuard";
+import GeoGate from "./components/GeoGate";
 import AppLayout from "./components/AppLayout";
 
 // Eagerly loaded (part of initial bundle)
@@ -70,7 +71,10 @@ export default function App() {
                       <Route path="/integrations" element={<IntegrationsPage />} />
                       <Route path="/billing" element={<BillingPage />} />
                       <Route path="/analytics" element={<AnalyticsPage />} />
-                      <Route path="/hedera" element={<HederaPage />} />
+                      {/* Hedera/crypto only available outside Brazil (regulatory compliance) */}
+                      <Route element={<GeoGate blockBrazil />}>
+                        <Route path="/hedera" element={<HederaPage />} />
+                      </Route>
                     </Route>
                   </Route>
                 </Route>

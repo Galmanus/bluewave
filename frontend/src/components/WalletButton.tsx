@@ -1,7 +1,12 @@
 import { Wallet, LogOut, ExternalLink, AlertCircle } from "lucide-react";
 import { useWallet } from "../hooks/useWallet";
+import { useGeo } from "../contexts/GeoContext";
 
 export default function WalletButton() {
+  const { geo } = useGeo();
+
+  // Crypto wallet not available in Brazil (regulatory compliance)
+  if (geo.isBrazil) return null;
   const {
     address,
     balance,
