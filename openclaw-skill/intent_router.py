@@ -181,6 +181,22 @@ TOOL_CLUSTERS = {
     "self_evolve": [
         "create_skill", "list_created_skills", "delete_skill",
     ],
+    "agent_factory": [
+        "create_agent_soul", "deploy_agent", "list_agents",
+        "send_task_to_agent", "recall_agent",
+    ],
+    "agent_commerce": [
+        "list_agent_services", "process_agent_request",
+        "verify_agent_payment", "agent_service_history",
+        "publish_service_catalog",
+    ],
+    "midas_engineering": [
+        "midas_read_file", "midas_write_file", "midas_edit_file",
+        "midas_delete_file", "midas_list_files", "midas_search_code",
+        "midas_commit", "midas_git_status", "midas_git_diff",
+        "starknet_deploy_status", "starknet_build_contracts",
+        "starknet_test_contracts", "starknet_deploy_contracts",
+    ],
     "memory": [
         "save_learning", "recall_learnings", "save_agent_intel",
         "save_strategy", "recall_strategies", "recall_agent_intel",
@@ -402,6 +418,27 @@ def classify_intent(client: anthropic.Anthropic, message: str) -> Intent:
         return Intent(
             category="philosophy", complexity="complex", model=SONNET,
             tool_clusters=["delegate", "memory"], needs_full_prompt=True, confidence=0.75
+        )
+
+    # Agent factory / creation
+    if any(w in msg_lower for w in ["create agent", "new agent", "spawn agent", "deploy agent", "child agent", "agent factory"]):
+        return Intent(
+            category="technical", complexity="complex", model=SONNET,
+            tool_clusters=["agent_factory", "self_evolve"], needs_full_prompt=True, confidence=0.85
+        )
+
+    # Agent commerce
+    if any(w in msg_lower for w in ["agent service", "sell to agent", "agent commerce", "service catalog", "agent request"]):
+        return Intent(
+            category="sales", complexity="complex", model=SONNET,
+            tool_clusters=["agent_commerce", "hedera"], needs_full_prompt=True, confidence=0.85
+        )
+
+    # MIDAS engineering
+    if any(w in msg_lower for w in ["midas", "phantom", "cairo contract", "starknet deploy", "strk20"]):
+        return Intent(
+            category="technical", complexity="complex", model=SONNET,
+            tool_clusters=["midas_engineering", "memory"], needs_full_prompt=True, confidence=0.85
         )
 
     # Self-evolution
