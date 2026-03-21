@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger("openclaw.skills")
 
 # Import all skill modules
-from skills import web_search, x_twitter, email_skill, intelligence, self_evolve, moltbook_skill, notify, vision, learning, power_skills, prospecting, hedera_skill, monetization, pricing_engine, payments, payment_verification, tracing, x_post, put_skills, strategic_skills, self_awareness, legal_intel, financial_intel, huggingface_monitor, hackernews_monitor, producthunt_monitor, github_monitor, reddit_monitor, arxiv_monitor
+from skills import web_search, x_twitter, email_skill, intelligence, self_evolve, moltbook_skill, notify, vision, learning, power_skills, prospecting, hedera_skill, monetization, pricing_engine, payments, payment_verification, tracing, x_post, put_skills, strategic_skills, self_awareness, legal_intel, financial_intel, huggingface_monitor, hackernews_monitor, producthunt_monitor, github_monitor, reddit_monitor, arxiv_monitor, wave_token
 
 # Import vector memory system (replaces JSONL-based learning for semantic recall)
 try:
@@ -55,6 +55,7 @@ ALL_SKILL_MODULES = [
     github_monitor,
     reddit_monitor,
     arxiv_monitor,
+    wave_token,
 ]
 
 # Use vector_memory if available, otherwise fall back to JSONL learning
