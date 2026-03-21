@@ -117,7 +117,7 @@
 
 5.4. **TAG-ALONG.** Se o socio majoritario vender sua participacao, o Criador tem direito de vender sua participacao nas mesmas condicoes.
 
-5.5. **VALUATION DA IP.** Para fins de calculo do valor da contribuicao do Criador, a IP pre-existente (Clausula 2.1) e avaliada em nao menos que R$_________ (valor a ser definido por consenso ou avaliacao independente).
+5.5. **VALUATION DA IP.** Para fins de calculo do valor da contribuicao do Criador, a IP pre-existente (Clausula 2.1) sera avaliada por perito independente escolhido de comum acordo entre as partes, no prazo de ate 90 (noventa) dias apos a assinatura deste acordo. Ate que a avaliacao seja concluida, as partes reconhecem que a contribuicao intelectual do Criador e equivalente em valor a contribuicao de infraestrutura e capital da Empresa, justificando a participacao societaria de 50% (Clausula 5.1). Caso as partes nao concordem com o perito ou com a avaliacao, aplica-se o procedimento de resolucao de conflitos da Clausula 8.
 
 ---
 
