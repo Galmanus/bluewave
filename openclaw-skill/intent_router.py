@@ -108,6 +108,9 @@ TOOL_CLUSTERS = {
         "put_analyzer", "competitor_phi_audit", "kill_chain_planner",
         "hf_trending_models", "hf_daily_papers", "hf_space_watch", "hf_model_detail",
         "hn_top_stories", "hn_search", "hn_story_comments",
+        "ph_today", "gh_trending_repos", "gh_search_repos", "gh_repo_detail",
+        "reddit_hot", "reddit_search", "reddit_post_comments",
+        "arxiv_recent", "arxiv_search",
     ],
     "sales": [
         "find_prospects", "research_prospect", "qualify_prospect_bant",
