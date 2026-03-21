@@ -53,6 +53,82 @@ from handler import BlueWaveHandler
 
 PORT = int(os.environ.get("OPENCLAW_PORT", "18790"))
 
+# ── API Key Tiers (for paid access) ──────────────────────────
+#
+# Free tier: 10 requests/day, Haiku only, no PUT/OSINT/agent-factory
+# Pro tier:  1000 requests/day, Sonnet, full tools
+# Enterprise: unlimited, Opus available, priority support
+#
+# Keys are set via environment or stored in a JSON file.
+# Revenue from paid API access is 100% Manuel's when running
+# outside Ialum infrastructure (clause 5.5b).
+
+API_KEYS_FILE = os.path.join(os.path.dirname(__file__), "memory", "api_keys.json")
+
+_API_KEYS = {}  # loaded at startup
+
+def _load_api_keys():
+    """Load API keys from file or environment."""
+    global _API_KEYS
+    # Built-in keys from environment
+    env_keys = os.environ.get("WAVE_API_KEYS", "")
+    if env_keys:
+        try:
+            _API_KEYS = json.loads(env_keys)
+        except json.JSONDecodeError:
+            pass
+
+    # File-based keys
+    if os.path.exists(API_KEYS_FILE):
+        try:
+            with open(API_KEYS_FILE, "r") as f:
+                file_keys = json.loads(f.read())
+                _API_KEYS.update(file_keys)
+        except Exception:
+            pass
+
+    # Default demo key (always available, rate limited)
+    _API_KEYS.setdefault("wave_demo_2026", {
+        "owner": "demo",
+        "tier": "free",
+        "daily_limit": 10,
+        "models": ["claude-haiku-4-5-20251001"],
+        "tools_blocked": ["dork_contacts", "dork_pain_signals", "create_agent_soul",
+                          "deploy_agent", "midas_read_file", "midas_write_file",
+                          "gmail_send", "starknet_deploy_contracts"],
+    })
+
+    # Pro key template (set WAVE_PRO_KEY env var to activate)
+    pro_key = os.environ.get("WAVE_PRO_KEY", "")
+    if pro_key:
+        _API_KEYS[pro_key] = {
+            "owner": "pro_customer",
+            "tier": "pro",
+            "daily_limit": 1000,
+            "models": ["claude-haiku-4-5-20251001", "claude-sonnet-4-20250514"],
+            "tools_blocked": ["create_agent_soul", "deploy_agent",
+                              "midas_write_file", "starknet_deploy_contracts"],
+        }
+
+
+def verify_api_key(request: "Request") -> dict:
+    """Verify API key from header or query param. Returns key info."""
+    key = request.headers.get("X-API-Key", "") or request.query_params.get("api_key", "")
+
+    # No key = internal/local access (no restrictions)
+    if not key and request.client and request.client.host in ("127.0.0.1", "localhost", "::1"):
+        return {"tier": "internal", "daily_limit": 999999}
+
+    # No key from external = use demo tier
+    if not key:
+        key = "wave_demo_2026"
+
+    if key not in _API_KEYS:
+        return None  # will raise 401
+
+    return _API_KEYS[key]
+
+
 # ── Pydantic models ──────────────────────────────────────────
 
 class ChatRequest(BaseModel):
@@ -69,9 +145,18 @@ class ChatResponse(BaseModel):
 # ── App ──────────────────────────────────────────────────────
 
 app = FastAPI(
-    title="OpenClaw Agent API",
-    description="Multi-agent AI system for Bluewave Creative Operations",
-    version="1.0.0",
+    title="Wave API — Autonomous Soul Architecture",
+    description=(
+        "Autonomous AI agent with 158 tools, 10 specialist agents, and a 19-subsystem "
+        "cognitive architecture. Built on the Autonomous Soul Architecture (ASA) and "
+        "Psychometric Utility Theory (PUT). Created by Manuel Galmanus.\n\n"
+        "**Tiers:**\n"
+        "- Free: 10 requests/day, demo key `wave_demo_2026`\n"
+        "- Pro: 1000 requests/day, full tools (contact m.galmanus@gmail.com)\n"
+        "- Enterprise: unlimited, Opus model (contact m.galmanus@gmail.com)\n\n"
+        "**Authentication:** Pass API key via `X-API-Key` header."
+    ),
+    version="2.0.0",
 )
 
 CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "").split(",")
@@ -100,6 +185,9 @@ def get_orchestrator(session_id: str = "default") -> Orchestrator:
 @app.on_event("startup")
 async def startup():
     global handler
+    _load_api_keys()
+    logger.info("API keys loaded: %d keys (%s)", len(_API_KEYS),
+                ", ".join(k.get("tier", "?") for k in _API_KEYS.values()))
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         logger.error("ANTHROPIC_API_KEY not set! Agent will not work.")
@@ -156,11 +244,74 @@ async def list_agents():
     return {"agents": agents}
 
 
+@app.get("/pricing")
+async def pricing():
+    """API pricing tiers for Wave access."""
+    return {
+        "tiers": {
+            "free": {
+                "price": "$0/month",
+                "requests_per_day": 10,
+                "model": "Haiku",
+                "tools": "Limited (no OSINT, no agent factory, no MIDAS)",
+                "api_key": "wave_demo_2026",
+                "how_to_start": "Use X-API-Key: wave_demo_2026 header",
+            },
+            "pro": {
+                "price": "$49/month",
+                "requests_per_day": 1000,
+                "model": "Haiku + Sonnet",
+                "tools": "Full (158 tools, PUT analysis, security audits, competitive intel)",
+                "how_to_start": "Contact m.galmanus@gmail.com",
+            },
+            "enterprise": {
+                "price": "Custom",
+                "requests_per_day": "Unlimited",
+                "model": "Haiku + Sonnet + Opus",
+                "tools": "Full + dedicated child agents + priority support",
+                "how_to_start": "Contact m.galmanus@gmail.com",
+            },
+        },
+        "features": {
+            "all_tiers": [
+                "10 specialist agents (brand, analytics, security, legal, financial, etc.)",
+                "Psychometric Utility Theory analysis",
+                "3-tier model routing (automatic quality optimization)",
+                "Hedera blockchain audit trail",
+            ],
+            "pro_and_above": [
+                "Security audits (HTTP headers, SSL, DNS, breach check)",
+                "Competitive intelligence with OSINT",
+                "PUT SaaS API (behavioral market intelligence)",
+                "Agent-to-agent commerce",
+                "Content strategy and brand compliance",
+            ],
+            "enterprise_only": [
+                "Opus model for complex strategic analysis",
+                "Dedicated child agents for your organization",
+                "Custom soul specifications for your use case",
+                "Priority support from the creator",
+            ],
+        },
+        "contact": "m.galmanus@gmail.com",
+        "documentation": "https://github.com/Galmanus/bluewave",
+    }
+
+
 @app.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest):
-    """Send a message to the orchestrator and get a response."""
+async def chat(req: ChatRequest, request: Request):
+    """Send a message to the orchestrator and get a response.
+
+    Authentication: pass API key via X-API-Key header.
+    Free tier: 10 requests/day with key 'wave_demo_2026'.
+    """
     if not req.message.strip():
         raise HTTPException(400, "Empty message")
+
+    # Verify API key
+    key_info = verify_api_key(request)
+    if key_info is None:
+        raise HTTPException(401, "Invalid API key. Get a free key at /pricing")
 
     orch = get_orchestrator(req.session_id)
     t0 = time.time()
