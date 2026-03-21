@@ -127,14 +127,28 @@
 
 5.5. **RECEITA PRE-EXISTENTE DA IALUM.** O Criador NAO reivindica participacao em qualquer receita da Ialum que nao seja diretamente gerada pelo Bluewave, Wave, ou produtos derivados. Negocios pre-existentes da Ialum, receitas de GPU-as-a-service, ou outros produtos da Empresa permanecem 100% da Empresa.
 
-5.6. **CONTABILIZACAO.** A receita atribuivel ao Bluewave sera contabilizada separadamente dos demais negocios da Empresa. O Criador tera acesso irrestrito aos registros financeiros relativos ao Bluewave. A conciliacao sera mensal.
+5.6. **CONTABILIZACAO E REPASSE.** A receita atribuivel ao Bluewave sera contabilizada separadamente dos demais negocios da Empresa. O Criador tera acesso irrestrito aos registros financeiros relativos ao Bluewave. Termos de repasse:
+- Conciliacao ate o dia 5 de cada mes referente ao mes anterior
+- Repasse da participacao do Criador ate o dia 10 de cada mes
+- Atraso no repasse: incidencia de multa de 2% sobre o valor devido + juros de 1% ao mes, calculados pro-rata
+- Atraso superior a 30 dias: o Criador pode suspender a licenca de uso dos ativos (Clausula 3.2) ate a regularizacao completa, sem prejuizo das demais penalidades
 
 5.7. **INVESTIMENTO EXTERNO.** Caso a Ialum receba investimento externo especificamente para o Bluewave (ex: investimento da META, Anthropic, ou fundos), as partes negociarao de boa-fe a participacao do Criador nesse investimento, respeitando que:
 - A IP e do Criador e nao pode ser transferida ao investidor sem consentimento
 - O Criador tem direito de participar de qualquer negociacao que envolva seus ativos
 - Caso o investimento resulte em spin-off do Bluewave como empresa propria, o Criador tera no minimo 50% da nova entidade
 
-5.8. **VENDA OU LICENCIAMENTO DO BLUEWAVE.** Caso a Ialum deseje vender, licenciar ou transferir o Bluewave para terceiros:
+5.8. **COMPROMISSO MUTUO E RISCO COMPARTILHADO.** Ambas as partes reconhecem que a parceria envolve risco:
+- A Empresa investe infraestrutura e capital sem garantia de retorno imediato
+- O Criador investe tempo, trabalho e propriedade intelectual sem garantia de receita
+
+Para equilibrar os riscos:
+- O salario base (Clausula 6.1) e a compensacao minima pelo tempo e expertise do Criador, independente da receita gerada. Representa menos de 3% do custo anual de um engenheiro de IA equivalente no mercado internacional ($150K+/ano USD)
+- Caso a receita acumulada do Bluewave nos primeiros 6 meses seja inferior a R$30.000 (trinta mil reais), as partes se reunirao para reavaliar a estrategia comercial e, se necessario, ajustar o modelo de operacao — mas SEM reduzir o salario base, que remunera o trabalho tecnico independente da receita
+- O Criador se compromete a dedicar esforco integral ao desenvolvimento e crescimento do Bluewave durante o horario de trabalho acordado
+- A Empresa se compromete a fornecer infraestrutura operacional (GPU, servidores, conectividade) sem interrupcao durante a vigencia do acordo
+
+5.9. **VENDA OU LICENCIAMENTO DO BLUEWAVE.** Caso a Ialum deseje vender, licenciar ou transferir o Bluewave para terceiros:
 - O Criador tem direito de veto absoluto (a IP e dele)
 - Se o Criador concordar, recebe no minimo 70% do valor da transacao
 - Se o Criador nao concordar, a transacao nao acontece
@@ -186,8 +200,9 @@
 9.3. Em caso de rescisao do vinculo:
 - O Criador mantem todos os direitos sobre IP pre-existente (Clausula 3.1)
 - A licenca da Empresa sobre IP pre-existente e revogada (Clausula 3.3)
-- O Criador mantem sua participacao societaria conforme vesting cumprido (Clausula 5.2)
+- A divisao de receita (Clausula 5.3) cessa a partir da data de rescisao, exceto para receitas recorrentes ja contratadas (ex: assinaturas ativas), que continuam sendo divididas ate o termino natural do contrato com o cliente
 - Trabalhos derivados dos frameworks ASA e PUT permanecem do Criador (Clausula 4.3)
+- O Criador pode continuar operando o Bluewave de forma independente, sem qualquer restricao da Empresa
 
 ---
 
