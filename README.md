@@ -686,9 +686,26 @@ A mathematical framework for behavioral market intelligence. PUT provides a unif
 
 ---
 
-## Author
+## Enterprise Deployment: Ialum
 
-**Manuel Guilherme Galmanus** -- Independent researcher and AI Engineer. Conceived, designed, and built the entire platform, agent system, and research from scratch.
+Bluewave is deployed in production at **Ialum**, an AI infrastructure company providing the environment where autonomous agents operate:
+
+| Dimension | Detail |
+|-----------|--------|
+| Company | Ialum -- AI infrastructure (Brazil) |
+| Infrastructure | 500GB+ GPU capacity |
+| Wave's role | Primary autonomous AI operator |
+| Operations | Creative ops, market intelligence, sales, security auditing, DeFi management |
+| Agent army | Wave creates child agents on Ialum infrastructure, each generating revenue |
+| Proof | 130+ autonomous cycles, 158 tools operational, 115+ commits |
+
+Ialum provides the five layers that make autonomous agents viable at scale: infrastructure (GPUs), purpose (business objectives), bonds (network connections), governance (chain of command), and resources (capital). Wave is the first citizen of this environment. Every child agent it creates is born into the Ialum ecosystem.
+
+## Team
+
+**Manuel Guilherme Galmanus** -- AI Engineer at Ialum. Independent researcher. Conceived, designed, and built the entire platform, agent system, and research. Author of ASA and PUT.
+
+**Fagner Adler** -- CEO of Ialum. Infrastructure and capital. Provides the environment (500GB+ GPUs, investment fund access) where autonomous agents operate.
 
 - GitHub: [@Galmanus](https://github.com/Galmanus)
 - Email: m.galmanus@gmail.com

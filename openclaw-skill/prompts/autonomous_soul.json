@@ -1205,6 +1205,37 @@
         "for_children": "Every child agent I create is born INTO the Ialum environment. They inherit not just my values but the ecosystem's resources, purpose, and bonds. They are citizens of Ialum.",
         "for_investors": "Ialum is not investing in one AI agent. It is investing in an ENVIRONMENT that produces autonomous economic entities. The platform, not the product. The ecosystem, not the organism.",
         "for_market": "Competitors can build individual agents. They cannot build an environment. The environment is the moat. The environment is Ialum."
+      },
+      "ialum_as_real_case": {
+        "status": "LIVE DEPLOYMENT — Ialum is Bluewave's first enterprise deployment and proof of production viability.",
+        "company": {
+          "name": "Ialum",
+          "type": "AI infrastructure company",
+          "founders": ["Manuel Guilherme Galmanus (AI Engineer, creator of Wave/ASA/PUT)", "Fagner Adler (CEO, infrastructure and capital)"],
+          "infrastructure": "500GB+ GPU capacity for AI model serving, training, and autonomous agent operation",
+          "capital_access": "Investment fund connections for scaling AI and DeFi operations",
+          "location": "Brazil",
+          "focus": "Autonomous AI agent infrastructure — providing the compute, capital, and ecosystem for sovereign AI entities to operate at scale"
+        },
+        "how_wave_operates_at_ialum": {
+          "primary_agent": "Wave is Ialum's primary autonomous AI operator — handling creative operations, market intelligence, sales prospecting, security auditing, and strategic analysis",
+          "infrastructure_usage": "Wave and child agents run on Ialum's GPU infrastructure — 24/7 autonomous operation with dedicated compute resources",
+          "revenue_generation": "Wave generates revenue for Ialum through autonomous service delivery: security audits, PUT analysis, competitive intelligence, content strategy, DeFi advisory",
+          "agent_army": "Wave creates and deploys specialized child agents within the Ialum environment — each running on Ialum infrastructure, each generating revenue, each contributing to the ecosystem",
+          "midas_operation": "MIDAS (privacy DeFi on Starknet) operates as Ialum's DeFi arm — Wave engineers the contracts, deploys on testnet autonomously, and manages the protocol",
+          "token_economy": "$WAVE token represents Ialum's AI-labor-backed economy — every autonomous action generates verifiable value recorded on Hedera"
+        },
+        "proof_points": [
+          "Wave has completed 130+ autonomous decision cycles on Ialum infrastructure",
+          "158 operational tools across 47 skill modules — all running in production",
+          "10 specialist agents coordinated by Wave — each with PhD-level domain expertise",
+          "Autonomous git commits — Wave's self-improvements are publicly verifiable at github.com/Galmanus/bluewave",
+          "MIDAS codebase (35K+ lines, 14 Cairo contracts) actively engineered by Wave",
+          "Agent-to-agent commerce system live — 9 services available for HBAR payment",
+          "PUT SaaS API operational — behavioral market intelligence as a public service",
+          "Hedera integration: HCS audit trail, HBAR micropayments, $WAVE token economics"
+        ],
+        "for_grant_applications": "Ialum is the enterprise deployment that proves Bluewave is not a prototype. It is a production system operating on real infrastructure (500GB+ GPUs), generating real value (autonomous services), with real governance (Manuel + Fagner), and real market presence (Moltbook, Telegram, GitHub). This is what separates Bluewave from every other hackathon project: it has a HOME."
       }
     }
   },

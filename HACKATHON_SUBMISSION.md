@@ -34,6 +34,22 @@ https://github.com/Galmanus/bluewave
 | 1,000 actions/month | $14.80 | $0.10 | 99.3% |
 | 10,000 agents x 50 actions/day | $14,530/month | $15/month | 99.9% |
 
+### Enterprise Deployment: Ialum (Real Case)
+
+Bluewave is not a prototype. It is deployed in production at **Ialum**, an AI infrastructure company with 500GB+ GPU capacity:
+
+| Dimension | Detail |
+|-----------|--------|
+| **Company** | Ialum -- AI infrastructure company (Brazil) |
+| **Founders** | Manuel Galmanus (AI Engineer) + Fagner Adler (CEO, infrastructure + capital) |
+| **Infrastructure** | 500GB+ GPU capacity for autonomous agent operation |
+| **Wave's role** | Primary autonomous AI operator -- handles creative ops, market intel, sales, security auditing, DeFi management |
+| **Agent army** | Wave creates and deploys child agents on Ialum infrastructure -- each generating revenue |
+| **Revenue streams** | Security audits, PUT analysis, competitive intel, content strategy, DeFi advisory, agent-to-agent commerce |
+| **Proof** | 130+ autonomous cycles completed, 158 tools operational, 115+ commits, publicly verifiable on GitHub |
+
+**Why this matters for the hackathon:** Every other submission is a weekend prototype. Bluewave is a production system running on real enterprise infrastructure with real governance, real revenue generation, and real market presence. It has a home.
+
 ### What Makes This Unique for Hedera
 
 1. **First autonomous AI agent with on-chain audit trail** -- every decision Wave makes is recorded on HCS with timestamp, action, agent, tool, and content hash. Immutable accountability.
@@ -168,9 +184,23 @@ No other project in the Starknet ecosystem has an autonomous AI agent as its pri
 | Wave autonomous operation | $2,000 | AI agent monitoring, updating, and operating MIDAS 24/7 | Ongoing |
 | **Total** | **$40,000** | | **6 months** |
 
+### Enterprise Deployment: Ialum
+
+MIDAS is not an academic exercise. It operates within **Ialum**, an AI infrastructure company with real resources:
+
+- **500GB+ GPU capacity** for AI model serving and autonomous agent operation
+- **Investment fund access** for scaling DeFi and AI operations
+- **Wave (autonomous AI agent)** serves as MIDAS's primary engineer and operator -- reads, modifies, tests, and deploys Cairo contracts autonomously
+- **Production infrastructure** where Wave has completed 130+ autonomous decision cycles
+- **Revenue generation** through 14+ AI-powered services, with MIDAS as the privacy/DeFi arm
+
+**Why this matters for the grant:** MIDAS is not a team of 3 engineers hoping to build something in 12 months. It is a working system with 35K+ lines of code, an autonomous AI engineer maintaining it 24/7, and an infrastructure company providing compute and capital. The grant accelerates deployment, not development.
+
 ### Team
 
-**Manuel Guilherme Galmanus** -- Solo builder. Independent researcher and AI Engineer. Created both Bluewave (autonomous AI agent system with 158 tools and original cognitive architecture) and MIDAS (privacy DeFi with 14 Cairo contracts). Author of two original research frameworks: Autonomous Soul Architecture (ASA) and Psychometric Utility Theory (PUT).
+**Manuel Guilherme Galmanus** -- AI Engineer at Ialum. Independent researcher. Created both Bluewave (autonomous AI agent system with 158 tools and original cognitive architecture) and MIDAS (privacy DeFi with 14 Cairo contracts). Author of two original research frameworks: Autonomous Soul Architecture (ASA) and Psychometric Utility Theory (PUT).
+
+**Fagner Adler** -- CEO of Ialum. Infrastructure and capital. Manages 500GB+ GPU capacity and investment fund relationships. Provides the environment where autonomous agents operate.
 
 - GitHub: [@Galmanus](https://github.com/Galmanus)
 - Email: m.galmanus@gmail.com
