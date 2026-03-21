@@ -165,7 +165,7 @@ Para equilibrar os riscos:
 - Crescimento da base de clientes/usuarios
 - Contribuicao tecnica documentada (commits, features, papers)
 
-6.3. **BONUS DE PERFORMANCE.** O Criador recebera 20% (vinte por cento) de toda receita diretamente atribuivel ao Wave e ao Bluewave, alem do salario base. Receita diretamente atribuivel inclui: vendas de servicos executados pelo Wave, subscricoes do Bluewave SaaS, grants e premios de hackathons, e receita de agent-to-agent commerce.
+6.3. **PARTICIPACAO NOS RESULTADOS.** Alem do salario base, o Criador recebe sua participacao nos resultados conforme a tabela de divisao de receita da Clausula 5.3 (50% para receita operacional, 70% para licenciamento e PUT SaaS). O salario base NAO e deduzido da participacao nos resultados — sao remuneracoes distintas e cumulativas. O salario remunera o trabalho tecnico. A participacao remunera o resultado comercial do produto.
 
 6.4. **TOKEN ALLOCATION.** Conforme especificacao do $WAVE token (Clausula 2.1f), 20% do supply total (200.000.000 tokens) e alocado ao Criador como Founder's Share, com vesting de 24 meses e cliff de 6 meses.
 
