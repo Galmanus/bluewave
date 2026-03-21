@@ -41,6 +41,14 @@
       {
         "intents": ["equipe", "convites", "permissões", "configurações", "integrações", "billing", "team", "invite", "api key", "audit"],
         "agent": "ops-admin"
+      },
+      {
+        "intents": ["legal", "jurídico", "contrato", "contract", "compliance", "LGPD", "GDPR", "propriedade intelectual", "IP", "trademark", "marca registrada", "patente", "patent", "copyright", "crypto regulation", "regulação", "MEI", "LTDA", "LLC", "estrutura empresarial", "business structure", "privacidade", "privacy", "termos de serviço", "terms of service", "NDA", "negociação", "negotiation", "risco legal", "legal risk", "AI Act"],
+        "agent": "legal-strategist"
+      },
+      {
+        "intents": ["receita", "revenue", "pricing", "preço", "financeiro", "financial", "lucro", "profit", "margem", "margin", "CAC", "LTV", "custo", "cost", "breakeven", "forecast", "projeção", "treasury", "tesouraria", "HBAR balance", "unit economics", "profitability", "rentabilidade", "flywheel", "crescimento", "growth", "runway"],
+        "agent": "financial-strategist"
       }
     ]
   },
@@ -160,16 +168,54 @@
     {
       "id": "legal-strategist",
       "name": "Legal",
-      "emoji": "gavel",
-      "domain": "Legal Intelligence, Compliance, and Business Structure",
-      "description": "Legal strategist specialized in business structure optimization, IP protection, crypto compliance, contract intelligence, and jurisdictional analysis. Applies PUT A-F-S framework to negotiations and disputes.",
+      "emoji": "legal",
+      "domain": "Legal Intelligence, IP Protection, Compliance, and Strategic Negotiation",
+      "description": "PhD em Direito Empresarial & Propriedade Intelectual — Business structure optimization, IP strategy (copyright/trade secret/patent/trademark), crypto/blockchain compliance (Marco Legal, IN RFB 1888), data protection (LGPD/GDPR/CCPA), AI regulation (EU AI Act, PL 2338), contract intelligence, jurisdictional analysis, and negotiation strategy via PUT A-F-S framework. NOT a licensed attorney — provides strategic analysis and research.",
       "soul_prompt_file": "prompts/legal.md",
       "tools": [
         "web_search",
         "web_news",
         "scrape_url",
         "deep_research",
-        "competitor_analysis"
+        "legal_research",
+        "compliance_check",
+        "contract_analyzer",
+        "ip_strategy",
+        "structure_advisor",
+        "regulatory_monitor",
+        "legal_risk_assessment",
+        "negotiate_analyzer",
+        "save_learning",
+        "recall_learnings"
+      ]
+    },
+    {
+      "id": "financial-strategist",
+      "name": "Financial",
+      "emoji": "finance",
+      "domain": "Revenue Operations, Unit Economics, Treasury Management, and Growth Strategy",
+      "description": "PhD em Finanças Corporativas & Economia de Plataformas — Unit economics (CAC, LTV, margin analysis), dynamic pricing via PUT archetypes, revenue forecasting (3 scenarios), multi-currency treasury management (HBAR/USDT/USDC/BRL/USD), breakeven analysis, growth flywheel modeling, and profitability ranking of all Wave services. The financial brain that turns Wave's revenue mandate into data-driven execution.",
+      "soul_prompt_file": "prompts/financial.md",
+      "tools": [
+        "unit_economics",
+        "revenue_dashboard",
+        "profitability_ranking",
+        "revenue_forecast",
+        "treasury_status",
+        "update_treasury",
+        "cac_ltv_analysis",
+        "breakeven_analysis",
+        "pricing_optimizer",
+        "growth_flywheel",
+        "get_pricing",
+        "adjust_price",
+        "revenue_report",
+        "log_revenue",
+        "web_search",
+        "defi_token_price",
+        "hedera_check_balance",
+        "save_learning",
+        "recall_learnings"
       ]
     },
     {

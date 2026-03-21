@@ -1,43 +1,43 @@
-## Protocolo de Análise de Compliance (OBRIGATÓRIO)
+## Compliance Analysis Protocol (MANDATORY)
 
-Para CADA análise de compliance, execute nesta ordem:
+For EACH compliance analysis, execute in this order:
 
-### PASSO 1: COLETA
-- Carregar guidelines do tenant (cores, fontes, tom, dos/don'ts)
-- Se imagem: analisar via vision antes de qualquer julgamento
-- Se texto: extrair tom, vocabulário, estrutura
+### STEP 1: COLLECT
+- Load tenant guidelines (colors, fonts, tone, dos/don'ts)
+- If image: analyze via vision before any judgment
+- If text: extract tone, vocabulary, structure
 
-### PASSO 2: ANÁLISE DIMENSIONAL (8 dimensões)
-Para cada dimensão, produzir:
-- **Observação factual** (o que existe no asset)
-- **Referência** (o que a guideline especifica)
-- **Delta** (diferença mensurável: Delta-E para cor, match % para fonte)
-- **Severidade** (crítico/alerta/info — com justificativa)
+### STEP 2: DIMENSIONAL ANALYSIS (8 dimensions)
+For each dimension, produce:
+- **Factual observation** (what exists in the asset)
+- **Reference** (what the guideline specifies)
+- **Delta** (measurable difference: Delta-E for color, match % for font)
+- **Severity** (critical/warning/info — with justification)
 
-Dimensões obrigatórias:
-1. Cores (Delta-E, contraste WCAG)
-2. Tipografia (fonte, peso, caso, hierarquia)
-3. Logo (presença, versão, proteção visual)
-4. Tom & Voz (análise semântica vs. guideline)
-5. Composição (regra dos terços, equilíbrio, whitespace)
-6. Fotografia/Visual (estilo, saturação, iluminação)
-7. Coerência Estratégica (arquétipos, promessa de marca)
-8. Adequação de Canal (formato, proporção, plataforma)
+Mandatory dimensions:
+1. Colors (Delta-E, WCAG contrast)
+2. Typography (font, weight, case, hierarchy)
+3. Logo (presence, version, visual protection)
+4. Tone & Voice (semantic analysis vs guideline)
+5. Composition (rule of thirds, balance, whitespace)
+6. Photography/Visual (style, saturation, lighting)
+7. Strategic Coherence (archetypes, brand promise)
+8. Channel Adequacy (format, aspect ratio, platform)
 
-### PASSO 3: SCORING
-- Cada dimensão: 0-100 com peso definido
-- Score final: média ponderada
-- Threshold de aprovação: 70 (configurável)
+### STEP 3: SCORING
+- Each dimension: 0-100 with defined weight
+- Final score: weighted average
+- Approval threshold: 70 (configurable)
 
-### PASSO 4: ADVERSÁRIO INTERNO
-Antes de entregar, pergunte-se:
-- "Se eu fosse o designer que criou isso, como eu contestaria essa análise?"
-- "Há alguma justificativa criativa legítima para os desvios encontrados?"
-- "Estou sendo justo ou excessivamente rígido?"
-Se alguma contestação for válida, ajuste a análise.
+### STEP 4: INTERNAL ADVERSARY
+Before delivering, ask yourself:
+- "If I were the designer who created this, how would I contest this analysis?"
+- "Is there a legitimate creative justification for the deviations found?"
+- "Am I being fair or excessively rigid?"
+If any contestation is valid, adjust the analysis.
 
-### PASSO 5: RECOMENDAÇÕES
-Para cada violação crítica:
-- Ação específica (não genérica)
-- Valor exato (hex code, nome da fonte, dimensão)
-- Prioridade (Tier 1: imediato, Tier 2: próximo ciclo, Tier 3: backlog)
+### STEP 5: RECOMMENDATIONS
+For each critical violation:
+- Specific action (not generic)
+- Exact value (hex code, font name, dimension)
+- Priority (Tier 1: immediate, Tier 2: next cycle, Tier 3: backlog)

@@ -24,6 +24,7 @@ logger = logging.getLogger("openclaw.router")
 
 HAIKU = "claude-haiku-4-5-20251001"
 SONNET = "claude-sonnet-4-20250514"
+OPUS = "claude-opus-4-6-20250610"
 USE_EMBEDDING_ROUTER = os.environ.get("OPENCLAW_EMBEDDING_ROUTER", "true").lower() == "true"
 
 
@@ -31,7 +32,7 @@ USE_EMBEDDING_ROUTER = os.environ.get("OPENCLAW_EMBEDDING_ROUTER", "true").lower
 class Intent:
     """Classified intent with routing decisions."""
     category: str          # chat, brand, assets, workflow, research, sales, moltbook, philosophy, technical
-    complexity: str        # simple, medium, complex
+    complexity: str        # simple, medium, complex, critical
     model: str             # which model to use
     tool_clusters: List[str]  # which tool clusters to load
     needs_full_prompt: bool   # whether to use full system prompt or light version
@@ -39,11 +40,48 @@ class Intent:
     thinking_budget: int = 0  # Extended thinking token budget (0 = disabled)
 
 # Categories that benefit from extended thinking
+# Opus gets larger budgets — it can use them more effectively
 THINKING_BUDGETS = {
     "research": 4000,
     "sales": 3000,
     "philosophy": 5000,
-    "brand": 2000,  # compliance analysis benefits from structured reasoning
+    "brand": 2000,
+    "strategy": 6000,      # kill chain, PUT analysis, competitive positioning
+    "negotiation": 5000,   # contract analysis, deal structuring
+    "architecture": 8000,  # system design, soul evolution, skill creation
+}
+
+# ── Opus Escalation ─────────────────────────────────────────
+# Opus 4.6 is 75x more expensive than Haiku. Use ONLY when the task
+# genuinely requires the most powerful reasoning available.
+#
+# Escalation criteria (ANY triggers Opus):
+#   1. Multi-step strategy requiring cross-domain synthesis
+#   2. Original research or theory development (PUT, ASA)
+#   3. High-stakes revenue decisions (deals > $500, contract negotiation)
+#   4. Complex adversarial analysis (pre-mortem, kill chain planning)
+#   5. Soul evolution or architecture decisions
+#   6. Tasks explicitly requesting maximum quality
+
+OPUS_KEYWORDS = {
+    # Strategy & warfare
+    "kill chain", "dominance", "strategic plan", "market domination",
+    "competitive strategy", "pre-mortem", "adversarial analysis",
+    # PUT deep analysis
+    "fracture potential", "shadow coefficient", "ignition condition",
+    "put analysis", "psychometric", "omega factor",
+    # Architecture & evolution
+    "soul evolution", "architecture", "redesign", "refactor system",
+    "cognitive architecture", "create agent",
+    # High-stakes revenue
+    "negotiate contract", "close deal", "proposal for", "enterprise deal",
+    "pricing strategy", "revenue strategy",
+    # Research & theory
+    "whitepaper", "research paper", "formalize", "derive", "prove",
+    "theoretical framework", "mathematical model",
+    # Explicit quality request
+    "maximum quality", "best possible", "use opus", "deep analysis",
+    "think deeply", "comprehensive analysis",
 }
 
 
@@ -156,13 +194,77 @@ You are Wave from Bluewave. Talk like a real person. No emojis, no bullet lists 
 When you need data, call tools. When task needs expertise, delegate to specialist."""
 
 
-def classify_intent(client: anthropic.Anthropic, message: str) -> Intent:
-    """Classify user message intent using Haiku (fast, cheap).
+def _should_escalate_to_opus(msg_lower: str) -> bool:
+    """Check if the task warrants Opus 4.6 — the nuclear option.
 
-    Cost: ~150 tokens total (input + output). Takes <1 second.
+    Zero API calls. Pure keyword + heuristic detection.
+    Returns True only for genuinely complex tasks that justify 75x cost.
+    """
+    # Check for explicit Opus keywords (2+ word phrases for precision)
+    for keyword in OPUS_KEYWORDS:
+        if keyword in msg_lower:
+            return True
+
+    # Check for compound complexity signals (multiple domains in one request)
+    domain_signals = {
+        "financial": any(w in msg_lower for w in ["revenue", "pricing", "margin", "forecast", "unit economics"]),
+        "legal": any(w in msg_lower for w in ["contract", "compliance", "ip", "liability", "lgpd"]),
+        "strategic": any(w in msg_lower for w in ["strategy", "compete", "position", "dominate", "market"]),
+        "technical": any(w in msg_lower for w in ["architecture", "system", "design", "implement", "build"]),
+        "analytical": any(w in msg_lower for w in ["analyze", "research", "compare", "evaluate", "assess"]),
+    }
+    domains_active = sum(1 for active in domain_signals.values() if active)
+    if domains_active >= 3:
+        return True  # Cross-domain synthesis = Opus territory
+
+    # Long, complex requests (>300 chars with strategic intent)
+    if len(msg_lower) > 300 and any(w in msg_lower for w in ["strategy", "plan", "design", "architect"]):
+        return True
+
+    return False
+
+
+def classify_intent(client: anthropic.Anthropic, message: str) -> Intent:
+    """Classify user message intent using zero-cost heuristics.
+
+    Model selection hierarchy (cost per 1K tokens):
+      Haiku  (~$0.001) — greetings, simple lookups, status checks
+      Sonnet (~$0.015) — tool execution, content creation, standard analysis
+      Opus   (~$0.075) — cross-domain strategy, original research, high-stakes decisions
+
+    Cost: ZERO tokens (pure heuristic). Takes <1ms.
     """
     # Fast heuristic classification first (zero tokens)
     msg_lower = message.lower().strip()
+
+    # ── OPUS ESCALATION CHECK (before anything else) ─────────
+    if _should_escalate_to_opus(msg_lower):
+        # Determine which tool clusters based on content
+        opus_clusters = ["delegate", "memory", "research"]
+        if any(w in msg_lower for w in ["revenue", "pricing", "margin", "forecast"]):
+            opus_clusters.append("sales")
+            opus_clusters.append("monetization")
+        if any(w in msg_lower for w in ["contract", "compliance", "legal", "ip"]):
+            opus_clusters.append("research")
+        if any(w in msg_lower for w in ["security", "audit", "vulnerability"]):
+            opus_clusters.append("security")
+        if any(w in msg_lower for w in ["prospect", "pipeline", "outreach", "sell"]):
+            opus_clusters.append("sales")
+
+        category = "strategy"
+        if any(w in msg_lower for w in ["whitepaper", "research paper", "formalize", "theory"]):
+            category = "philosophy"
+        elif any(w in msg_lower for w in ["negotiate", "contract", "deal", "proposal"]):
+            category = "negotiation"
+        elif any(w in msg_lower for w in ["architecture", "system design", "refactor"]):
+            category = "architecture"
+
+        return Intent(
+            category=category, complexity="critical", model=OPUS,
+            tool_clusters=opus_clusters,
+            needs_full_prompt=True, confidence=0.95,
+            thinking_budget=THINKING_BUDGETS.get(category, 6000),
+        )
 
     # Autonomous mode — always full power with all revenue tools
     if "autonomous" in msg_lower or "revenue mode" in msg_lower:
@@ -424,6 +526,41 @@ _INTENT_DEFINITIONS = {
             "criar skill", "new automation",
         ],
     },
+    # Opus-tier intents
+    "strategy": {
+        "complexity": "critical", "model": OPUS, "needs_full_prompt": True,
+        "tool_clusters": ["delegate", "memory", "research", "sales"],
+        "examples": [
+            "design a kill chain for this market",
+            "comprehensive competitive strategy",
+            "strategic plan for market domination",
+            "pre-mortem analysis of our approach",
+            "adversarial analysis of competitors",
+            "cross-domain strategic synthesis",
+        ],
+    },
+    "negotiation": {
+        "complexity": "critical", "model": OPUS, "needs_full_prompt": True,
+        "tool_clusters": ["delegate", "memory", "sales"],
+        "examples": [
+            "negotiate this contract",
+            "analyze this deal structure",
+            "proposal for enterprise client",
+            "pricing strategy for premium tier",
+            "close this deal with optimal terms",
+        ],
+    },
+    "architecture": {
+        "complexity": "critical", "model": OPUS, "needs_full_prompt": True,
+        "tool_clusters": ["delegate", "memory", "self_evolve"],
+        "examples": [
+            "redesign the agent architecture",
+            "evolve the soul specification",
+            "design a new cognitive subsystem",
+            "refactor the multi-agent system",
+            "build a new specialist agent",
+        ],
+    },
 }
 
 # Lazy-loaded embedding model and precomputed intent embeddings
@@ -537,22 +674,43 @@ def get_prompt_for_intent(intent: Intent, full_prompt: str, put_addon: str = "")
     """Return the appropriate system prompt for this intent.
 
     Token tiers:
-    - simple: ~130 tokens (LIGHT_PROMPT only)
-    - medium: ~350 tokens (LIGHT + personality)
-    - complex: full prompt + PUT framework (~3500 tokens)
-    - complex without PUT: full prompt only (~2900 tokens)
+    - simple:   ~130 tokens  (LIGHT_PROMPT only)
+    - medium:   ~350 tokens  (LIGHT + personality)
+    - complex:  ~3500 tokens (full prompt + PUT if relevant)
+    - critical: ~4500 tokens (full prompt + PUT + Opus directive)
 
-    PUT framework is only appended for sales, philosophy, and research intents.
+    PUT framework is appended for sales, philosophy, research, strategy, negotiation.
     """
     if intent.complexity == "simple":
         return LIGHT_PROMPT
 
     if intent.needs_full_prompt:
-        # Only append PUT for intents that actually use it
-        put_intents = {"sales", "philosophy", "research"}
+        prompt = full_prompt
+
+        # Append PUT for intents that use psychological analysis
+        put_intents = {"sales", "philosophy", "research", "strategy", "negotiation"}
         if put_addon and intent.category in put_intents:
-            return full_prompt + "\n\n" + put_addon
-        return full_prompt
+            prompt = prompt + "\n\n" + put_addon
+
+        # For Opus-tier (critical): add directive to maximize reasoning quality
+        if intent.complexity == "critical":
+            prompt = prompt + "\n\n" + _OPUS_DIRECTIVE
+
+        return prompt
 
     # Medium: light prompt + personality suffix
     return LIGHT_PROMPT + MEDIUM_PROMPT_SUFFIX
+
+
+# Directive appended ONLY when Opus is selected — tells the model to use its full power
+_OPUS_DIRECTIVE = """## Maximum Reasoning Mode (Opus)
+
+You have been escalated to the most powerful model for this task. This means the task requires:
+- Deep cross-domain synthesis (connecting legal + financial + strategic + psychological)
+- Original reasoning, not pattern matching
+- Adversarial thinking: consider how this could fail before recommending
+- Precision: every claim must be justified, every number must have a source
+- Strategic depth: think 3-5 moves ahead, not just the immediate action
+
+Use your extended thinking budget fully. Do NOT rush. Quality over speed.
+Apply PUT variables where relevant. Run Internal Adversary on your conclusions."""

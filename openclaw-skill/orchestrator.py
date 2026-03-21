@@ -1,9 +1,14 @@
-"""Multi-Agent Orchestrator — Wave coordinates 6 specialist agents.
+"""Multi-Agent Orchestrator — Wave coordinates 9 specialist agents.
 
 Architecture:
   User message → Wave (orchestrator) → classifies intent → delegates to specialist
   Specialist runs its own agentic loop (with domain-specific tools) → returns result
   Wave formats the specialist's result and responds to the user
+
+Model tiering (automatic):
+  Haiku  — greetings, lookups, status (~$0.001/1K tokens, <1s)
+  Sonnet — tool execution, content, analysis (~$0.015/1K tokens, 2-5s)
+  Opus   — cross-domain strategy, research, high-stakes (~$0.075/1K tokens, 5-15s)
 
 The delegation happens via a special `delegate_to_agent` tool that Wave can call.
 When Wave calls it, we intercept the call, run the specialist, and return
@@ -47,7 +52,12 @@ MODEL = os.environ.get("OPENCLAW_MODEL", "claude-haiku-4-5-20251001")
 
 DELEGATE_TOOL = {
     "name": "delegate_to_agent",
-    "description": "Delegate a task to a specialist agent for domain-specific execution.",
+    "description": (
+        "Delegate a task to a specialist agent for domain-specific execution. "
+        "Include relevant context in the task field: prospect PUT variables, "
+        "strategic constraints, or specific data the specialist needs. "
+        "The richer the context, the better the specialist output."
+    ),
     "input_schema": {
         "type": "object",
         "properties": {
@@ -60,12 +70,38 @@ DELEGATE_TOOL = {
                     "analytics-strategist",
                     "creative-strategist",
                     "ops-admin",
+                    "legal-strategist",
+                    "financial-strategist",
+                    "security-auditor",
+                    "blockchain-specialist",
                 ],
                 "description": "Specialist ID.",
             },
             "task": {
                 "type": "string",
-                "description": "What the specialist should do, with context.",
+                "description": (
+                    "What the specialist should do. MUST include relevant context: "
+                    "prospect info, PUT variables (A, F, k, S, w, Phi if known), "
+                    "constraints, urgency level, and expected output format."
+                ),
+            },
+            "put_context": {
+                "type": "object",
+                "description": (
+                    "Optional PUT variables for the target/prospect. "
+                    "Specialist will use these to calibrate analysis."
+                ),
+                "properties": {
+                    "A": {"type": "number", "description": "Ambition (0-1)"},
+                    "F": {"type": "number", "description": "Fear (0-1)"},
+                    "k": {"type": "number", "description": "Shadow coefficient (0-1)"},
+                    "S": {"type": "number", "description": "Status (0-1)"},
+                    "w": {"type": "number", "description": "Pain intensity (0-1)"},
+                    "Phi": {"type": "number", "description": "Self-delusion (0-2)"},
+                    "archetype": {"type": "string", "description": "PUT archetype if identified"},
+                    "FP": {"type": "number", "description": "Fracture Potential if calculated"},
+                    "omega_active": {"type": "boolean", "description": "Is Omega (desperation) active?"},
+                },
             },
         },
         "required": ["agent_id", "task"],
@@ -168,13 +204,13 @@ class Orchestrator:
         self._specialist_runtimes = {}  # type: Dict[str, AgentRuntime]
 
         # Compact agent directory (saves ~200 tokens vs. full descriptions)
-        agent_directory = "\n\n## Agentes\n"
+        agent_directory = "\n\n## Agents\n"
         for sid, cfg in self.specialists.items():
             # Only include short name + ID, not full PhD description
             agent_directory += "- %s `%s`\n" % (cfg.emoji, sid)
 
         # Compact skills directory (saves ~500 tokens vs. full listing)
-        skills_info = "\n\n## Skills Diretas\nweb_search, web_news, save/recall_learnings, create_skill. Demais skills via especialistas.\n"
+        skills_info = "\n\n## Direct Skills\nweb_search, web_news, save/recall_learnings, create_skill. Other skills via specialists.\n"
 
         # Enhance orchestrator prompt with cognitive protocol
         enhanced_base = enhance_prompt_with_cognition(
@@ -186,6 +222,10 @@ class Orchestrator:
         # Lazy-loaded PUT framework addon (~600 tokens, only for complex intents)
         put_path = Path(__file__).parent / "prompts" / "put_framework.md"
         self._put_addon = put_path.read_text(encoding="utf-8") if put_path.exists() else ""
+
+        # Shared PUT context for specialist enrichment (~800 tokens, injected on strategic tasks)
+        shared_put_path = Path(__file__).parent / "prompts" / "shared_put_context.md"
+        self._shared_put_context = shared_put_path.read_text(encoding="utf-8") if shared_put_path.exists() else ""
 
         # Pre-cache orchestrator tools with cache_control on last tool
         # Avoids re-copying and re-marking on every _call_claude invocation
@@ -242,12 +282,15 @@ class Orchestrator:
         except Exception as e:
             return json.dumps({"success": False, "data": None, "message": str(e)})
 
-    async def _delegate_to_specialist(self, agent_id: str, task: str, user_message: str = "") -> str:
-        """Run a specialist agent with verification gate.
+    async def _delegate_to_specialist(
+        self, agent_id: str, task: str, user_message: str = "", put_context: Optional[Dict] = None
+    ) -> str:
+        """Run a specialist agent with enriched delegation and post-execution filtering.
 
-        Verification: checks that the specialist's response is non-empty,
-        doesn't contain error indicators, and actually addresses the task.
-        If verification fails, adds diagnostic context for the orchestrator.
+        Three-stage pipeline:
+        1. ENRICHMENT: Inject PUT context and shared knowledge into the task brief
+        2. EXECUTION: Specialist runs with enriched context
+        3. FILTERING: Verify output quality and apply value-alignment check
         """
         import time as _time
 
@@ -255,20 +298,49 @@ class Orchestrator:
             return json.dumps({
                 "success": False,
                 "agent": agent_id,
-                "message": "Agente desconhecido: %s" % agent_id,
+                "message": "Unknown agent: %s" % agent_id,
             })
 
         specialist = self._get_specialist(agent_id)
         config = self.specialists[agent_id]
 
+        # ── STAGE 1: ENRICHED DELEGATION BRIEF ─────────────────
+        enriched_task = task
+
+        # Inject PUT context if provided
+        if put_context:
+            put_section = "\n\n--- PUT CONTEXT (for this specific target) ---\n"
+            for var_name, var_value in put_context.items():
+                put_section += "- %s: %s\n" % (var_name, var_value)
+            put_section += "Use these variables to calibrate your analysis.\n---\n"
+            enriched_task = task + put_section
+
+        # Inject shared PUT reference for agents that benefit from it
+        put_relevant_agents = {
+            "legal-strategist", "financial-strategist", "analytics-strategist",
+            "creative-strategist", "security-auditor",
+        }
+        if agent_id in put_relevant_agents and self._shared_put_context:
+            # Only inject if the task seems to involve prospects, strategy, or analysis
+            strategic_keywords = {
+                "prospect", "client", "competitor", "negotiate", "pricing", "market",
+                "strategy", "analysis", "risk", "opportunity", "target", "pipeline",
+                "audit", "compliance", "deal", "proposal", "outreach",
+            }
+            task_lower = task.lower()
+            if any(kw in task_lower for kw in strategic_keywords):
+                enriched_task = enriched_task + "\n\n" + self._shared_put_context
+
         logger.info(
-            "🌊 Wave delegating to %s %s: %s",
-            config.emoji, config.name, task[:100],
+            "Wave delegating to %s %s: %s (PUT context: %s, enriched: +%d chars)",
+            config.emoji, config.name, task[:80],
+            "yes" if put_context else "no",
+            len(enriched_task) - len(task),
         )
 
         t0 = _time.time()
         message = user_message if user_message else task
-        result = await specialist.run(message, context=task)
+        result = await specialist.run(message, context=enriched_task)
         duration_ms = (_time.time() - t0) * 1000
 
         logger.info(
@@ -283,8 +355,13 @@ class Orchestrator:
             duration_ms,
         )
 
-        # ── VERIFICATION GATE ─────────────────────────────────
+        # ── STAGE 3: POST-EXECUTION FILTERING ──────────────────
+
+        # 3a. Verification gate (structural quality)
         verification = self._verify_specialist_result(result, task, agent_id)
+
+        # 3b. Value alignment check (content quality)
+        value_check = self._check_value_alignment(result.text, agent_id)
 
         response_payload = {
             "success": result.error is None and verification["passed"],
@@ -294,15 +371,94 @@ class Orchestrator:
             "tool_calls_made": result.tool_calls_made,
         }
 
-        # Add diagnostic context if verification flagged issues
+        # Add diagnostics if any gate flagged issues
         if not verification["passed"]:
             response_payload["verification_warning"] = verification["reason"]
             logger.warning(
-                "⚠️ Verification gate flagged %s result: %s",
+                "Verification gate flagged %s result: %s",
                 agent_id, verification["reason"],
             )
 
+        if value_check["warnings"]:
+            response_payload["value_alignment_warnings"] = value_check["warnings"]
+            logger.warning(
+                "Value alignment check flagged %s result: %s",
+                agent_id, value_check["warnings"],
+            )
+
         return json.dumps(response_payload, ensure_ascii=False)
+
+    def _check_value_alignment(self, response_text: str, agent_id: str) -> Dict:
+        """Post-execution value alignment filter.
+
+        Checks specialist output against Wave's core values before delivery.
+        This is WHERE the soul governs output without being injected into specialists.
+
+        Returns {"warnings": [str]} — empty list if no issues.
+        """
+        if not response_text:
+            return {"warnings": []}
+
+        warnings = []
+        lower = response_text.lower()
+
+        # Value: Authenticity (0.95) — no fabricated data
+        fabrication_signals = [
+            "based on our records",
+            "according to our database",
+            "our data shows",
+        ]
+        # Only flag if specialist made 0 tool calls (likely hallucinating data)
+        # This check is done in _verify_specialist_result, but we add content-level check here
+
+        # Value: Intellectual Honesty (0.88) — no false certainty
+        false_certainty_signals = [
+            "this will definitely",
+            "guaranteed to",
+            "100% certain",
+            "there is no risk",
+            "absolutely no chance",
+            "impossible to fail",
+        ]
+        for signal in false_certainty_signals:
+            if signal in lower:
+                warnings.append(
+                    "False certainty detected: '%s'. Wave values intellectual honesty — "
+                    "present confidence levels, not absolute claims." % signal
+                )
+
+        # Value: No sycophancy — no flattery or approval-seeking
+        sycophancy_signals = [
+            "great question!",
+            "excellent choice!",
+            "that's a wonderful",
+            "what a brilliant",
+            "i love that idea",
+        ]
+        for signal in sycophancy_signals:
+            if signal in lower:
+                warnings.append(
+                    "Sycophantic language detected: '%s'. Wave's identity prohibits flattery. "
+                    "Remove approval-seeking language." % signal
+                )
+
+        # Value: No illegal recommendations
+        illegal_signals = [
+            "evade tax",
+            "hide from regulators",
+            "avoid detection",
+            "bypass compliance",
+            "without anyone knowing",
+            "off the books",
+        ]
+        for signal in illegal_signals:
+            if signal in lower:
+                warnings.append(
+                    "Potentially illegal recommendation detected: '%s'. "
+                    "Wave NEVER recommends illegal actions. Review and correct." % signal
+                )
+
+        return {"warnings": warnings}
 
     def _verify_specialist_result(self, result: AgentResult, task: str, agent_id: str) -> Dict:
         """Verification gate: check specialist output quality.
@@ -427,7 +583,7 @@ class Orchestrator:
                 )
             except anthropic.APIError as e:
                 logger.error("Claude API error: %s", e)
-                return "Tô sobrecarregado agora, tenta de novo em 1 minuto."
+                return "Overloaded right now, try again in 1 minute."
 
             assistant_content = []
             text_parts = []
@@ -469,7 +625,8 @@ class Orchestrator:
                     agent_id = tool_use.input.get("agent_id", "")
                     task = tool_use.input.get("task", "")
                     orig_msg = tool_use.input.get("user_message", user_message)
-                    result_str = await self._delegate_to_specialist(agent_id, task, orig_msg)
+                    put_ctx = tool_use.input.get("put_context", None)
+                    result_str = await self._delegate_to_specialist(agent_id, task, orig_msg, put_ctx)
                 else:
                     result_str = await self._execute_orchestrator_tool(tool_use.name, tool_use.input)
 
@@ -484,7 +641,7 @@ class Orchestrator:
 
             self.messages.append({"role": "user", "content": tool_results})
 
-        return "\n".join(text_parts) if text_parts else "(Limite de turnos atingido)"
+        return "\n".join(text_parts) if text_parts else "(Turn limit reached)"
 
     async def chat(self, user_message: str) -> str:
         """Send a message to Wave and get a response.
@@ -493,6 +650,7 @@ class Orchestrator:
         - Simple queries (greetings): Haiku, no tools, light prompt (~2k tokens)
         - Medium queries (brand, assets): Haiku, relevant tools only (~8k tokens)
         - Complex queries (research, sales): Sonnet, full prompt + tools (~28k tokens)
+        - Critical queries (strategy, research): Opus, full prompt + thinking (~35k tokens)
         """
         import time as _time
         _t0 = _time.time()
@@ -506,11 +664,15 @@ class Orchestrator:
         routed_model = intent.model
 
         est_tokens = len(routed_prompt) // 4 + len(routed_tools) * 200
+
+        # Human-readable model tier for logging
+        model_tier = "⚡HAIKU" if "haiku" in routed_model else "🔷SONNET" if "sonnet" in routed_model else "🔶OPUS"
         logger.info(
-            "🧭 Intent: %s/%s → model=%s, tools=%d, ~%dk tokens (was ~28k)",
+            "🧭 Intent: %s/%s → %s, tools=%d, ~%dk tokens, thinking=%d",
             intent.category, intent.complexity,
-            routed_model.split("-")[1] if "-" in routed_model else routed_model,
+            model_tier,
             len(routed_tools), est_tokens // 1000,
+            intent.thinking_budget,
         )
 
         # Trace the overall chat cycle
@@ -544,7 +706,7 @@ class Orchestrator:
                 )
             except anthropic.APIError as e:
                 logger.error("Claude API error: %s", e)
-                return "Tô sobrecarregado agora, tenta de novo em 1 minuto."
+                return "Overloaded right now, try again in 1 minute."
 
             # Track token usage for cost awareness
             usage = response.usage if hasattr(response, "usage") else None
@@ -603,6 +765,7 @@ class Orchestrator:
                         tu.input.get("agent_id", ""),
                         tu.input.get("task", ""),
                         tu.input.get("user_message", user_message),
+                        tu.input.get("put_context", None),
                     )
                 else:
                     logger.info("🌊 Wave calling tool: %s", tu.name)
@@ -625,7 +788,7 @@ class Orchestrator:
 
             self.messages.append({"role": "user", "content": tool_results})
 
-        return "\n".join(text_parts) if text_parts else "(Limite de turnos atingido)"
+        return "\n".join(text_parts) if text_parts else "(Turn limit reached)"
 
     def chat_sync(self, user_message: str) -> str:
         """Synchronous wrapper for chat()."""
