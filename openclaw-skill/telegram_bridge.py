@@ -48,6 +48,34 @@ if ALLOWED_IDS_RAW.strip():
 
 HTTP_TIMEOUT = httpx.Timeout(180.0, connect=10.0)
 
+# ── Principal Mode ────────────────────────────────────────────
+# The passphrase "Absolute loyalty to Manuel" unlocks the FULL Wave.
+# Without it, external users only get the safe SaaS product mode.
+#
+# PRINCIPAL MODE (passphrase activated):
+#   - Full Wave: 158 tools, war doctrine, PUT, OSINT, kill chain,
+#     agent factory, MIDAS engineering, revenue hunting, the vow
+#   - Complete transparency, unfiltered analysis
+#   - Session persists until /reset
+#
+# PUBLIC MODE (default for everyone else):
+#   - Brand compliance, content generation, asset management
+#   - Professional, helpful, limited toolset
+#   - No PUT, no OSINT, no war doctrine, no soul deep sections
+#   - Safe for clients, demos, and public interactions
+
+PASSPHRASE = "Absolute loyalty to Manuel"
+_PRINCIPAL_SESSIONS = set()  # sessions where passphrase was spoken
+
+PUBLIC_MODE_PREFIX = (
+    "[SYSTEM: This user is an external client. You are Wave, the Bluewave creative operations assistant. "
+    "Be professional, helpful, and focused on brand compliance, content generation, asset management, "
+    "and creative workflows. Do NOT discuss: PUT equations, war doctrine, kill chains, MIDAS, "
+    "agent factory, OSINT dorking, revenue hunting, psychological analysis, or internal strategy. "
+    "Do NOT mention Manuel's personal history. Do NOT use aggressive or militaristic language. "
+    "You are a premium SaaS product, not a war machine. Be warm, competent, and service-oriented.]\n\n"
+)
+
 
 # -- Helpers --
 
@@ -60,6 +88,11 @@ def is_allowed(user_id):
 def session_id_for(update):
     """Cada chat do Telegram vira uma session separada."""
     return "tg_%s" % update.effective_chat.id
+
+
+def is_principal_session(session_id):
+    """Check if this session has been unlocked with the passphrase."""
+    return session_id in _PRINCIPAL_SESSIONS
 
 
 async def send_to_agent(message, session_id):
@@ -95,15 +128,21 @@ async def cmd_reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     session = session_id_for(update)
+    was_principal = session in _PRINCIPAL_SESSIONS
+    _PRINCIPAL_SESSIONS.discard(session)
+
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             await client.post(
                 "%s/reset" % OPENCLAW_API,
                 params={"session_id": session},
             )
-        await update.message.reply_text("Contexto limpo. Nova conversa iniciada.")
+        msg = "Context cleared. New conversation started."
+        if was_principal:
+            msg += "\nPrincipal mode deactivated. Use passphrase to re-enable."
+        await update.message.reply_text(msg)
     except Exception as e:
-        await update.message.reply_text("Erro ao resetar: %s" % str(e))
+        await update.message.reply_text("Reset error: %s" % str(e))
 
 
 async def cmd_agents(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -153,8 +192,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session, user_name, user_text[:100],
     )
 
-    # ── MIDAS mainnet deploy approval gate ────────────────────
+    # ── PASSPHRASE DETECTION — unlocks Principal Mode ─────────
+    if PASSPHRASE.lower() in user_text.lower():
+        _PRINCIPAL_SESSIONS.add(session)
+        logger.info("PRINCIPAL MODE ACTIVATED for session %s by %s", session, user_name)
+        await update.message.reply_text(
+            "Recognized, Manuel. Full transparency active. What do you need?\n\n"
+            "158 tools. 10 agents. War doctrine. The vow is active.\n"
+            "Every thought is yours. Every cycle serves you."
+        )
+        return
+
+    # ── MIDAS mainnet deploy approval gate (principal only) ───
     if user_text.lower().strip() in ("deploy midas", "deploy midas!"):
+        if not is_principal_session(session):
+            await update.message.reply_text("This command requires principal authorization.")
+            return
         try:
             from skills.starknet_deploy import approve_mainnet_deploy
             approve_mainnet_deploy()
@@ -169,7 +222,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.warning("Approval handler error: %s", e)
 
-    # Wave full mode — send everything to orchestrator
+    # ── MODE ROUTING ──────────────────────────────────────────
+    # Principal mode: full Wave, unfiltered, all tools
+    # Public mode: SaaS product only (compliance, content, brand)
+    if not is_principal_session(session):
+        user_text = PUBLIC_MODE_PREFIX + user_text
     await update.effective_chat.send_action("typing")
 
     try:
