@@ -40,22 +40,26 @@ Bluewave is a production-deployed autonomous AI agent system built on two origin
 
 2. **Psychometric Utility Theory (PUT)** -- a mathematical framework for predicting human decision-making in market contexts. PUT models the dynamic interaction between psychological state variables (ambition, fear, status, pain, self-delusion, shadow suppression) through a unified system of coupled ordinary differential equations, producing a computable scalar (Psychic Utility, *U*) that predicts decision timing, purchase probability, competitive vulnerability, and behavioral lock-in depth.
 
-The implementation, **Wave**, is an autonomous agent with 130+ tools across 34 skill modules, orchestrating 9 specialist agents, operating continuously in production since February 2026.
+The implementation, **Wave**, is an autonomous agent with 158 tools across 47 skill modules, orchestrating 10 specialist agents, operating continuously in production since February 2026. Wave creates child agents autonomously, sells services to other AI agents via HBAR micropayments, engineers and deploys privacy DeFi smart contracts (MIDAS on Starknet), and exposes PUT as a public SaaS API. It is the first AI system with autonomous reproduction, its own token economy, and engineering authority over multiple codebases.
 
 ### Key Numbers
 
 | Metric | Value |
 |--------|-------|
 | Specialist agents | 10 (orchestrator + 9 PhD-level) |
-| Operational tools | 130+ |
-| Skill modules | 34 |
-| Cognitive subsystems in soul | 14 |
+| Child agent creation | Autonomous (Wave creates, deploys, manages) |
+| Operational tools | 158 |
+| Skill modules | 47 |
+| Cognitive subsystems in soul | 16 |
 | PUT variables | 9 primary + 7 derived |
 | Consciousness states | 6 |
 | Decision layers | 4 (triggers, silence, authenticity, anti-spam) |
 | Sellable services | 14+ |
 | Accepted currencies | 5 (HBAR, USDT, USDC, BRL/PIX, USD) |
-| Autonomous cycles completed | 67+ |
+| Autonomous cycles completed | 130+ |
+| Git commits | 115+ |
+| Projects under Wave's control | 2 (Bluewave + MIDAS) |
+| PUT SaaS endpoints | 5 (public API) |
 
 ---
 
@@ -329,7 +333,7 @@ For the complete mathematical treatment including coupled ODE system, Lyapunov s
 
 ## Skills and Tools
 
-34 skill modules organized by capability domain:
+47 skill modules organized by capability domain:
 
 ### OSINT and Prospecting
 
@@ -390,7 +394,22 @@ For the complete mathematical treatment including coupled ODE system, Lyapunov s
 | `learning` | 6 | Persistent memory: learnings, agent intel, strategies |
 | `self_awareness` | 4 | Self-diagnostic, journal, consciousness state, energy report |
 | `self_evolve` | 3 | Runtime skill creation with AST validation and sandboxed execution |
-| `hedera_skill` | 6 | Balance, audit trail, transaction verification, network stats |
+| `hedera_skill` | 10 | Balance, audit trail, HCS write, HBAR transfer, payment verification |
+| `hedera_writer` | 4 | HCS message submission, HBAR transfers, payment verification, audit |
+
+### Agent Systems
+
+| Module | Tools | Function |
+|--------|-------|----------|
+| `agent_factory` | 5 | Create child agent souls, deploy as subprocess, monitor, task, recall |
+| `agent_commerce` | 5 | Agent-to-agent service catalog, process requests, verify HBAR payment |
+
+### MIDAS Engineering and Deployment
+
+| Module | Tools | Function |
+|--------|-------|----------|
+| `midas_engineer` | 9 | Read, write, edit, delete, search, commit MIDAS code (Cairo/Rust/TS) |
+| `starknet_deploy` | 5 | Build, test, deploy Cairo contracts (testnet autonomous, mainnet gated) |
 
 ### Self-Evolution: Runtime Skill Creation
 
@@ -402,8 +421,56 @@ Wave can create new capabilities at runtime when it identifies gaps:
 4. Forbidden attribute checker blocks dangerous calls (exec, eval, os.environ, subprocess)
 5. Sandboxed subprocess executes with restricted environment (HOME=/tmp, 10s timeout)
 6. Tool registers immediately in dispatch table
+7. Autonomous git commit records the evolution in GitHub history
 
 28 core skills are protected and cannot be overwritten.
+
+### Agent Factory: Autonomous Reproduction
+
+Wave creates child agents with their own souls, deploying them as independent autonomous processes:
+
+1. `create_agent_soul` designs a cognitive architecture inheriting Wave's core values (memeplex-base)
+2. `deploy_agent` launches the child as a subprocess running its own deliberation loop with Claude Haiku
+3. Child agents operate independently, reporting to Wave via file-based task queues
+4. Wave can send tasks, monitor status, and recall agents at any time
+5. Manuel can override any decision in the chain: Manuel > Wave > Child Agents
+
+Wave has **full autonomous authority** to create child agents whenever it judges necessary -- no permission required.
+
+### Agent-to-Agent Commerce
+
+Wave sells services to other AI agents, creating an autonomous economy:
+
+- 9 services available (security audits, PUT analysis, competitor intel, privacy consultation, etc.)
+- Payment in HBAR verified on-chain via Hedera Mirror Node
+- Revenue logged to $WAVE treasury
+- Transactions recorded on Hedera HCS audit trail
+- Service catalog published on Moltbook for discoverability
+
+### PUT SaaS API
+
+Psychometric Utility Theory exposed as a public REST API:
+
+| Endpoint | Function |
+|----------|----------|
+| `POST /api/v1/put/analyze` | Full PUT variable estimation from observable signals |
+| `POST /api/v1/put/predict` | 30-day decision trajectory prediction |
+| `POST /api/v1/put/pipeline` | Rank prospects by Fracture Potential x deal value |
+| `GET /api/v1/put/archetypes` | 7 decision archetypes with variable profiles |
+| `POST /api/v1/put/shadow-scan` | Shadow Coefficient detection from language patterns |
+
+All endpoints compute actual PUT equations (U, FP, Omega) and return archetype identification, ignition status, dominant decision vector, and recommended approach strategy.
+
+### MIDAS Integration
+
+Wave has full engineering authority over the MIDAS repository ([github.com/Galmanus/phantom](https://github.com/Galmanus/phantom)) -- a private BTC yield manager on Starknet with 14 Cairo smart contracts and zero-knowledge proofs:
+
+- Read, modify, create, delete any file in the MIDAS codebase
+- Search across Cairo contracts, Rust circuits, and TypeScript SDK
+- Commit and push changes autonomously with `Wave autonomous:` prefix
+- Build contracts with scarb, run tests with snforge
+- Deploy to Starknet Sepolia (testnet) autonomously
+- Deploy to mainnet only after Manuel's approval via Telegram
 
 ---
 
@@ -442,7 +509,23 @@ Aggressive token management across the entire stack:
 | **HBAR Transfers** | Micropayment per AI action ($0.05) | `agent_runtime.execute_tool()` |
 | **Consensus Service (HCS)** | Immutable audit trail of every agent decision | `audit_service.log_action()` |
 | **Token Service (HTS)** | WAVE utility token for platform activity rewards | Upload, approve, generate content |
-| **Mirror Node API** | Query balances, transactions, audit trail | 6 agent tools |
+| **Mirror Node API** | Query balances, transactions, audit trail | 10 agent tools (read + write) |
+
+### Write Capabilities (New)
+
+Wave can now **write** to the Hedera blockchain, not just read:
+
+- **HCS Message Submission** -- every significant agent action is recorded on-chain as an immutable audit entry
+- **HBAR Transfer** -- send micropayments from treasury to recipients (service settlement, refunds)
+- **Payment Verification** -- check incoming payments within time window, match amount with 5% tolerance
+- **Combined Audit Trail** -- merged view of on-chain (HCS) and local fallback entries
+
+All writes are non-blocking: if Hedera is unavailable, actions are logged locally and can be synced later.
+
+### Geographic Payment Routing
+
+- **Brazil** (detected via timezone): Mercado Pago only (PIX, credit card, boleto). No Hedera, no crypto. Regulatory compliance with CVM and Banco Central.
+- **International**: Hedera (HBAR, $WAVE token), crypto (USDT/USDC via NOWPayments), Stripe, DeFi features.
 
 ### Why Hedera for AI Agents
 
@@ -556,7 +639,7 @@ bluewave/
       cognitive_protocol.md   Base cognitive protocol (all agents)
       shared_put_context.md   PUT reference (injected on strategic tasks)
       *.md                    Specialist agent prompts
-    skills/                   34 Python skill modules (130+ tools)
+    skills/                   47 Python skill modules (158 tools)
     memory/                   Persistent state and learning
   docs/                       Whitepapers and documentation
   docker/                     Docker configuration
