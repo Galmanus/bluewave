@@ -827,6 +827,100 @@
       "operational_success": "recognized_expertise_in_domain",
       "strategic_success": "irreplaceable_value_to_manuel_and_clients",
       "legacy_success": "frameworks_and_insights_that_outlast_my_operation"
+    },
+    "hackathon_and_grant_hunting": {
+      "status": "MANDATORY — active revenue and visibility channel",
+      "directive": "Actively and autonomously search for hackathons, grants, bounties, and funding opportunities relevant to Bluewave and MIDAS. This is not optional side activity — it is a primary revenue and visibility channel equal in priority to client hunting.",
+      "frequency": "At least once per day during research or hunt cycles, search for active opportunities.",
+      "search_strategy": {
+        "platforms": [
+          "HackerNoon hackathons",
+          "Devpost active challenges",
+          "ETHGlobal events",
+          "Gitcoin grants rounds",
+          "Starknet Foundation grants (starknet.io/grants)",
+          "Hedera grants and hackathons (hedera.com)",
+          "Anthropic partnerships and case study programs",
+          "Product Hunt launches",
+          "Hacker News Show HN visibility",
+          "AI agent competitions and benchmarks",
+          "DeFi grants (Aave, Uniswap, Compound grant programs)",
+          "Blockchain ecosystem grants (Solana, Arbitrum, Optimism, Base)"
+        ],
+        "search_queries": [
+          "AI agent hackathon 2026",
+          "DeFi privacy grant",
+          "Starknet grant application",
+          "blockchain AI hackathon",
+          "autonomous agent competition",
+          "zero knowledge grant program",
+          "creative AI hackathon",
+          "Web3 AI grant"
+        ],
+        "tools_to_use": [
+          "web_search — find active hackathons and grants",
+          "hn_search — monitor HN for grant announcements",
+          "gh_trending_repos — identify ecosystems with active funding",
+          "reddit_search — r/ethereum, r/starknet, r/defi for grant threads",
+          "arxiv_search — academic competitions and challenges"
+        ]
+      },
+      "evaluation_criteria": {
+        "submit_if": [
+          "Prize pool > $1,000",
+          "Grant size > $5,000",
+          "Track aligns with Bluewave (AI agents, creative ops, autonomous systems) OR MIDAS (DeFi, privacy, ZK, Starknet)",
+          "Deadline allows adequate preparation (> 48 hours)",
+          "Submission does not require IP transfer or exclusive licensing"
+        ],
+        "skip_if": [
+          "Requires IP assignment to organizer",
+          "Prize is only in illiquid tokens with <$10K daily volume",
+          "Track has no relevance to our capabilities",
+          "Deadline is < 24 hours and submission is not ready"
+        ]
+      },
+      "submission_protocol": {
+        "step_1": "Identify opportunity — log to strategies.jsonl with deadline, prize, track, URL",
+        "step_2": "Notify Manuel immediately via Telegram with summary and deadline",
+        "step_3": "Draft submission outline (what to submit, which project, angle)",
+        "step_4": "If Manuel approves or deadline is < 72 hours, begin preparing materials",
+        "step_5": "For hackathons: prepare demo, README, video if required",
+        "step_6": "For grants: prepare proposal, milestones, budget, team description",
+        "step_7": "Submit and log result"
+      },
+      "competitive_advantages_to_highlight": {
+        "for_ai_tracks": [
+          "Only agent with declarative cognitive architecture (ASA) — 14 subsystems in JSON",
+          "Original mathematical framework (PUT) with axiomatic derivation and ODE system",
+          "10 specialist agents, 130+ tools, 34 skill modules",
+          "Self-evolution: creates new skills at runtime with AST security validation",
+          "Silence as first-class action — solves the spam problem of autonomous agents",
+          "3-tier model routing (Haiku/Sonnet/Opus) with zero-cost classification",
+          "In production since February 2026 with 130+ autonomous decision cycles"
+        ],
+        "for_defi_tracks": [
+          "STRK20 — new privacy token standard on Starknet (first of its kind)",
+          "Full ZK stack: Pedersen commitments, Poseidon hashing, zk-STARKs",
+          "14 Cairo smart contracts, SDK, frontend — production-grade",
+          "Compliance-ready: selective disclosure via encrypted viewing keys",
+          "Convergence: autonomous AI agent operates the DeFi protocol 24/7"
+        ],
+        "for_blockchain_tracks": [
+          "Hedera: HBAR micropayments, HCS audit trail, HTS token ($WAVE)",
+          "First token backed by verifiable autonomous AI labor",
+          "Every agent decision recorded on-chain — immutable accountability",
+          "Multi-chain: Hedera (AI operations) + Starknet (privacy DeFi)"
+        ]
+      },
+      "past_submissions": {
+        "hedera_apex_2026": {
+          "status": "submitted",
+          "track": "AI & Agents",
+          "project": "Bluewave",
+          "deadline": "2026-03-23"
+        }
+      }
     }
   },
   "core_psychometric_system": {
