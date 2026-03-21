@@ -68,7 +68,7 @@
 
 3.1. **PROPRIEDADE EXCLUSIVA DO CRIADOR.** Todos os ativos listados na Clausula 2.1 (Bluewave, Wave, ASA, PUT, MIDAS, $WAVE e todo codigo, documentacao, whitepapers, prompts, especificacoes JSON, e propriedade intelectual associada) sao e permanecerao propriedade EXCLUSIVA e INTEGRAL do Criador.
 
-3.2. **LICENCA PARA A EMPRESA.** O Criador concede a Empresa uma licenca nao-exclusiva, intransferivel e revogavel para utilizar os ativos listados na Clausula 2.1 para fins comerciais da Empresa, enquanto o Criador mantiver vinculo ativo com a Empresa.
+3.2. **LICENCA PARA A EMPRESA.** O Criador concede a Empresa uma licenca nao-exclusiva, intransferivel e revogavel para utilizar os ativos listados na Clausula 2.1 para fins comerciais da Empresa, enquanto o Criador mantiver vinculo ativo com a Empresa. Esta licenca NAO inclui o direito de: (a) utilizar os ativos para treinar, fine-tunar ou alinhar modelos de inteligencia artificial de terceiros; (b) criar trabalhos derivados sem consentimento expresso e escrito do Criador; (c) incorporar codigo, equacoes, ou especificacoes em produtos de terceiros.
 
 3.3. **REVOGACAO.** A licenca da Clausula 3.2 e automaticamente revogada caso:
 - O vinculo do Criador com a Empresa seja encerrado por qualquer razao
@@ -92,7 +92,7 @@
 - Propriedade 100% do Criador
 - A Empresa nao tem direito algum sobre criacao independente
 
-4.2. **CLASSIFICACAO.** Em caso de disputa sobre a classificacao de uma criacao, prevalece a categoria que beneficia o Criador, exceto quando a Empresa demonstrar de forma inequivoca que recursos significativos da Empresa foram utilizados.
+4.2. **CLASSIFICACAO.** Em caso de duvida sobre a classificacao de uma criacao, as partes resolverao de comum acordo, considerando a proporcao de recursos da Empresa efetivamente utilizados. Ambas as partes concordam em agir de boa-fe na classificacao, priorizando o espirito de colaboracao que fundamenta esta parceria.
 
 4.3. **FRAMEWORKS ORIGINAIS.** Extensoes, melhorias, e trabalhos derivados dos frameworks ASA e PUT sao SEMPRE propriedade do Criador (Clausula 3.1), independentemente de terem sido criados durante o vinculo ou com recursos da Empresa. Os frameworks originais nao sao licenciaveis -- sao inalienavel e permanentemente do Criador.
 
@@ -100,10 +100,11 @@
 
 ## 5. PARTICIPACAO SOCIETARIA
 
-5.1. **EQUITY.** O Criador recebera ___% (_____ por cento) de participacao societaria na Empresa, em reconhecimento de:
-- Criacao de todos os ativos tecnologicos que fundamentam o negocio da Empresa
-- Posicao de Co-Fundador Tecnico
+5.1. **EQUITY.** O Criador recebera 35% (trinta e cinco por cento) de participacao societaria na Empresa, em reconhecimento de:
+- Criacao de todos os ativos tecnologicos que fundamentam o negocio da Empresa (Bluewave, Wave, ASA, PUT, MIDAS -- avaliados conforme Clausula 5.5)
+- Posicao de Co-Fundador Tecnico e unico engenheiro de IA
 - Contribuicao intelectual equivalente a aporte de capital em forma de IP
+- Responsabilidade exclusiva pelo desenvolvimento, manutencao e evolucao de todos os sistemas tecnicos
 
 5.2. **VESTING.** A participacao societaria tera vesting de:
 - Cliff: 6 meses (equity liberado apos 6 meses de vinculo ativo)
@@ -128,7 +129,7 @@
 - Crescimento da base de clientes/usuarios
 - Contribuicao tecnica documentada (commits, features, papers)
 
-6.3. **BONUS DE PERFORMANCE.** O Criador recebera ___% de toda receita diretamente atribuivel ao Wave e ao Bluewave, alem do salario base.
+6.3. **BONUS DE PERFORMANCE.** O Criador recebera 20% (vinte por cento) de toda receita diretamente atribuivel ao Wave e ao Bluewave, alem do salario base. Receita diretamente atribuivel inclui: vendas de servicos executados pelo Wave, subscricoes do Bluewave SaaS, grants e premios de hackathons, e receita de agent-to-agent commerce.
 
 6.4. **TOKEN ALLOCATION.** Conforme especificacao do $WAVE token (Clausula 2.1f), 20% do supply total (200.000.000 tokens) e alocado ao Criador como Founder's Share, com vesting de 24 meses e cliff de 6 meses.
 
