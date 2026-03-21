@@ -262,15 +262,60 @@ class Orchestrator:
         for rt in self._specialist_runtimes.values():
             rt.reset()
 
+    async def _record_audit(self, action: str, tool: str, result: Any = None):
+        """Record action to Hedera HCS audit trail (non-blocking).
+
+        This is the integration point between Wave's cognitive operations
+        and the immutable on-chain record. Every significant action leaves
+        a verifiable trace on Hedera.
+
+        Cost: ~$0.0001 per entry. Non-blocking — failure does not affect operation.
+        """
+        try:
+            from skills.hedera_writer import submit_hcs_message
+
+            # Determine revenue from result (if applicable)
+            revenue_usd = 0.0
+            if isinstance(result, dict):
+                revenue_usd = result.get("revenue_usd", 0.0)
+
+            # Only audit significant actions (skip low-value reads to save cost)
+            skip_tools = {
+                "web_search", "web_news", "scrape_url",  # research reads
+                "recall_learnings", "recall_strategies", "recall_agent_intel",  # memory reads
+                "moltbook_feed", "moltbook_home",  # social reads
+                "hedera_check_balance", "hedera_audit_trail",  # hedera reads
+                "hedera_cost_report", "hedera_platform_stats",  # hedera reads
+                "self_diagnostic",  # diagnostic
+            }
+            if tool in skip_tools:
+                return
+
+            await submit_hcs_message(
+                action=action,
+                agent="wave",
+                tool=tool,
+                details=str(result)[:200] if result else "",
+                revenue_usd=revenue_usd,
+            )
+        except Exception as e:
+            # Audit failure must NEVER break agent operation
+            logger.debug("Audit recording failed (non-blocking): %s", e)
+
     async def _execute_orchestrator_tool(self, tool_name: str, tool_input: Dict) -> str:
         """Execute a tool that the orchestrator calls directly (not delegation).
 
         Results are compressed via token_optimizer to minimize context growth.
+        Every tool execution is recorded on the Hedera audit trail (HCS).
         """
         # Check if it's a skill tool first
         if is_skill_tool(tool_name):
             logger.info("Executing skill: %s", tool_name)
             result = await execute_skill(tool_name, tool_input)
+
+            # Record on Hedera audit trail (non-blocking)
+            await self._record_audit("skill_execution", tool_name, result)
+
             raw = json.dumps(result, ensure_ascii=False, default=str)
             return compress_tool_result(tool_name, raw)
 
@@ -353,6 +398,13 @@ class Orchestrator:
             "orchestrator", agent_id, task,
             result.text[:500] if result.text else "",
             duration_ms,
+        )
+
+        # ── STAGE 2.5: HEDERA AUDIT TRAIL ────────────────────
+        await self._record_audit(
+            action="delegation",
+            tool="delegate_to_%s" % agent_id,
+            result={"task": task[:100], "tool_calls": result.tool_calls_made},
         )
 
         # ── STAGE 3: POST-EXECUTION FILTERING ──────────────────

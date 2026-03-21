@@ -160,9 +160,11 @@ TOOL_CLUSTERS = {
         "social_monitor", "google_trends",
     ],
     "hedera": [
-        "hedera_check_balance", "hedera_log_audit_trail",
-        "hedera_verify_transaction", "hedera_get_transactions",
-        "hedera_network_stats", "hedera_cost_report",
+        "hedera_check_balance", "hedera_audit_trail",
+        "hedera_verify_transaction", "hedera_recent_transactions",
+        "hedera_platform_stats", "hedera_cost_report",
+        "hedera_log_action", "hedera_transfer",
+        "hedera_verify_payment", "hedera_full_audit",
     ],
     "payments": [
         "list_services", "payment_instructions", "confirm_payment",

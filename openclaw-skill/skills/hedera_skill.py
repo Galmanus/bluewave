@@ -247,6 +247,157 @@ async def hedera_cost_report(params: Dict[str, Any]) -> Dict:
     return {"success": True, "data": report, "message": msg}
 
 
+async def hedera_log_action(params: Dict[str, Any]) -> Dict:
+    """Manually log an action to the Hedera Consensus Service audit trail."""
+    action = params.get("action", "manual_log")
+    tool = params.get("tool", "")
+    details = params.get("details", "")
+
+    try:
+        from skills.hedera_writer import submit_hcs_message
+        result = await submit_hcs_message(
+            action=action,
+            agent="wave",
+            tool=tool,
+            details=details,
+        )
+
+        on_chain = result.get("on_chain", False)
+        msg = "**Audit Entry Recorded%s**\n" % (" (ON-CHAIN)" if on_chain else " (LOCAL)")
+        msg += "Action: %s\n" % action
+        if tool:
+            msg += "Tool: %s\n" % tool
+        if result.get("tx_id"):
+            msg += "TX: %s\n" % result["tx_id"]
+            msg += "Sequence: #%s\n" % result.get("sequence", "?")
+        if result.get("fallback"):
+            msg += "Note: %s (will sync when Hedera is configured)\n" % result["fallback"]
+
+        return {"success": True, "data": result, "message": msg}
+    except Exception as e:
+        return {"success": False, "data": None, "message": "Audit log failed: %s" % str(e)}
+
+
+async def hedera_transfer(params: Dict[str, Any]) -> Dict:
+    """Transfer HBAR from treasury to a recipient (micropayment settlement)."""
+    to_account = params.get("to_account", "")
+    amount_hbar = params.get("amount_hbar", 0.0)
+    memo = params.get("memo", "")
+
+    if not to_account or amount_hbar <= 0:
+        return {"success": False, "data": None, "message": "Need to_account and amount_hbar > 0"}
+
+    try:
+        from skills.hedera_writer import transfer_hbar
+        from skills.hedera_client import usd_to_tinybars
+
+        tinybars = int(amount_hbar * 100_000_000)
+        result = await transfer_hbar(to_account, tinybars, memo)
+
+        if result.get("success"):
+            msg = (
+                "**HBAR Transfer%s**\n"
+                "Amount: %.4f HBAR\n"
+                "To: %s\n"
+            ) % (
+                " (ON-CHAIN)" if result.get("on_chain") else "",
+                amount_hbar,
+                to_account,
+            )
+            if result.get("tx_id"):
+                msg += "TX: %s\n" % result["tx_id"]
+        else:
+            msg = "Transfer failed: %s" % result.get("error", "unknown")
+
+        return {"success": result.get("success", False), "data": result, "message": msg}
+    except Exception as e:
+        return {"success": False, "data": None, "message": "Transfer failed: %s" % str(e)}
+
+
+async def hedera_verify_payment(params: Dict[str, Any]) -> Dict:
+    """Verify if an incoming HBAR payment was received from a client."""
+    from_account = params.get("from_account", "")
+    expected_hbar = params.get("expected_hbar", 0.0)
+    time_window = params.get("time_window_hours", 1)
+
+    if not from_account or expected_hbar <= 0:
+        return {"success": False, "data": None, "message": "Need from_account and expected_hbar > 0"}
+
+    try:
+        from skills.hedera_writer import verify_incoming_payment
+
+        tinybars = int(expected_hbar * 100_000_000)
+        result = await verify_incoming_payment(
+            from_account, tinybars, time_window_seconds=int(time_window * 3600)
+        )
+
+        if result.get("found"):
+            msg = (
+                "**Payment CONFIRMED**\n"
+                "From: %s\n"
+                "Amount: %.4f HBAR\n"
+                "TX: %s\n"
+                "Time: %s\n"
+                "HashScan: %s"
+            ) % (
+                from_account,
+                result.get("amount_hbar", 0),
+                result.get("tx_id", "?"),
+                result.get("timestamp", "?"),
+                result.get("hashscan", ""),
+            )
+        else:
+            msg = "**Payment NOT FOUND** from %s (checked %d transactions, window: %dh)" % (
+                from_account,
+                result.get("checked_transactions", 0),
+                time_window,
+            )
+
+        return {"success": True, "data": result, "message": msg}
+    except Exception as e:
+        return {"success": False, "data": None, "message": "Payment verification failed: %s" % str(e)}
+
+
+async def hedera_full_audit(params: Dict[str, Any]) -> Dict:
+    """Get complete audit trail — both on-chain (HCS) and local fallback entries."""
+    limit = params.get("limit", 20)
+
+    try:
+        from skills.hedera_writer import get_full_audit_trail
+
+        result = await get_full_audit_trail(limit=limit)
+
+        lines = ["**Complete Audit Trail** (%d entries)\n" % result.get("total", 0)]
+
+        if result.get("on_chain"):
+            lines.append("--- ON-CHAIN (Hedera HCS) ---")
+            for m in result["on_chain"]:
+                payload = m.get("payload", {})
+                lines.append("#%s [%s] %s — %s %s" % (
+                    m.get("sequence", "?"),
+                    payload.get("ts", m.get("timestamp", "?"))[:19],
+                    payload.get("action", "?"),
+                    payload.get("agent", ""),
+                    payload.get("tool", ""),
+                ))
+
+        if result.get("local"):
+            lines.append("\n--- LOCAL FALLBACK ---")
+            for entry in result["local"][-10:]:
+                payload = entry.get("payload", {})
+                lines.append("[%s] %s — %s %s (%s)" % (
+                    payload.get("ts", entry.get("timestamp", "?"))[:19],
+                    payload.get("action", "?"),
+                    payload.get("agent", ""),
+                    payload.get("tool", ""),
+                    entry.get("status", "?"),
+                ))
+
+        return {"success": True, "data": result, "message": "\n".join(lines)}
+    except Exception as e:
+        return {"success": False, "data": None, "message": "Audit trail failed: %s" % str(e)}
+
+
 TOOLS = [
     {
         "name": "hedera_check_balance",
@@ -312,6 +463,59 @@ TOOLS = [
             "properties": {
                 "ai_actions": {"type": "integer", "default": 100, "description": "Number of AI actions to calculate for"},
                 "price_per_action": {"type": "number", "default": 0.05, "description": "Price charged per AI action in USD"},
+            },
+        },
+    },
+    {
+        "name": "hedera_log_action",
+        "description": "Record an action to the immutable Hedera Consensus Service audit trail. Every logged action is timestamped and verifiable on HashScan.",
+        "handler": hedera_log_action,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "description": "Type of action (e.g., 'service_delivered', 'prospect_contacted', 'skill_created')"},
+                "tool": {"type": "string", "description": "Tool used for this action"},
+                "details": {"type": "string", "description": "Additional details to hash into the audit entry"},
+            },
+            "required": ["action"],
+        },
+    },
+    {
+        "name": "hedera_transfer",
+        "description": "Transfer HBAR from platform treasury to a recipient. Used for micropayment settlement, refunds, or token operations.",
+        "handler": hedera_transfer,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "to_account": {"type": "string", "description": "Recipient Hedera account ID (e.g., 0.0.12345)"},
+                "amount_hbar": {"type": "number", "description": "Amount in HBAR to transfer"},
+                "memo": {"type": "string", "description": "Transaction memo (max 100 chars)"},
+            },
+            "required": ["to_account", "amount_hbar"],
+        },
+    },
+    {
+        "name": "hedera_verify_payment",
+        "description": "Verify if an incoming HBAR payment was received from a specific account. Used to confirm client payments before delivering services.",
+        "handler": hedera_verify_payment,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "from_account": {"type": "string", "description": "Sender's Hedera account ID"},
+                "expected_hbar": {"type": "number", "description": "Expected payment amount in HBAR"},
+                "time_window_hours": {"type": "number", "default": 1, "description": "How far back to search (hours)"},
+            },
+            "required": ["from_account", "expected_hbar"],
+        },
+    },
+    {
+        "name": "hedera_full_audit",
+        "description": "Get the complete audit trail combining on-chain (Hedera HCS) and local entries. Shows all recorded Wave actions with verification status.",
+        "handler": hedera_full_audit,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "default": 20, "description": "Maximum entries to retrieve"},
             },
         },
     },
