@@ -106,6 +106,7 @@ TOOL_CLUSTERS = {
         "web_search", "web_news", "scrape_url", "deep_research",
         "competitor_analysis", "market_research", "seo_analysis",
         "put_analyzer", "competitor_phi_audit", "kill_chain_planner",
+        "hf_trending_models", "hf_daily_papers", "hf_space_watch", "hf_model_detail",
     ],
     "sales": [
         "find_prospects", "research_prospect", "qualify_prospect_bant",
