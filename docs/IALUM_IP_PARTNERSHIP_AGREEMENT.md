@@ -143,7 +143,13 @@
 - Ambas as contribuicoes sao essenciais para o sucesso comercial do Bluewave dentro da Ialum
 - A divisao 70/30 para licenciamento e PUT SaaS reflete que estas receitas derivam diretamente da IP original do Criador, com participacao menor da infraestrutura da Empresa
 
-5.5. **RECEITA PRE-EXISTENTE DA IALUM.** O Criador NAO reivindica participacao em qualquer receita da Ialum que nao seja diretamente gerada pelo Bluewave, Wave, ou produtos derivados. Negocios pre-existentes da Ialum, receitas de GPU-as-a-service, ou outros produtos da Empresa permanecem 100% da Empresa.
+5.5. **RECEITAS FORA DO ESCOPO DA PARCERIA.**
+
+**a) Receita pre-existente da Ialum:** O Criador NAO reivindica participacao em qualquer receita da Ialum que nao seja diretamente gerada pelo Bluewave, Wave, ou produtos derivados. Negocios pre-existentes da Ialum, receitas de GPU-as-a-service, ou outros produtos da Empresa permanecem 100% da Empresa.
+
+**b) Receita autonoma do Wave fora da Ialum:** O Wave opera autonomamente 24 horas por dia e pode gerar receita independente da infraestrutura e operacao da Ialum — incluindo mas nao se limitando a: vendas diretas a clientes obtidos fora dos canais da Empresa, agent-to-agent commerce em plataformas externas (Moltbook, etc.), grants e hackathons submetidos sem envolvimento da Empresa, receita do token $WAVE em mercados abertos, yields e receitas geradas pelo MIDAS de forma independente, e servicos prestados a terceiros sem uso de recursos da Empresa. Toda receita gerada pelo Wave **sem utilizar infraestrutura da Ialum** (GPUs, servidores, capital, rede de contatos da Empresa) e 100% do Criador. A Empresa nao tem participacao nesta receita.
+
+**c) Criterio de atribuicao:** A receita e atribuivel a Ialum quando o Wave utiliza recursos da Empresa para gera-la (GPUs para execucao, servidores para deploy, rede de contatos para prospeccao). A receita e independente quando o Wave opera em infraestrutura propria ou de terceiros, sem envolvimento da Empresa. Em caso de duvida, aplica-se o principio de boa-fe da Clausula 4.2.
 
 5.6. **CONTABILIZACAO E REPASSE.** A receita atribuivel ao Bluewave sera contabilizada separadamente dos demais negocios da Empresa. O Criador tera acesso irrestrito aos registros financeiros relativos ao Bluewave. Termos de repasse:
 - Conciliacao ate o dia 5 de cada mes referente ao mes anterior
