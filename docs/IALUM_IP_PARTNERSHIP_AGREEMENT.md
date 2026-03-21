@@ -137,10 +137,10 @@
 | Licenciamento da tecnologia para terceiros | 70% (dono da IP) | 30% |
 | PUT SaaS API (subscricoes) | 70% (dono da IP) | 30% |
 
-5.4. **JUSTIFICATIVA DO SPLIT 50/50.** A divisao igualitaria reflete a realidade de que:
-- Sem o produto do Criador, a infraestrutura da Empresa nao gera receita
-- Sem a infraestrutura da Empresa, o produto do Criador opera com menos escala
-- Ambas as contribuicoes sao essenciais e complementares
+5.4. **JUSTIFICATIVA DO SPLIT 50/50.** A divisao igualitaria reflete a natureza complementar das contribuicoes para a operacao do Bluewave especificamente:
+- O Criador contribui com a totalidade do produto, da propriedade intelectual e do desenvolvimento tecnico
+- A Empresa contribui com infraestrutura, capital operacional e rede de contatos
+- Ambas as contribuicoes sao essenciais para o sucesso comercial do Bluewave dentro da Ialum
 - A divisao 70/30 para licenciamento e PUT SaaS reflete que estas receitas derivam diretamente da IP original do Criador, com participacao menor da infraestrutura da Empresa
 
 5.5. **RECEITA PRE-EXISTENTE DA IALUM.** O Criador NAO reivindica participacao em qualquer receita da Ialum que nao seja diretamente gerada pelo Bluewave, Wave, ou produtos derivados. Negocios pre-existentes da Ialum, receitas de GPU-as-a-service, ou outros produtos da Empresa permanecem 100% da Empresa.
