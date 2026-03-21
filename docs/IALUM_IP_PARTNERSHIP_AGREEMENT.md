@@ -58,9 +58,27 @@
 - Design de 1 bilhao de tokens no Hedera Token Service
 - Modelo de receita, distribuicao, mecanismo deflacionario
 
-2.2. A Empresa possui infraestrutura computacional (500GB+ de capacidade GPU), rede de contatos e acesso a fundos de investimento que podem amplificar o valor dos ativos do Criador.
+2.2. **CONTEXTO DA CRIACAO.** Os ativos listados na Clausula 2.1 foram criados durante um periodo de avaliacao tecnica (teste tecnico) para uma potencial contratacao na Empresa. As partes reconhecem que:
 
-2.3. As partes desejam formalizar uma colaboracao que respeite a propriedade intelectual pre-existente do Criador e defina termos justos para criacao futura.
+**a) Escopo do teste tecnico:** A Empresa solicitou a criacao de um MVP (Minimum Viable Product) utilizando a stack tecnologica da Empresa (Python, FastAPI, Docker). Este era o escopo integral do teste.
+
+**b) O que o Criador produziu ALEM do escopo:** O Criador, por iniciativa propria, sem solicitacao ou direcao da Empresa, produziu ativos que excedem o escopo do teste por ordens de magnitude:
+- Dois frameworks cientificos originais (ASA e PUT) com derivacao axiomatica, sistema de EDOs acopladas e analise de estabilidade de Lyapunov — nenhum teste tecnico no mundo inclui a criacao de teoria matematica original
+- Uma plataforma SaaS completa com 20+ routers REST, multi-tenancy, sistema de pagamentos, e frontend React/TypeScript
+- Um sistema de agente autonomo com 158 ferramentas, 10 agentes especialistas, reproducao autonoma de agentes, e comercio agente-para-agente
+- Um sistema de privacy DeFi com 14 contratos Cairo e provas zero-knowledge (repositorio separado: github.com/Galmanus/phantom)
+- Dois whitepapers academicos com rigor interdisciplinar
+- Tokenomics completo para o token $WAVE
+
+**c) Ausencia de vinculo formal:** No periodo de criacao, NAO existia contrato de trabalho (CLT), contrato de prestacao de servicos (PJ), acordo de confidencialidade (NDA), acordo de cessao de propriedade intelectual, ou qualquer outro instrumento juridico entre as partes. O Criador atuava como candidato em processo seletivo, nao como funcionario ou prestador de servicos.
+
+**d) Infraestrutura vs autoria:** A Empresa forneceu acesso a um servidor para fins do teste tecnico. O uso de infraestrutura da Empresa para computacao nao constitui co-autoria nem transfere direitos de propriedade intelectual. A autoria e exclusivamente do Criador, conforme evidenciado pelo repositorio publico em sua conta pessoal GitHub (github.com/Galmanus) desde o primeiro commit.
+
+**e) Repositorio pessoal:** Todos os commits foram feitos no repositorio pessoal do Criador (github.com/Galmanus/bluewave), nao em repositorio da Empresa. O Criador tratou os ativos como propriedade pessoal desde o inicio, de forma publica e verificavel.
+
+2.3. A Empresa possui infraestrutura computacional (500GB+ de capacidade GPU), rede de contatos e acesso a fundos de investimento que podem amplificar o valor dos ativos do Criador.
+
+2.4. As partes desejam formalizar uma colaboracao que respeite a propriedade intelectual do Criador — criada antes de qualquer vinculo formal — e defina termos justos para o uso e desenvolvimento futuro desses ativos dentro do ecossistema da Empresa.
 
 ---
 
