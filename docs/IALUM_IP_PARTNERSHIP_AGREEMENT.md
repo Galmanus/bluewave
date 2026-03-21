@@ -98,26 +98,46 @@
 
 ---
 
-## 5. PARTICIPACAO SOCIETARIA
+## 5. ESTRUTURA COMERCIAL E PARTICIPACAO NOS RESULTADOS
 
-5.1. **EQUITY.** O Criador recebera 50% (cinquenta por cento) de participacao societaria na Empresa, em reconhecimento de:
-- Criacao de 100% dos ativos tecnologicos que fundamentam o negocio da Empresa (Bluewave, Wave, ASA, PUT, MIDAS -- avaliados conforme Clausula 5.5)
-- Autoria de dois frameworks originais (ASA e PUT) sem equivalente na literatura mundial
-- Posicao de Co-Fundador Tecnico e unico engenheiro de IA
-- Contribuicao intelectual equivalente a aporte de capital em forma de IP -- a IP e o produto; sem ela, a Empresa nao tem oferta comercial
-- Responsabilidade exclusiva pelo desenvolvimento, manutencao e evolucao de todos os sistemas tecnicos
-- Justificativa: a Empresa contribui com infraestrutura (GPU) e capital, que sao substituiveis e alugareis no mercado; o Criador contribui com propriedade intelectual original, unica e insubstituivel, que constitui a totalidade do produto da Empresa
+5.1. **PROPRIEDADE DO BLUEWAVE.** O Criador e o proprietario integral do produto Bluewave e de todos os seus componentes (Wave, ASA, PUT, MIDAS, $WAVE). O Bluewave NAO pertence a Ialum. O Bluewave opera DENTRO da Ialum utilizando a infraestrutura e os recursos da Empresa, em regime de parceria comercial. O Criador nao reivindica participacao societaria na Ialum, e a Ialum nao reivindica propriedade sobre o Bluewave.
 
-5.2. **VESTING.** A participacao societaria tera vesting de:
-- Cliff: 6 meses (equity liberado apos 6 meses de vinculo ativo)
-- Vesting total: 24 meses linear apos o cliff
-- Aceleracao total em caso de: (a) demissao sem justa causa, (b) mudanca de controle da Empresa (venda, fusao, aquisicao), (c) violacao deste acordo pela Empresa
+5.2. **MODELO DE PARCERIA.** A relacao entre o Criador e a Empresa e uma parceria comercial onde:
+- O Criador contribui com: o produto (Bluewave/Wave/MIDAS), a propriedade intelectual (ASA/PUT), o desenvolvimento e a operacao tecnica
+- A Empresa contribui com: infraestrutura (GPUs, servidores), capital operacional, rede de contatos, e acesso a fundos de investimento
+- O produto do Criador opera dentro do ecossistema da Empresa, gerando receita para ambos
 
-5.3. **ANTI-DILUICAO.** Em caso de novas rodadas de investimento, o Criador tem direito de participar pro-rata para manter seu percentual, ou receber compensacao equivalente.
+5.3. **DIVISAO DE RECEITA.** Toda receita gerada pelo Bluewave, Wave, e produtos derivados dentro da operacao da Ialum sera dividida da seguinte forma:
 
-5.4. **TAG-ALONG.** Se o socio majoritario vender sua participacao, o Criador tem direito de vender sua participacao nas mesmas condicoes.
+| Fonte de Receita | Criador (Manuel) | Empresa (Ialum) |
+|------------------|-------------------|-----------------|
+| Servicos do Wave (auditorias, PUT, intel) | 50% | 50% |
+| Assinaturas SaaS do Bluewave | 50% | 50% |
+| Grants e premios de hackathons | 50% | 50% |
+| Agent-to-agent commerce | 50% | 50% |
+| Contratos de consultoria via Wave | 50% | 50% |
+| Licenciamento da tecnologia para terceiros | 70% (dono da IP) | 30% |
+| PUT SaaS API (subscricoes) | 70% (dono da IP) | 30% |
 
-5.5. **VALUATION DA IP.** Para fins de calculo do valor da contribuicao do Criador, a IP pre-existente (Clausula 2.1) sera avaliada por perito independente escolhido de comum acordo entre as partes, no prazo de ate 90 (noventa) dias apos a assinatura deste acordo. Ate que a avaliacao seja concluida, as partes reconhecem que a contribuicao intelectual do Criador e equivalente em valor a contribuicao de infraestrutura e capital da Empresa, justificando a participacao societaria de 50% (Clausula 5.1). Caso as partes nao concordem com o perito ou com a avaliacao, aplica-se o procedimento de resolucao de conflitos da Clausula 8.
+5.4. **JUSTIFICATIVA DO SPLIT 50/50.** A divisao igualitaria reflete a realidade de que:
+- Sem o produto do Criador, a infraestrutura da Empresa nao gera receita
+- Sem a infraestrutura da Empresa, o produto do Criador opera com menos escala
+- Ambas as contribuicoes sao essenciais e complementares
+- A divisao 70/30 para licenciamento e PUT SaaS reflete que estas receitas derivam diretamente da IP original do Criador, com participacao menor da infraestrutura da Empresa
+
+5.5. **RECEITA PRE-EXISTENTE DA IALUM.** O Criador NAO reivindica participacao em qualquer receita da Ialum que nao seja diretamente gerada pelo Bluewave, Wave, ou produtos derivados. Negocios pre-existentes da Ialum, receitas de GPU-as-a-service, ou outros produtos da Empresa permanecem 100% da Empresa.
+
+5.6. **CONTABILIZACAO.** A receita atribuivel ao Bluewave sera contabilizada separadamente dos demais negocios da Empresa. O Criador tera acesso irrestrito aos registros financeiros relativos ao Bluewave. A conciliacao sera mensal.
+
+5.7. **INVESTIMENTO EXTERNO.** Caso a Ialum receba investimento externo especificamente para o Bluewave (ex: investimento da META, Anthropic, ou fundos), as partes negociarao de boa-fe a participacao do Criador nesse investimento, respeitando que:
+- A IP e do Criador e nao pode ser transferida ao investidor sem consentimento
+- O Criador tem direito de participar de qualquer negociacao que envolva seus ativos
+- Caso o investimento resulte em spin-off do Bluewave como empresa propria, o Criador tera no minimo 50% da nova entidade
+
+5.8. **VENDA OU LICENCIAMENTO DO BLUEWAVE.** Caso a Ialum deseje vender, licenciar ou transferir o Bluewave para terceiros:
+- O Criador tem direito de veto absoluto (a IP e dele)
+- Se o Criador concordar, recebe no minimo 70% do valor da transacao
+- Se o Criador nao concordar, a transacao nao acontece
 
 ---
 
