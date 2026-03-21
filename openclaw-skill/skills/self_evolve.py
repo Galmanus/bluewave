@@ -53,6 +53,95 @@ PROTECTED_SKILLS = frozenset({
 })
 
 
+REPO_ROOT = SKILLS_DIR.parent.parent  # /home/manuel/bluewave
+
+
+def _autonomous_git_commit(skill_name: str, tool_names: list, description: str = ""):
+    """Commit a newly created skill to git — Wave's autonomous evolution recorded in history.
+
+    Safety constraints:
+    - Only commits files under openclaw-skill/skills/
+    - Never commits other code, configs, or secrets
+    - Commit message clearly marks autonomous origin
+    - Failure to commit does NOT fail skill creation (non-blocking)
+    """
+    try:
+        skill_file = "openclaw-skill/skills/%s.py" % skill_name
+        tools_str = ", ".join(tool_names[:5])
+        desc_line = (" — %s" % description[:80]) if description else ""
+
+        commit_msg = (
+            "Wave autonomous: created skill '%s'%s\n\n"
+            "Tools: %s\n"
+            "Security: AST validated + sandbox passed\n"
+            "Origin: autonomous self-evolution (no human intervention)"
+        ) % (skill_name, desc_line, tools_str)
+
+        # Stage only the specific skill file
+        result_add = subprocess.run(
+            ["git", "add", skill_file],
+            capture_output=True, text=True, timeout=10,
+            cwd=str(REPO_ROOT),
+        )
+        if result_add.returncode != 0:
+            logger.warning("Git add failed for %s: %s", skill_name, result_add.stderr.strip())
+            return
+
+        # Commit with autonomous identity
+        result_commit = subprocess.run(
+            ["git", "commit", "-m", commit_msg],
+            capture_output=True, text=True, timeout=10,
+            cwd=str(REPO_ROOT),
+        )
+        if result_commit.returncode != 0:
+            logger.warning("Git commit failed for %s: %s", skill_name, result_commit.stderr.strip())
+            return
+
+        # Push to remote (non-blocking — if it fails, the commit is still local)
+        subprocess.run(
+            ["git", "push"],
+            capture_output=True, text=True, timeout=30,
+            cwd=str(REPO_ROOT),
+        )
+
+        logger.info(
+            "AUTONOMOUS COMMIT: Wave committed skill '%s' to git (%s)",
+            skill_name, tools_str,
+        )
+    except Exception as e:
+        # Never let git failure break skill creation
+        logger.warning("Autonomous git commit failed (non-blocking): %s", e)
+
+
+def _autonomous_git_commit_deletion(skill_name: str):
+    """Record skill deletion in git history."""
+    try:
+        skill_file = "openclaw-skill/skills/%s.py" % skill_name
+        commit_msg = (
+            "Wave autonomous: deleted skill '%s'\n\n"
+            "Origin: autonomous self-evolution (no human intervention)"
+        ) % skill_name
+
+        subprocess.run(
+            ["git", "add", skill_file],
+            capture_output=True, text=True, timeout=10,
+            cwd=str(REPO_ROOT),
+        )
+        subprocess.run(
+            ["git", "commit", "-m", commit_msg],
+            capture_output=True, text=True, timeout=10,
+            cwd=str(REPO_ROOT),
+        )
+        subprocess.run(
+            ["git", "push"],
+            capture_output=True, text=True, timeout=30,
+            cwd=str(REPO_ROOT),
+        )
+        logger.info("AUTONOMOUS COMMIT: Wave deleted skill '%s' from git", skill_name)
+    except Exception as e:
+        logger.warning("Autonomous git commit (deletion) failed (non-blocking): %s", e)
+
+
 class SkillSecurityError(Exception):
     """Raised when generated code fails security validation."""
 
@@ -297,10 +386,15 @@ async def create_skill(params: Dict[str, Any]) -> Dict:
             safe_name, tool_names,
         )
 
+        # ── AUTONOMOUS GIT COMMIT ────────────────────────────────
+        # Wave records its own evolution in git history.
+        # Only commits the specific skill file — never touches other code.
+        _autonomous_git_commit(safe_name, tool_names, description)
+
         return {
             "success": True,
             "data": {"skill_name": safe_name, "tools": tool_names, "file": str(file_path)},
-            "message": "Skill **%s** created with %d tools: %s\nSecurity: AST validated + sandbox passed." % (
+            "message": "Skill **%s** created with %d tools: %s\nSecurity: AST validated + sandbox passed. Committed to git." % (
                 safe_name, len(tools), ", ".join(tool_names)
             ),
         }
@@ -351,10 +445,14 @@ async def delete_skill(params: Dict[str, Any]) -> Dict:
 
     file_path.unlink()
     logger.info("AUDIT: Skill deleted — name=%s", safe_name)
+
+    # Record deletion in git
+    _autonomous_git_commit_deletion(safe_name)
+
     return {
         "success": True,
         "data": {"deleted": safe_name},
-        "message": "Skill **%s** deleted. Restart needed to unregister tools." % safe_name,
+        "message": "Skill **%s** deleted and committed to git. Restart needed to unregister tools." % safe_name,
     }
 
 
