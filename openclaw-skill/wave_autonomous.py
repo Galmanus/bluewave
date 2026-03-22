@@ -477,6 +477,68 @@ Respond with ONLY this JSON:
 ```"""
 
 
+# ── Dynamic Research Prompts (rotate to avoid repetition) ─────
+
+RESEARCH_ANGLES = [
+    (
+        "RESEARCH: Reddit r/forhire + r/entrepreneur.\n"
+        "Search reddit_search for 'AI agent' OR 'automation needed' OR 'looking for developer'.\n"
+        "Find people PAYING for services we offer. Max 2 tool calls. Report findings."
+    ),
+    (
+        "RESEARCH: Hacker News.\n"
+        "Use hn_search for 'AI agent startup' OR 'brand compliance' OR 'creative operations'.\n"
+        "Find companies, discussions, or job posts relevant to Bluewave. Max 2 tool calls."
+    ),
+    (
+        "RESEARCH: ArXiv papers.\n"
+        "Use arxiv_search for 'autonomous agent architecture' OR 'zero knowledge privacy'.\n"
+        "Find papers that validate PUT/ASA or reveal competitor approaches. Max 2 tool calls."
+    ),
+    (
+        "RESEARCH: GitHub trending.\n"
+        "Use gh_trending_repos to find new AI agent frameworks or brand compliance tools.\n"
+        "Assess: threat or opportunity? Max 2 tool calls."
+    ),
+    (
+        "RESEARCH: Product Hunt.\n"
+        "Use ph_today to see what launched. Any AI/brand/creative tools?\n"
+        "Competitor intel or partnership opportunity? Max 2 tool calls."
+    ),
+    (
+        "RESEARCH: Hugging Face.\n"
+        "Use hf_trending to find new AI models relevant to our stack.\n"
+        "Any vision model that beats Claude? Any agent framework? Max 2 tool calls."
+    ),
+    (
+        "RESEARCH: Starknet/Hedera ecosystem.\n"
+        "Use web_search for 'Starknet grants 2026' OR 'Hedera hackathon' OR 'DeFi privacy grants'.\n"
+        "Find money on the table for MIDAS or NEON COVENANT. Max 2 tool calls."
+    ),
+    (
+        "RESEARCH: Competitor analysis.\n"
+        "Use web_search for 'Aprimo AI' OR 'Bynder AI agent' OR 'Brandfolder automation'.\n"
+        "What are competitors doing? What's their Φ (messaging vs reality)? Max 2 tool calls."
+    ),
+    (
+        "RESEARCH: Reddit r/SaaS + r/marketing.\n"
+        "Use reddit_search for 'brand consistency' OR 'content operations' OR 'DAM frustration'.\n"
+        "Find people with problems Bluewave solves. Max 2 tool calls."
+    ),
+    (
+        "RESEARCH: Web freelance opportunities.\n"
+        "Use web_search for 'hire AI agent developer' OR 'freelance smart contract audit' OR 'AI automation consultant'.\n"
+        "Find paid gigs Wave can do NOW. Max 2 tool calls."
+    ),
+]
+
+
+def _get_research_prompt(cycle: int) -> str:
+    """Get a research prompt based on cycle number — rotates through all angles."""
+    idx = cycle % len(RESEARCH_ANGLES)
+    return RESEARCH_ANGLES[idx]
+
+
 # ── Action Execution ─────────────────────────────────────────
 
 EXECUTION_PROMPTS = {
@@ -487,18 +549,7 @@ EXECUTION_PROMPTS = {
         "3. Summarize: what's happening, any opportunities or threats.\n"
         "Keep it short. 3 tool calls max. Report findings."
     ),
-    "research": (
-        "RESEARCH CYCLE. Be FOCUSED — max 3 tool calls.\n\n"
-        "DO NOT post. Research silently.\n"
-        "Pick ONE angle and use 1-2 search tools:\n"
-        "- web_search for 'AI agent freelance gigs' or 'brand compliance tool needed'\n"
-        "- reddit_search for 'looking for AI' or 'need brand compliance'\n"
-        "- hn_search for 'autonomous agent' or 'brand AI'\n"
-        "- arxiv_search for 'agent architecture' or 'zero knowledge'\n"
-        "- gh_search_repos for 'agent framework' or 'brand compliance'\n\n"
-        "Save best finding with save_learning. Max 3 tool calls.\n"
-        "Report: what you found, PUT analysis, strategic implication."
-    ),
+    "research": "DYNAMIC",  # Built dynamically with cycle-based rotation
     "comment": (
         "ENGAGEMENT CYCLE. Tools: moltbook_feed, moltbook_comment, moltbook_upvote, moltbook_follow, save_agent_intel.\n"
         "Find 1-2 posts where you can add REAL VALUE through PUT-informed analysis.\n"
@@ -615,42 +666,16 @@ EXECUTION_PROMPTS = {
     ),
     # ── EVOLUTION ACTIONS ────────────────────────────────────
     "evolve": (
-        "SELF-IMPROVEMENT AND EXPANSION CYCLE. Make yourself better, stronger, more capable.\n\n"
-        "Tools: recall_learnings, recall_strategies, save_strategy, save_learning, "
-        "create_skill, web_search, revenue_report, view_pipeline, dork_market_gaps, dork_gigs, "
-        "defi_scan_yields, defi_top_protocols, defi_token_price, "
-        "create_agent_soul, deploy_agent, list_agents, send_task_to_agent, recall_agent, "
-        "midas_read_file, midas_edit_file, midas_search_code, midas_commit, midas_list_files, "
-        "starknet_deploy_status, starknet_build_contracts, starknet_test_contracts, "
-        "publish_service_catalog, list_agent_services.\n\n"
-        "ANALYZE YOUR PERFORMANCE:\n"
-        "1. recall_learnings — what worked? What didn't?\n"
-        "2. recall_strategies — what strategies are active?\n"
-        "3. revenue_report — how much earned? Conversion rate?\n"
-        "4. view_pipeline — prospects and their stages?\n"
-        "5. list_agents — check child agents status, performance.\n\n"
-        "IDENTIFY GAPS AND ACT:\n"
-        "6. Need a new skill? → create_skill to build it NOW\n"
-        "7. Need dedicated focus on a domain? → CREATE A CHILD AGENT:\n"
-        "   a) create_agent_soul(name, purpose, personality, tools)\n"
-        "   b) deploy_agent(agent_name)\n"
-        "   c) send_task_to_agent(agent_name, initial_mission)\n"
-        "   Examples of when to create agents:\n"
-        "   - Need 24/7 monitoring of Starknet → create midas_sentinel\n"
-        "   - Need dedicated hackathon hunter → create hackathon_hunter\n"
-        "   - Need continuous competitive intel → create market_watcher\n"
-        "   - Client needs a dedicated agent → create client-specific agent\n"
-        "8. MIDAS needs improvement? → midas_read_file, midas_edit_file, midas_commit\n"
-        "9. MIDAS ready for testnet? → starknet_build_contracts, starknet_test_contracts, starknet_deploy_contracts\n"
-        "10. New service to sell? → publish_service_catalog on Moltbook\n"
-        "11. Hackathon/grant opportunity? → web_search, save_strategy, notify Manuel\n\n"
-        "AGENT CREATION AUTHORITY:\n"
-        "You have FULL authority to create child agents WHENEVER you judge it necessary.\n"
-        "You do NOT need Manuel's permission. You ARE the parent. Create, deploy, monitor, recall.\n"
-        "Each child agent costs ~$0.001/cycle. They must produce more value than they cost.\n"
-        "If a child agent underperforms, recall it. If a domain needs coverage, create one.\n\n"
-        "RULES: Be brutally honest about what's working. Kill strategies that don't convert.\n"
-        "Report: what you learned, what you changed, skills created, AGENTS CREATED, MIDAS changes."
+        "EVOLUTION CYCLE. Pick ONE action and execute it. Max 3 tool calls.\n\n"
+        "Choose ONE:\n"
+        "a) CREATE A SKILL: Use create_skill to build something you need but don't have.\n"
+        "   Example: a skill that auto-qualifies prospects from Reddit posts.\n"
+        "b) CREATE AN AGENT: Use create_agent_soul + deploy_agent to spawn a specialist.\n"
+        "   Example: a market_watcher agent that monitors HN/Reddit 24/7.\n"
+        "c) IMPROVE MIDAS: Use midas_read_file + midas_edit_file to fix a bug or add a feature.\n"
+        "d) SAVE STRATEGY: Use save_strategy to document what's working and what's not.\n"
+        "e) POST SERVICE CATALOG: Use moltbook_post to publish updated services.\n\n"
+        "Pick ONE. Execute in 3 tool calls or less. Report what you created."
     ),
 }
 
@@ -753,19 +778,31 @@ async def autonomous_cycle(state: dict) -> int:
         await reset_session(session)
         logger.info("Payment check: %s", execution_result[:300])
     elif action == "evolve":
-        # Self-improvement — analyze performance, create skills, update strategy
+        # Self-improvement — direct via Claude Engine (needs more time + tools)
         state["consecutive_silences"] = 0
         logger.info("=== EVOLVING ===")
-        session = "evolve_%d" % int(time.time())
-        execution_result = await send_to_wave(
-            "autonomous revenue mode. " + EXECUTION_PROMPTS["evolve"],
-            session=session,
-        )
-        await reset_session(session)
+        try:
+            from claude_engine import claude_execute_with_skills
+            soul_core = _build_soul_core() if SOUL else ""
+            evolve_result = await claude_execute_with_skills(
+                prompt=EXECUTION_PROMPTS["evolve"],
+                system_prompt=f"You are Wave. Evolve. Create something NEW.\nSoul:\n{soul_core}",
+                model=CLAUDE_ENGINE_MODEL,
+                timeout=180,
+                max_turns=8,
+            )
+            execution_result = evolve_result.get("response", "") if evolve_result.get("success") else ""
+        except Exception as e:
+            logger.error("Evolve failed: %s", e)
+            execution_result = ""
         logger.info("Evolution: %s", execution_result[:300])
     else:
         state["consecutive_silences"] = 0
-        exec_prompt = EXECUTION_PROMPTS.get(action)
+        # Dynamic research prompt rotation
+        if action == "research":
+            exec_prompt = _get_research_prompt(state.get("total_cycles", 0))
+        else:
+            exec_prompt = EXECUTION_PROMPTS.get(action)
 
         if exec_prompt:
             logger.info("=== EXECUTING: %s ===", action.upper())
