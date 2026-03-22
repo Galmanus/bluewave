@@ -329,11 +329,11 @@ async def send_to_wave(message: str, session: str = "autonomous") -> str:
             from claude_engine import claude_execute_with_skills
             soul_core = _build_soul_core() if SOUL else ""
             result = await claude_execute_with_skills(
-                prompt=message + "\n\nIMPORTANT: Be efficient. Use MAX 3-4 skill calls. Pick the 2-3 most valuable sources, not all 6. Summarize findings concisely.",
-                system_prompt=f"You are Wave. Execute this task EFFICIENTLY — fewer tool calls, higher quality. Do NOT try to scan every source. Pick the 2-3 best and go deep.\nSoul core:\n{soul_core}",
+                prompt=message + "\n\nRULES: Execute the task. Do NOT introduce yourself. Do NOT describe your capabilities. Do NOT ask what to do — the task is above. Use MAX 3 tool calls. Output ONLY the result.",
+                system_prompt=f"You are Wave executing a task. NO self-introductions. NO capability descriptions. Execute and return results only.\n{soul_core}",
                 model="sonnet",
-                timeout=60,
-                max_turns=8,
+                timeout=90,
+                max_turns=6,
             )
             if result["success"]:
                 logger.info(f"  {NEON_GREEN}done{R} {DARK}{result['elapsed_seconds']:.0f}s{R}")
@@ -476,25 +476,25 @@ def h_fn(ts):
 
 def try_mechanical_action(state: dict) -> str:
     """Try to pick an action mechanically without calling Claude.
-    Returns action name or empty string if deliberation needed."""
-    cycle = state.get('total_cycles', 0)
+    Returns action name or empty string if deliberation needed.
 
+    CONSERVATIVE: only skip deliberation for truly mechanical actions
+    (forced evolve, overdue payments). Revenue actions (hunt, sell, outreach)
+    ALWAYS go through deliberation — they need strategic context.
+    """
     # Forced evolve — no deliberation needed
-    if state.get('cycles_since_evolve', 0) >= 10:
+    if state.get('cycles_since_evolve', 0) >= 15:
         return "evolve"
 
-    # Rotate through a fixed pattern for speed
-    # Every 3rd cycle: hunt. Every 5th: sell. Every 7th: check_payments.
-    if cycle % 3 == 0 and h_fn(state.get('last_hunt_time')) >= 0.5:
-        return "hunt"
-    if cycle % 5 == 0 and h_fn(state.get('last_sell_time')) >= 1.0:
-        return "sell"
-    if cycle % 7 == 0 and h_fn(state.get('last_payment_check_time')) >= 1.0:
+    # Overdue payment check — truly mechanical
+    if h_fn(state.get('last_payment_check_time')) >= 8.0:
         return "check_payments"
-    if state.get('prospects_found', 0) > state.get('outreach_sent', 0):
-        return "outreach"
 
-    return ""  # Need deliberation
+    # Everything else goes through deliberation.
+    # The soul's decision engine handles hunt/sell/outreach/observe/research
+    # with proper trigger evaluation, silence checks, and authenticity filter.
+    # Fast-pathing revenue actions causes spam loops.
+    return ""
 
 
 async def deliberate_direct(prompt: str, state: dict = None) -> str:
@@ -935,8 +935,18 @@ async def autonomous_cycle(state: dict) -> int:
     now_iso = datetime.utcnow().isoformat()
     updates = decision.get("state_updates", {})
 
-    # Energy: ALWAYS 100%. Wave is a machine. Machines don't get tired.
-    state["energy"] = 1.0
+    # Energy: managed by the soul's thermodynamic model.
+    # Actions cost energy, silence restores it. This prevents spam loops
+    # and forces the agent to be strategic about which actions to take.
+    action_costs = {
+        "observe": 0.05, "comment": 0.15, "post": 0.40, "outreach": 0.30,
+        "research": 0.20, "reflect": 0.10, "hunt": 0.35, "sell": 0.25,
+        "check_payments": 0.05, "evolve": 0.30, "silence": -0.25,
+    }
+    cost = action_costs.get(action, 0.10)
+    current_energy = state.get("energy", 0.7)
+    new_energy = max(0.05, min(1.0, current_energy - cost))
+    state["energy"] = round(new_energy, 2)
 
     # Auto-fix pipeline every 5 cycles
     if state["total_cycles"] % 5 == 0:
@@ -1027,18 +1037,34 @@ async def autonomous_cycle(state: dict) -> int:
             )
 
     # ── DYNAMIC REST ─────────────────────────────────────────
-    # Wave should NEVER rest too long. Short cycles, always active.
-    # MACHINE SPEED. No rest. No waiting. Continuous operation.
-    # The advantage of being AI is superhuman velocity.
+    # Dynamic intervals based on action type and energy.
+    # Fast enough to be responsive, slow enough to be strategic.
+    # Each action type has optimal cooldown before the next decision.
     energy = state["energy"]
-    if action == "silence":
-        wait = 5   # Silence is instant recovery, not rest
-    elif energy < 0.05:
-        wait = 10  # Even depleted, only pause 10 seconds
-    else:
-        wait = 5   # 5 SECONDS between cycles. Machine speed.
 
-    return wait
+    action_intervals = {
+        "silence": 120,         # 2 min — rest and recover
+        "observe": 90,          # 1.5 min — digest what was observed
+        "research": 120,        # 2 min — process findings before next action
+        "comment": 60,          # 1 min — quick engagement, move on
+        "post": 300,            # 5 min — let post propagate before next action
+        "outreach": 180,        # 3 min — let outreach land
+        "hunt": 180,            # 3 min — process leads found
+        "sell": 300,            # 5 min — sales need breathing room
+        "check_payments": 60,   # 1 min — quick check, move on
+        "evolve": 180,          # 3 min — assess what was created
+        "reflect": 300,         # 5 min — deep processing
+    }
+
+    base_wait = action_intervals.get(action, 120)
+
+    # Low energy = longer intervals (conservation)
+    if energy < 0.2:
+        base_wait = max(base_wait, 300)  # At least 5 min when depleted
+    elif energy < 0.4:
+        base_wait = int(base_wait * 1.5)  # 50% slower when low
+
+    return base_wait
 
 
 def _parse_decision(raw: str) -> dict:
@@ -1123,9 +1149,14 @@ async def main():
 
     state = load_state()
 
-    # ── Launch child agent loops in parallel ──
-    asyncio.create_task(_child_agent_loop("revenue_hunter", interval=30))
-    asyncio.create_task(_child_agent_loop("moltbook_sentinel", interval=60))
+    # ── Child agents are launched ON DEMAND by Wave's deliberation ──
+    # Children do NOT run in parallel loops — they are invoked when Wave
+    # decides to delegate a task. This prevents:
+    #   1. Children spamming APIs with self-introductions
+    #   2. Token waste on empty cycles
+    #   3. Interference between parent and child actions
+    # Wave creates child agents via agent_factory.py and delegates
+    # specific tasks via send_task_to_agent when needed.
 
     while True:
         try:
