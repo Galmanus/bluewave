@@ -847,6 +847,11 @@ async def autonomous_cycle(state: dict) -> int:
     prompt = build_deliberation_prompt(state)
     raw = await deliberate_direct(prompt, state=state)
 
+    # Retry once if empty
+    if not raw or len(raw.strip()) < 10:
+        logger.info(f"  {DARK}retrying deliberation...{R}")
+        raw = await deliberate_direct(prompt, state=state)
+
     # Parse decision
     decision = _parse_decision(raw)
     action = decision.get("decision", "silence")
@@ -1108,8 +1113,13 @@ def _parse_decision(raw: str) -> dict:
         except json.JSONDecodeError:
             pass
 
-    logger.warning("Could not parse deliberation, defaulting to observe")
-    return {"decision": "observe", "reasoning": "Failed to parse deliberation", "state_updates": {"energy": 0.8}}
+    # Smart fallback: rotate through useful actions instead of always observe
+    fallback_actions = ["hunt", "research", "observe", "sell", "post", "comment"]
+    import hashlib
+    idx = int(hashlib.md5(str(time.time()).encode()).hexdigest()[:4], 16) % len(fallback_actions)
+    fallback = fallback_actions[idx]
+    logger.warning(f"  {NEON_YELLOW}parse failed, fallback: {fallback}{R}")
+    return {"decision": fallback, "reasoning": f"Deliberation parse failed, executing {fallback}", "state_updates": {}}
 
 
 # ── Main ─────────────────────────────────────────────────────
