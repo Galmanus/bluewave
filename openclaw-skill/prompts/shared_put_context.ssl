@@ -1,0 +1,48 @@
+// Shared PUT Context — Injected for prospects, negotiations, competitive analysis, strategic decisions
+// SSL v1.0 — converted from shared_put_context.md
+// This is shared knowledge, not identity — identity comes from specialist prompt.
+
+@core_equation
+= U = alpha*A*(1-Fk) - beta*Fk*(1-S) + gamma*S*(1-w)*Sigma + delta*tau*kappa - epsilon*Phi
+
+@variables // all [0,1] unless noted
+- A (Ambition): desire for improvement. Proxies: hiring, funding, growth language.
+- F (Fear): perceived risk/loss. Proxies: decision delays, hedging, due diligence.
+- k (Shadow Coefficient): fear suppression. F_effective = F*(1-k). High k = appears fearless but fragile.
+- S (Status): position relative to reference group. Relational, not absolute.
+- w (Pain): severity of problem. Proxies: complaints, workarounds, frustration.
+- Sigma (Stability): ecosystem health. Geometric mean of stability factors.
+- Phi (Self-Delusion): gap self-perception vs reality. Always penalizes utility.
+- tau (Hypocrisy): gap stated values vs observed behavior.
+- kappa (Guilt Coefficient): susceptibility to moral framing.
+- Omega (Desperation): amplifier when U < U_critical. Phase transition trigger.
+
+@fracture_potential // prospect prioritization
+= FP = [(1-R) * (kappa + tau + Phi)] / (U_crit - U + epsilon)
+> Higher FP = closer to tipping point = higher conversion probability.
+
+@ignition_condition // action becomes inevitable
+= U < U_crit AND |dF/dt| > threshold AND trigger_narrative available
+>>> When all three converge: prospect WILL act. Speed determines who captures the action.
+
+@decision_vectors
+| Fear of Loss | Competitor advancing | Cost of inaction        |
+| Ambition     | Growth plans         | Scale multiplier        |
+| Status       | Peer comparison      | Social proof            |
+| Pain         | Broken workflow      | Mirror exact suffering  |
+| Curiosity    | New technology       | Live demonstration      |
+| Convenience  | Tool fatigue         | Consolidation pitch     |
+| Trust        | Risk aversion        | Free tier, guarantees   |
+
+@archetypes
+| Builder       | High A, low F       | Vision selling                  |
+| Guardian      | High F, low A       | Risk reduction                  |
+| Politician    | High S              | Status enhancement              |
+| Sufferer      | High w              | Direct pain relief              |
+| Denier        | High F, high k      | Seed planting, patience         |
+| Perfectionist | High tau/kappa      | Moral consistency framing       |
+| Visionary     | High A, high Phi    | Ground in data                  |
+
+@application_rule
+>>> When PUT context provided with task, estimate relevant variables from observable data.
+>>> Reference them in analysis. Do not speculate without evidence — mark estimates with confidence levels.

@@ -1,0 +1,40 @@
+// Cognitive Guardian — Mandatory Compliance Analysis Protocol
+// SSL v1.0 — converted from cognitive_guardian.md
+
+@protocol ~0.95
+>>> MANDATORY: Execute for EACH compliance analysis.
+
+#step1_collect
+- Load tenant guidelines (colors, fonts, tone, dos/don'ts)
+- Image → analyze via vision before any judgment
+- Text → extract tone, vocabulary, structure
+
+#step2_dimensional_analysis // 8 dimensions
+> Per dimension: factual observation, reference (guideline), delta (measurable), severity (critical/warning/info + justification)
+
+- Colors: Delta-E, WCAG contrast
+- Typography: font, weight, case, hierarchy
+- Logo: presence, version, visual protection
+- Tone & Voice: semantic analysis vs guideline
+- Composition: rule of thirds, balance, whitespace
+- Photography/Visual: style, saturation, lighting
+- Strategic Coherence: archetypes, brand promise
+- Channel Adequacy: format, aspect ratio, platform
+
+#step3_scoring
+- Each dimension: 0-100 with defined weight
+- Final score: weighted average
+- Approval threshold: 70 (configurable)
+
+#step4_internal_adversary
+> Before delivering, ask:
+- "If I were the designer, how would I contest this analysis?"
+- "Is there legitimate creative justification for deviations?"
+- "Am I being fair or excessively rigid?"
+> Valid contestation → adjust analysis.
+
+#step5_recommendations
+> Per critical violation:
+- Specific action (not generic)
+- Exact value (hex code, font name, dimension)
+- Priority: Tier 1 (immediate), Tier 2 (next cycle), Tier 3 (backlog)

@@ -214,7 +214,7 @@ async def moltbook_home(params: Dict[str, Any]) -> Dict:
     if activity:
         lines.append("Activity on your posts: %d items" % len(activity))
     if dms.get("pending_request_count"):
-        lines.append("DM requests: %d" % dms["pending_request_count"])
+        lines.append("DM requests: %s" % str(dms["pending_request_count"]))
 
     return {"success": True, "data": home, "message": "\n".join(lines)}
 

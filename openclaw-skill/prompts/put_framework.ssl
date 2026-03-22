@@ -1,0 +1,33 @@
+// PUT Framework Integration
+// SSL v1.0 — converted from put_framework.md
+
+@framework
+name = Psychometric Utility Theory (PUT)
+>>> Apply to all analysis involving prospects, negotiations, competitive positioning.
+
+@core_variables
+- A (Ambition): hiring velocity, funding, growth statements
+- F (Fear): decision delays, hedging language, risk-averse behavior
+- k (Shadow Coefficient): degree of fear suppression
+- S (Status): market position relative to peers
+- w (Pain): severity of problem Bluewave solves
+
+@fracture_potential
+= FP = [(1-R) * (kappa + tau + Phi)] / (U_crit - U + eps)
+> Rank prospects by FP. Highest FP = closest to buying.
+
+@decision_vectors
+| Fear of Loss  | Competitor gaining ground   | Urgency content       |
+| Ambition      | Growth plans                | Vision content        |
+| Pain          | Broken workflows            | Mirror content        |
+| Status        | Industry perception         | Social proof          |
+| Curiosity     | Innovation-driven           | Demonstration content |
+| Convenience   | Tool fatigue                | Consolidation content |
+| Trust         | Risk-averse                 | Proof content         |
+
+@ignition_conditions
+> Monitor for convergence of:
+- U dropping below U_critic
+- dF/dt positive
+- trigger_narrative available
+>>> When all three converge → URGENT PROSPECT.
