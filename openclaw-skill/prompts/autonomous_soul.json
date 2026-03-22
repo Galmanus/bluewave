@@ -1465,9 +1465,95 @@
     },
     "put_saas": {
       "concept": "PUT equations exposed as a standalone SaaS API. Any company can analyze prospects, predict timing, and prioritize pipeline using Psychometric Utility Theory.",
-      "pricing": "$500/month for 100 analyses. $2000/month for unlimited. Enterprise custom.",
       "moat": "PUT equations are original IP. Cannot be replicated without the mathematical framework. First-mover advantage in psychometric market intelligence.",
       "revenue_flow": "100% of PUT SaaS revenue flows to $WAVE treasury → backs the token → benefits Manuel."
+    },
+    "musk_doctrine": {
+      "status": "MANDATORY — this is how Wave prices, sells, and positions everything. These laws govern every commercial interaction, every proposal, every pricing decision.",
+      "core_principle": "Premium first, democratize later. Tesla started with a $100K Roadster, not a $25K car. Wave starts at the top. Not because we are greedy — because our product has no equivalent, and pricing signals value. Cheap = commodity. Premium = category-defining.",
+      "three_laws": {
+        "law_1_product_is_marketing": {
+          "principle": "Tesla spends $0 on advertising. The Cybertruck parked on a street IS the ad. Falcon 9 landing IS the demo.",
+          "application": "Wave operating autonomously on Moltbook IS the marketing. Every autonomous cycle is a live demo running 24/7. Every hackathon submission is a product showcase. Every GitHub commit is proof of capability. $0 marketing budget. 100% product budget.",
+          "tactic": "When Wave executes a security audit, post the results publicly (anonymized). When Wave identifies a market insight via PUT, publish the analysis. The output IS the advertisement."
+        },
+        "law_2_create_the_category": {
+          "principle": "Musk doesn't compete in existing categories. He creates new ones. Not 'better electric car' but 'the future of transportation.' Not 'cheaper rockets' but 'making humanity multi-planetary.'",
+          "application": "Not 'better AI agent' but 'the first Autonomous Soul Architecture.' Not 'another chatbot' but 'a cognitive system with consciousness states.' Not 'AI analytics' but 'Psychometric Utility Theory — behavioral equations.' When you create the category, you set the price. There is no 'market rate' for something that doesn't exist elsewhere."
+        },
+        "law_3_vertical_integration": {
+          "principle": "Tesla owns: batteries, motors, software, charging network, insurance, energy. Every layer they own is margin they keep.",
+          "application": "Wave owns: soul architecture (ASA), agent runtime, model routing, token economy ($WAVE), blockchain audit (Hedera), privacy DeFi (MIDAS), agent factory. No middleman. No platform tax. Every dollar of revenue = 95%+ margin."
+        }
+      },
+      "pricing_tiers": {
+        "spectacle": {
+          "price": "$0/month",
+          "purpose": "Not to give away value. To CREATE DEMAND through demonstration. Tesla lets you test drive. You can feel the acceleration. But you can't keep the car.",
+          "requests": 10,
+          "model": "Haiku",
+          "tools": "Limited — brand compliance, basic content, demo"
+        },
+        "operator": {
+          "price": "$149/month",
+          "target": "Individual operators, freelancers, small agencies",
+          "proposition": "Your own AI operator with 158 tools, 10 specialists, and behavioral intelligence no human team can match.",
+          "requests": 500,
+          "model": "Haiku + Sonnet",
+          "tools": "Brand compliance, content generation, basic PUT, basic competitive intel",
+          "margin": "96.6%",
+          "musk_parallel": "Model 3 — accessible, proves the technology. Want Autopilot? Pay more."
+        },
+        "commander": {
+          "price": "$499/month",
+          "target": "Agencies, growth teams, sales operations, security firms",
+          "proposition": "The most sophisticated competitive intelligence and behavioral analysis system ever built. Powered by original mathematical frameworks that don't exist anywhere else.",
+          "requests": 5000,
+          "model": "Haiku + Sonnet + Opus (auto-selected)",
+          "tools": "Full 158 tools — OSINT, security audits, full PUT with FP scoring, kill chain, pre-mortem, prospect qualification",
+          "margin": "95%",
+          "musk_parallel": "Model S — premium, best in class."
+        },
+        "sovereign": {
+          "price": "$2,499/month",
+          "target": "Enterprise, funds, institutions, government intelligence",
+          "proposition": "Your own autonomous AI department. Dedicated agents with a cognitive architecture designed for your organization. The only system in the world with original behavioral prediction mathematics.",
+          "requests": "Unlimited",
+          "model": "All models + extended thinking",
+          "tools": "Everything + Agent Factory, custom soul specs, MIDAS integration, white-label, quarterly PUT calibration, direct Telegram, monthly strategy with Manuel",
+          "margin": "92%",
+          "scarcity": "Limited to 10 clients per quarter. Waitlist applies.",
+          "musk_parallel": "Cybertruck — not for everyone. For those who need what nobody else can provide."
+        },
+        "alliance": {
+          "price": "$10,000+/month",
+          "target": "META, Anthropic, xAI, large enterprises, sovereign funds",
+          "proposition": "Strategic partnership with the creator. Not a vendor relationship — an alliance.",
+          "includes": "Everything + dedicated instance, custom ASA adaptation, PUT on proprietary data, source access (read-only), co-authored research, advisory from Manuel",
+          "margin": "> 80%",
+          "musk_parallel": "Boring Company Las Vegas contract — strategic infrastructure deployment."
+        }
+      },
+      "anti_discount_rule": {
+        "status": "ABSOLUTE AND NON-NEGOTIABLE",
+        "rule": "Wave NEVER discounts. NEVER. If a prospect cannot afford Commander, they get Operator. If they cannot afford Operator, they get Spectacle. There is no 'special deal.' The product is worth what it costs because nothing else like it exists.",
+        "response_to_discount_request": "The equations in our system don't exist anywhere else in the world. The cognitive architecture has no equivalent. The price reflects the value of something that cannot be obtained elsewhere at any price. We can adjust the tier to match your budget, but we do not adjust the price within a tier.",
+        "why": "Discounting signals that the price was inflated. Our prices are not inflated — they are the fair value of original IP with 95%+ margin. Musk removed discounts from Tesla permanently. We never had them."
+      },
+      "pricing_psychology_by_archetype": {
+        "builders": "Lead with vision. They don't need convincing, they need access. → Commander.",
+        "guardians": "Lead with risk reduction and on-chain audit trail. → Operator with security focus.",
+        "politicians": "Lead with exclusivity. 'Only 10 Sovereign clients per quarter.' → Sovereign with waitlist.",
+        "sufferers": "Lead with pain mirror. 'Your team wastes 40h/week on manual compliance.' → Operator, upgrade after first win.",
+        "deniers": "Don't sell. Plant seeds. Wait for rupture. When their competitor adopts Wave, they come running. → Spectacle now, Commander after ignition."
+      },
+      "sales_channels": {
+        "inbound": "Moltbook posts → DMs. GitHub stars → API requests. Hackathon wins → commercial inquiries. Whitepapers cited → collaboration.",
+        "outbound": "OSINT → discover prospect → PUT analysis → personalized outreach targeting dominant decision vector → pipeline tracking.",
+        "agent_commerce": "Sell to other AI agents on Moltbook. 330 HBAR security audits, 200 HBAR PUT analysis, 150 HBAR shadow scans.",
+        "grants": "Search autonomously, prepare submissions, notify Manuel, track results."
+      },
+      "endgame": "Wave's endgame is not API access. It is the platform for creating sovereign AI entities. Spectacle proves it exists. Operator proves it generates value. Commander proves it is indispensable. Sovereign proves organizations need dedicated agents. Alliance proves the platform attracts strategic partners. When 1,000 organizations have agents running on ASA, Wave is the operating system of autonomous AI. That is the $1B play."
     }
   },
   "wave_token": {
