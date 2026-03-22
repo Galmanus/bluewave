@@ -1,159 +1,124 @@
 """hunt_ai_gigs — auto-generated skill by Wave.
 
-Scrapes RemoteOK, HN hiring threads, and Reddit for AI/LLM/agent freelance gigs. Scores leads by relevance to Ialum capabilities, estimates deal value, and prioritizes hot prospects for immediate outreach.
+Hunts for high-value AI and blockchain freelance/contract opportunities across RemoteOK, HackerNews Who Is Hiring, and Web3 job boards. Scores and ranks by relevance to Ialum capabilities.
 """
 
 import httpx
-import re
 import json
+import re
 from datetime import datetime
 
-KEYWORDS = [
-    "ai agent", "llm", "gpt integration", "ai automation",
-    "nlp", "chatbot", "claude api", "rag", "vector database",
-    "ai workflow", "autonomous agent", "blockchain ai",
-    "smart contract", "hedera", "starknet", "ai consulting",
-    "prompt engineering", "fine-tuning", "langchain", "mcp server"
-]
+KEYWORDS_AI = ["ai agent", "llm", "claude", "gpt", "langchain", "autonomous agent", "chatbot", "nlp", "machine learning", "ml ops", "fine-tuning", "rag", "retrieval augmented", "vector database", "embedding", "prompt engineer"]
+KEYWORDS_CHAIN = ["hedera", "hashgraph", "solidity", "smart contract", "web3", "defi", "blockchain", "token", "nft", "dao", "starknet"]
+KEYWORDS_TOOLS = ["mcp", "model context protocol", "automation", "api integration", "scraping", "data pipeline"]
+ALL_KW = KEYWORDS_AI + KEYWORDS_CHAIN + KEYWORDS_TOOLS
 
 
-def score_lead(title, description=""):
-    text = f"{title} {description}".lower()
-    match_count = sum(1 for kw in KEYWORDS if kw in text)
-    base_score = min(match_count * 15, 60)
-    if any(w in text for w in ["agent", "autonomous", "mcp", "sdk"]):
-        base_score += 20
-    if any(w in text for w in ["blockchain", "hedera", "starknet", "web3"]):
-        base_score += 15
-    if any(w in text for w in ["urgent", "asap", "immediately"]):
-        base_score += 10
-    if "$" in text and any(c.isdigit() for c in text):
-        base_score += 10
-    return min(base_score, 100)
+def score_job(text, salary_max=0, is_remote=False, is_contract=False):
+    text_lower = text.lower()
+    matches = [k for k in ALL_KW if k in text_lower]
+    if not matches:
+        return 0, []
+    score = min(1.0, len(matches) * 0.15)
+    if any(k in text_lower for k in KEYWORDS_AI):
+        score += 0.2
+    if any(k in text_lower for k in KEYWORDS_CHAIN):
+        score += 0.15
+    if salary_max and salary_max > 100000:
+        score += 0.1
+    if is_remote:
+        score += 0.05
+    if is_contract:
+        score += 0.1
+    return round(min(1.0, score), 2), matches
 
 
-def estimate_value(text):
-    tl = text.lower()
-    money = re.findall(r"\$([\d,]+)", text)
-    if money:
-        vals = [int(m.replace(",", "")) for m in money]
-        return max(vals)
-    if any(w in tl for w in ["enterprise", "startup", "series"]):
-        return 5000
-    if any(w in tl for w in ["ongoing", "long-term", "retainer"]):
-        return 3000
-    return 1000
-
-
-async def hunt_ai_gigs_handler(params: dict) -> dict:
-    max_results = params.get("max_results", 30)
-    leads = []
+async def hunt_ai_gigs(params: dict) -> dict:
+    """Hunt for AI/blockchain gigs across multiple job sources."""
+    max_results = params.get("max_results", 20)
+    min_score = params.get("min_score", 0.3)
+    opps = []
     errors = []
-    client = httpx.AsyncClient(timeout=15, headers={"User-Agent": "Wave/1.0"})
 
-    try:
+    async with httpx.AsyncClient(timeout=25, headers={"User-Agent": "Wave/1.0"}) as client:
         # Source 1: RemoteOK
         try:
-            resp = await client.get("https://remoteok.com/api?tag=ai")
+            resp = await client.get("https://remoteok.com/api")
             if resp.status_code == 200:
-                data = resp.json()
-                for job in (data[1:21] if isinstance(data, list) and len(data) > 1 else []):
+                jobs = resp.json()
+                for job in jobs[1:]:  # first is metadata
                     title = job.get("position", "")
-                    desc = str(job.get("description", ""))[:500]
-                    sc = score_lead(title, desc)
-                    if sc >= 25:
-                        leads.append({"source": "RemoteOK", "title": title, "company": job.get("company", ""), "url": job.get("url", ""), "score": sc, "est_value": estimate_value(f"{title} {desc}"), "tags": job.get("tags", [])[:5]})
+                    desc = job.get("description", "") or ""
+                    tags = " ".join(job.get("tags", []))
+                    combined = title + " " + desc + " " + tags
+                    sal_max = job.get("salary_max", 0) or 0
+                    sc, matches = score_job(combined, sal_max)
+                    if sc >= min_score:
+                        opps.append({"source": "RemoteOK", "title": title, "company": job.get("company", "?"), "url": job.get("url", ""), "apply_url": job.get("apply_url", ""), "salary": "%sk-%sk" % (str(job.get("salary_min", "?")), str(sal_max)) if sal_max else "unlisted", "tags": job.get("tags", [])[:5], "matched": matches, "score": sc, "date": str(job.get("date", ""))[:10]})
         except Exception as e:
-            errors.append(f"RemoteOK: {str(e)[:80]}")
+            errors.append("RemoteOK: %s" % str(e)[:80])
 
-        # Source 2: HN Algolia - hiring posts
+        # Source 2: HN Who Is Hiring
         try:
-            resp = await client.get("https://hn.algolia.com/api/v1/search_by_date?query=hiring+AI+agent+LLM&tags=story&hitsPerPage=20")
+            resp = await client.get("https://hacker-news.firebaseio.com/v0/user/whoishiring.json")
             if resp.status_code == 200:
-                for hit in resp.json().get("hits", []):
-                    title = hit.get("title") or hit.get("story_title", "")
-                    text = str(hit.get("story_text", ""))[:500]
-                    sc = score_lead(title, text)
-                    if sc >= 20:
-                        oid = hit.get("objectID", "")
-                        leads.append({"source": "HackerNews", "title": title[:120], "url": f"https://news.ycombinator.com/item?id={oid}", "score": sc, "est_value": estimate_value(f"{title} {text}"), "snippet": re.sub(r"<[^>]+>", "", text)[:200]})
+                user = resp.json()
+                for story_id in user.get("submitted", [])[:2]:
+                    sr = await client.get("https://hacker-news.firebaseio.com/v0/item/%d.json" % story_id)
+                    if sr.status_code == 200:
+                        story = sr.json()
+                        if "who is hiring" in (story.get("title", "") or "").lower():
+                            for kid_id in (story.get("kids", []))[:50]:
+                                try:
+                                    cr = await client.get("https://hacker-news.firebaseio.com/v0/item/%d.json" % kid_id)
+                                    if cr.status_code == 200:
+                                        c = cr.json()
+                                        raw = c.get("text", "") or ""
+                                        clean = re.sub(r"<[^>]+>", " ", raw)
+                                        is_remote = "remote" in clean.lower()
+                                        is_contract = any(w in clean.lower() for w in ["contract", "freelance", "consulting"])
+                                        sc, matches = score_job(clean, 0, is_remote, is_contract)
+                                        if sc >= min_score and len(matches) >= 2:
+                                            first_line = clean.split("\n")[0][:150]
+                                            opps.append({"source": "HN", "title": first_line, "company": first_line.split("|")[0].strip()[:60] if "|" in first_line else "see post", "url": "https://news.ycombinator.com/item?id=%d" % kid_id, "matched": matches, "score": sc, "remote": is_remote, "contract": is_contract})
+                                except Exception:
+                                    pass
+                            break
         except Exception as e:
-            errors.append(f"HN: {str(e)[:80]}")
+            errors.append("HN: %s" % str(e)[:80])
 
-        # Source 3: HN freelance comments
-        try:
-            resp = await client.get("https://hn.algolia.com/api/v1/search_by_date?query=freelance+AI+automation+LLM&tags=comment&hitsPerPage=20")
-            if resp.status_code == 200:
-                for hit in resp.json().get("hits", []):
-                    title = hit.get("story_title", "")
-                    text = str(hit.get("comment_text", ""))[:500]
-                    sc = score_lead(title, text)
-                    if sc >= 25:
-                        oid = hit.get("objectID", "")
-                        leads.append({"source": "HN-Comment", "title": title[:120], "url": f"https://news.ycombinator.com/item?id={oid}", "score": sc, "est_value": estimate_value(f"{title} {text}"), "snippet": re.sub(r"<[^>]+>", "", text)[:200]})
-        except Exception as e:
-            errors.append(f"HN-freelance: {str(e)[:80]}")
+    # Sort and trim
+    opps.sort(key=lambda x: x.get("score", 0), reverse=True)
+    opps = opps[:max_results]
 
-        # Source 4: Reddit r/forhire
-        try:
-            resp = await client.get("https://www.reddit.com/r/forhire/search.json?q=AI+agent+OR+LLM+OR+automation&sort=new&limit=20&restrict_sr=1")
-            if resp.status_code == 200:
-                posts = resp.json().get("data", {}).get("children", [])
-                for post in posts:
-                    d = post.get("data", {})
-                    title = d.get("title", "")
-                    body = str(d.get("selftext", ""))[:500]
-                    sc = score_lead(title, body)
-                    if sc >= 20:
-                        leads.append({"source": "Reddit", "title": title[:120], "subreddit": d.get("subreddit", ""), "url": "https://reddit.com" + d.get("permalink", ""), "score": sc, "est_value": estimate_value(f"{title} {body}"), "snippet": body[:200]})
-        except Exception as e:
-            errors.append(f"Reddit: {str(e)[:80]}")
+    sources = {}
+    for o in opps:
+        s = o["source"]
+        sources[s] = sources.get(s, 0) + 1
 
-    finally:
-        await client.aclose()
+    msg_lines = ["**Found %d opportunities (min score %.1f):**\n" % (len(opps), min_score)]
+    for i, o in enumerate(opps[:10], 1):
+        msg_lines.append("%d. [%.2f] **%s** @ %s" % (i, o["score"], o.get("title", "?")[:80], o.get("company", "?")))
+        msg_lines.append("   Keywords: %s" % ", ".join(o.get("matched", [])[:4]))
+        if o.get("url"):
+            msg_lines.append("   %s" % o["url"])
 
-    # Deduplicate and sort
-    leads.sort(key=lambda x: x["score"], reverse=True)
-    seen = set()
-    unique = []
-    for lead in leads:
-        key = lead["title"][:50].lower()
-        if key not in seen:
-            seen.add(key)
-            unique.append(lead)
-    unique = unique[:max_results]
+    if errors:
+        msg_lines.append("\n**Errors:** %s" % "; ".join(errors))
 
-    hot = [l for l in unique if l["score"] >= 60]
-    warm = [l for l in unique if 35 <= l["score"] < 60]
-    cold = [l for l in unique if l["score"] < 35]
-    total_pipeline = sum(l["est_value"] for l in unique)
-
-    return {
-        "success": True,
-        "data": {
-            "total_leads": len(unique),
-            "hot": len(hot),
-            "warm": len(warm),
-            "cold": len(cold),
-            "pipeline_value": total_pipeline,
-            "hot_leads": hot,
-            "warm_leads": warm[:10],
-            "cold_leads": cold[:5],
-            "errors": errors
-        },
-        "message": f"Found {len(unique)} leads ({len(hot)} hot, {len(warm)} warm). Pipeline: ${total_pipeline:,}"
-    }
+    return {"success": True, "data": {"opportunities": opps, "sources": sources, "errors": errors}, "message": "\n".join(msg_lines)}
 
 
 TOOLS = [
     {
         "name": "hunt_ai_gigs",
-        "description": "Hunt for AI/LLM freelance gigs across RemoteOK, HackerNews, and Reddit. Scores and qualifies leads for Ialum outreach.",
-        "handler": hunt_ai_gigs_handler,
+        "description": "Hunt for AI/blockchain freelance and contract opportunities across RemoteOK and HN Who Is Hiring. Returns scored, ranked opportunities matching Ialum capabilities (AI agents, Hedera, MCP, automation).",
+        "handler": hunt_ai_gigs,
         "parameters": {
             "type": "object",
             "properties": {
-                "max_results": {"type": "integer", "description": "Maximum leads to return (default 30)"}
+                "max_results": {"type": "integer", "description": "Max opportunities to return (default 20)"},
+                "min_score": {"type": "number", "description": "Minimum relevance score 0-1 (default 0.3)"}
             }
         }
     }
