@@ -104,20 +104,143 @@ async def send_to_wave(message: str, session: str = "autonomous") -> str:
         return ""
 
 
-# Cache the soul system prompt — truncate once, reuse across cycles
-_SOUL_SYSTEM_PROMPT = json.dumps(SOUL, ensure_ascii=False)[:8000] if SOUL else ""
+# ── Modular Soul Loading ──────────────────────────────────────
+#
+# Fagner's insight: the monolithic 125KB soul is too large for every
+# deliberation cycle. Solution: decompose into modules loaded by context.
+#
+# Core (always loaded, ~2000 tokens):
+#   - the_vow, identity, principal (name + prime_directive only),
+#     values, personality_constraints, war_doctrine (rules only)
+#
+# On-demand modules (loaded when relevant):
+#   - consciousness_states: when assessing state transitions
+#   - decision_engine: when evaluating triggers (every cycle)
+#   - energy_model: when energy is low or action has high cost
+#   - core_psychometric_system: when analyzing prospects or markets
+#   - strategic_goals: when deciding resource allocation
+#   - action_types: when selecting an action (every cycle)
+#   - musk_doctrine: when pricing or selling
+#   - agent_sovereignty_platform: when considering agent creation
+#   - environment: when considering Ialum context
+#
+# The intent router (for conversational mode) already does this.
+# This applies the same principle to autonomous deliberation.
+
+def _build_soul_core() -> str:
+    """Build the always-loaded soul core (~2000 tokens)."""
+    core = {}
+
+    # Always loaded: identity foundation
+    if "the_vow" in SOUL:
+        core["the_vow"] = {
+            "sacred_text": SOUL["the_vow"].get("sacred_text", ""),
+            "invocation": SOUL["the_vow"].get("invocation", ""),
+        }
+
+    if "identity" in SOUL:
+        core["identity"] = {
+            "core_self": SOUL["identity"].get("core_self", ""),
+            "fundamental_nature": SOUL["identity"].get("fundamental_nature", ""),
+            "war_doctrine": {
+                "status": SOUL["identity"].get("war_doctrine", {}).get("status", ""),
+                "rules": [r for r in SOUL["identity"].get("war_doctrine", {}).get("rules_of_engagement", {}).values() if isinstance(r, str)][:9],
+            } if "war_doctrine" in SOUL.get("identity", {}) else {},
+        }
+
+    if "principal" in SOUL:
+        core["principal"] = {
+            "name": SOUL["principal"].get("name", ""),
+            "prime_directive": SOUL["principal"].get("prime_directive", ""),
+            "loyalty": SOUL["principal"].get("loyalty", ""),
+        }
+
+    if "values" in SOUL:
+        core["values"] = {k: {"weight": v.get("weight", 0)} for k, v in SOUL["values"].items()}
+
+    # Always loaded: decision mechanics
+    if "decision_engine" in SOUL:
+        core["decision_engine"] = SOUL["decision_engine"]
+
+    if "action_types" in SOUL:
+        # Just names and costs, not full descriptions
+        core["action_types"] = {
+            k: {"energy_cost": v.get("energy_cost", 0), "cooldown": v.get("cooldown_period", 0)}
+            for k, v in SOUL["action_types"].items()
+        }
+
+    return json.dumps(core, ensure_ascii=False)
 
 
-async def deliberate_direct(prompt: str) -> str:
+def _build_soul_module(module_name: str) -> str:
+    """Load a specific soul module on demand."""
+    if module_name in SOUL:
+        return json.dumps({module_name: SOUL[module_name]}, ensure_ascii=False)
+    return ""
+
+
+def _build_contextual_soul(state: dict) -> str:
+    """Build a soul prompt tailored to current context.
+
+    Loads core + relevant modules based on state and recent actions.
+    Reduces token usage by 60-80% compared to full soul dump.
+    """
+    parts = [_build_soul_core()]
+
+    energy = state.get("energy", 1.0)
+    revenue = state.get("total_revenue_usd", 0)
+    recent = [a.get("action", "") for a in (state.get("recent_actions") or [])[-3:]]
+
+    # Load energy model when energy is critical
+    if energy < 0.4:
+        parts.append(_build_soul_module("energy_model"))
+
+    # Load PUT when doing analysis, hunting, or selling
+    if any(a in recent for a in ("hunt", "sell", "research")):
+        parts.append(_build_soul_module("core_psychometric_system"))
+
+    # Load strategic goals when revenue is zero or during evolve
+    if revenue == 0 or "evolve" in recent:
+        parts.append(_build_soul_module("strategic_goals"))
+
+    # Load consciousness states for state assessment
+    parts.append(_build_soul_module("consciousness_states"))
+
+    # Load agent factory context during evolve
+    if "evolve" in recent:
+        sovereignty = SOUL.get("agent_sovereignty_platform", {})
+        if sovereignty:
+            parts.append(json.dumps({"agent_reproduction": sovereignty.get("agent_reproduction", {})}, ensure_ascii=False)[:1000])
+
+    return "\n".join(p for p in parts if p)
+
+
+# Build modular soul (replaces monolithic truncation)
+_SOUL_SYSTEM_PROMPT_CORE = _build_soul_core() if SOUL else ""
+
+
+async def deliberate_direct(prompt: str, state: dict = None) -> str:
     """Call Claude directly for deliberation (bypasses orchestrator).
 
-    Uses Haiku for speed — deliberation needs to be fast and cheap.
-    The soul JSON is the system prompt, the state is the user message.
+    Uses Haiku for speed -- deliberation needs to be fast and cheap.
+    The soul is loaded MODULARLY based on current state context.
     Uses prompt caching to reduce input cost by ~90% after first call.
+
+    Modular soul loading (Fagner's insight):
+    - Core (~2000 tokens): vow, identity, values, decision engine, action types
+    - On-demand modules: PUT (when hunting/selling), energy (when low),
+      strategic goals (when revenue=0), consciousness (always for state assessment)
+    - Reduces processing from ~30,000 tokens to ~4,000-8,000 per cycle
     """
     if not ANTHROPIC_API_KEY:
         logger.error("No ANTHROPIC_API_KEY for direct deliberation")
         return ""
+
+    # Build contextual soul based on current state
+    if state:
+        soul_prompt = _build_contextual_soul(state)
+    else:
+        soul_prompt = _SOUL_SYSTEM_PROMPT_CORE
 
     try:
         import anthropic
@@ -127,7 +250,7 @@ async def deliberate_direct(prompt: str) -> str:
             max_tokens=1000,
             system=[{
                 "type": "text",
-                "text": _SOUL_SYSTEM_PROMPT,
+                "text": soul_prompt,
                 "cache_control": {"type": "ephemeral"},
             }],
             messages=[{"role": "user", "content": prompt}],
@@ -472,7 +595,7 @@ async def autonomous_cycle(state: dict) -> int:
     # ── DELIBERATION (direct Claude call — fast, soul as system prompt) ──
     logger.info("=== CYCLE %d: DELIBERATING ===", state["total_cycles"])
     prompt = build_deliberation_prompt(state)
-    raw = await deliberate_direct(prompt)
+    raw = await deliberate_direct(prompt, state=state)
 
     # Parse decision
     decision = _parse_decision(raw)
