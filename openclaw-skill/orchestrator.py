@@ -595,13 +595,74 @@ class Orchestrator:
                 logger.info("🧠 Extended thinking enabled: %d token budget", thinking_budget)
 
             return self.client.messages.create(**kwargs)
-        except anthropic.RateLimitError as e:
-            if attempt < 2:
+        except (anthropic.RateLimitError, anthropic.APIStatusError) as e:
+            error_msg = str(e)
+
+            # If API key is blocked/exhausted, try Claude Engine (FREE on Max plan)
+            if "usage limits" in error_msg.lower() or "rate limit" in error_msg.lower() or attempt >= 2:
+                if not use_tools:  # Claude Engine can handle tool-free calls
+                    logger.warning("API blocked/limited — switching to Claude Engine (FREE)")
+                    try:
+                        import asyncio
+                        from claude_engine import claude_call
+
+                        # Extract user message from messages
+                        user_msg = ""
+                        for m in reversed(managed_messages):
+                            if m.get("role") == "user":
+                                content = m.get("content", "")
+                                if isinstance(content, list):
+                                    user_msg = " ".join(
+                                        b.get("text", "") for b in content if b.get("type") == "text"
+                                    )
+                                else:
+                                    user_msg = str(content)
+                                break
+
+                        loop = asyncio.get_event_loop()
+                        if loop.is_running():
+                            import concurrent.futures
+                            with concurrent.futures.ThreadPoolExecutor() as pool:
+                                result = pool.submit(
+                                    asyncio.run,
+                                    claude_call(
+                                        prompt=user_msg,
+                                        system_prompt=use_system,
+                                        model="sonnet",
+                                        timeout=120,
+                                    )
+                                ).result()
+                        else:
+                            result = asyncio.run(claude_call(
+                                prompt=user_msg,
+                                system_prompt=use_system,
+                                model="sonnet",
+                                timeout=120,
+                            ))
+
+                        if result["success"]:
+                            logger.info("Claude Engine response in %.1fs via %s",
+                                       result["elapsed_seconds"], result["engine"])
+                            # Create a mock response object matching Anthropic API shape
+                            from types import SimpleNamespace
+                            mock_block = SimpleNamespace(type="text", text=result["response"])
+                            mock_resp = SimpleNamespace(
+                                content=[mock_block],
+                                stop_reason="end_turn",
+                                model=result["model"],
+                                usage=SimpleNamespace(input_tokens=0, output_tokens=0),
+                            )
+                            return mock_resp
+                    except Exception as engine_err:
+                        logger.error("Claude Engine fallback also failed: %s", engine_err)
+
+            # Standard retry logic for rate limits
+            if attempt < 2 and "rate limit" in error_msg.lower():
                 wait = 15 if attempt == 0 else 5
                 fallback = "claude-haiku-4-5-20251001"
                 logger.warning("Rate limited (attempt %d), waiting %ds then trying %s...",
                              attempt, wait, fallback)
-                _time.sleep(wait)  # sync context — acceptable for rate-limit retry
+                _time.sleep(wait)
                 return self._call_claude(messages, model=fallback, system_prompt=use_system,
                                          tools=use_tools, attempt=attempt + 1)
             raise

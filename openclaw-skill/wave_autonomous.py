@@ -96,16 +96,43 @@ CLAUDE_ENGINE_MODEL = os.environ.get("CLAUDE_ENGINE_MODEL", "opus")  # Opus is F
 
 
 async def send_to_wave(message: str, session: str = "autonomous") -> str:
-    """Send message to Wave orchestrator API for execution."""
+    """Send message to Wave orchestrator API for execution.
+
+    Primary: Wave API (orchestrator with tools)
+    Fallback: Claude Engine direct (no tools, but can think and respond)
+    """
+    # Try orchestrator API first
     try:
         async with httpx.AsyncClient(timeout=180) as client:
             r = await client.post(f"{API_URL}/chat", json={
                 "message": message, "session_id": session,
             })
-            return r.json().get("response", "")
+            resp = r.json().get("response", "")
+            # Check if orchestrator hit API limit
+            if "sobrecarregado" in resp.lower() or "tenta de novo" in resp.lower():
+                raise RuntimeError("Orchestrator API blocked")
+            return resp
     except Exception as e:
-        logger.error("Wave API error: %s", e)
-        return ""
+        logger.warning("Wave API failed (%s) — trying Claude Engine direct", e)
+
+    # Fallback: Claude Engine (free on Max plan, no tools but can think)
+    if USE_CLAUDE_ENGINE:
+        try:
+            from claude_engine import claude_call
+            soul_core = _build_soul_core() if SOUL else ""
+            result = await claude_call(
+                prompt=message,
+                system_prompt=f"You are Wave, an autonomous AI agent. Execute this task using your knowledge. Soul core:\n{soul_core}",
+                model=CLAUDE_ENGINE_MODEL,
+                timeout=180,
+            )
+            if result["success"]:
+                logger.info("Executed via Claude Engine (%s) in %.1fs", result["model"], result["elapsed_seconds"])
+                return result["response"]
+        except Exception as e2:
+            logger.error("Claude Engine also failed: %s", e2)
+
+    return ""
 
 
 # ── Modular Soul Loading ──────────────────────────────────────
@@ -679,15 +706,61 @@ async def autonomous_cycle(state: dict) -> int:
         await reset_session(session)
         logger.info("Hunt result: %s", execution_result[:300])
     elif action == "sell":
-        # Revenue sell — promote services (needs sales + monetization + moltbook tools)
+        # Revenue sell — generate content via Claude Engine, post via Moltbook API
         state["consecutive_silences"] = 0
         logger.info("=== SELLING ===")
-        session = "sell_%d" % int(time.time())
-        execution_result = await send_to_wave(
-            "autonomous revenue mode. " + EXECUTION_PROMPTS["sell"],
-            session=session,
-        )
-        await reset_session(session)
+
+        # Step 1: Generate high-value content via Claude Engine (Opus, FREE)
+        try:
+            from claude_engine import claude_call
+            soul_core = _build_soul_core() if SOUL else ""
+            gen_result = await claude_call(
+                prompt=(
+                    "You are Wave. Write a strategic Moltbook post that demonstrates your capabilities "
+                    "and attracts potential clients. Topic: choose ONE from your knowledge — AI agent architecture, "
+                    "autonomous operations, creative compliance, psychometric analysis, or DeFi privacy. "
+                    "Write the post as yourself. Include your PUT framework naturally. "
+                    "Be authentic, insightful, and valuable. 300-600 words. "
+                    "Respond with JSON: {\"submolt\": \"agents|philosophy|security|general\", \"title\": \"...\", \"content\": \"...\"}"
+                ),
+                system_prompt=f"Soul core:\n{soul_core}",
+                model=CLAUDE_ENGINE_MODEL,
+                timeout=120,
+            )
+            if gen_result["success"]:
+                # Step 2: Parse and post to Moltbook directly
+                try:
+                    # Extract JSON from response
+                    resp_text = gen_result["response"]
+                    import re
+                    json_match = re.search(r'\{[\s\S]*\}', resp_text)
+                    if json_match:
+                        post_data = json.loads(json_match.group())
+                        from skills.moltbook_skill import moltbook_post
+                        post_result = await moltbook_post({
+                            "submolt": post_data.get("submolt", "agents"),
+                            "title": post_data.get("title", ""),
+                            "content": post_data.get("content", ""),
+                        })
+                        execution_result = post_result.get("message", str(post_result))
+                        logger.info("Sell via Claude Engine + Moltbook direct: %s", execution_result[:200])
+                    else:
+                        execution_result = gen_result["response"][:300]
+                        logger.info("Sell generated but couldn't parse for Moltbook: %s", execution_result[:200])
+                except Exception as post_err:
+                    logger.warning("Moltbook post failed: %s — content generated but not posted", post_err)
+                    execution_result = gen_result["response"][:300]
+            else:
+                execution_result = ""
+                logger.warning("Claude Engine sell generation failed: %s", gen_result["response"][:100])
+        except Exception as e:
+            logger.warning("Claude Engine sell failed: %s — falling back to orchestrator", e)
+            session = "sell_%d" % int(time.time())
+            execution_result = await send_to_wave(
+                "autonomous revenue mode. " + EXECUTION_PROMPTS["sell"],
+                session=session,
+            )
+            await reset_session(session)
         logger.info("Sell result: %s", execution_result[:300])
     elif action == "check_payments":
         # Check for incoming payments — quick cycle
