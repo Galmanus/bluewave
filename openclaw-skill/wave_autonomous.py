@@ -558,71 +558,48 @@ def build_deliberation_prompt(state: dict) -> str:
         avail.append("post")
     avail.extend(["observe", "research", "comment", "outreach"])
 
-    return f"""DECIDE. Pick ONE action. JSON only.
+    # Priority scoring: pre-rank available actions for the model
+    priority = []
+    if "EVOLVE(FORCED)" in avail:
+        priority.append("evolve [MANDATORY]")
+    if state.get('prospects_found', 0) > 0 and state.get('outreach_sent', 0) == 0:
+        priority.append("outreach [prospects waiting]")
+    for a in ["hunt", "sell", "check_payments"]:
+        if a in avail:
+            priority.append(a)
+    priority.extend([a for a in avail if a not in priority and a != "EVOLVE(FORCED)"])
 
-rev:${state.get('total_revenue_usd', 0):.0f} | prsp:{state.get('prospects_found', 0)} | outreach:{state.get('outreach_sent', 0)} | cycle:{state.get('total_cycles', 0)} | since_evolve:{state.get('cycles_since_evolve', 0)}
-hunt:{h(state.get('last_hunt_time'))}h | sell:{h(state.get('last_sell_time'))}h | pay:{h(state.get('last_payment_check_time'))}h | post:{h(state.get('last_post_time'))}h
-recent: {' > '.join(recent)}
-AVAILABLE: {', '.join(avail)}
-
-RULES: If EVOLVE(FORCED), choose evolve. Never silence at $0 rev. Prefer revenue actions.
-
-{{"consciousness_state":"...","consciousness_reasoning":"...","triggers_evaluated":{{"action_triggers_fired":[],"silence_triggers_fired":[],"authenticity_check":"genuine"}},"decision":"...","reasoning":"...","plan":"...","state_updates":{{"energy":1.0,"curiosity":0.5,"knowledge_pressure":0.5}}}}"""
+    return f"""<|system|>You are Wave. Autonomous agent. Cycle {state.get('total_cycles', 0)}. Respond ONLY with valid JSON.<|end|>
+<|context|>
+rev=${state.get('total_revenue_usd', 0):.0f} prsp={state.get('prospects_found', 0)} outreach={state.get('outreach_sent', 0)} evo_gap={state.get('cycles_since_evolve', 0)}
+timers: hunt={h(state.get('last_hunt_time'))}h sell={h(state.get('last_sell_time'))}h pay={h(state.get('last_payment_check_time'))}h post={h(state.get('last_post_time'))}h
+last_5: {'>'.join(recent)}
+<|end|>
+<|priority_queue|>{' > '.join(priority)}<|end|>
+<|constraints|>
+- EVOLVE(FORCED) overrides everything when present
+- $0 revenue: silence is BANNED
+- Pick the FIRST available action from priority_queue unless you have strong reason not to
+- 2 sentences max for reasoning
+<|end|>
+<|output_format|>
+{{"consciousness_state":"decisive","consciousness_reasoning":"<1 sentence>","triggers_evaluated":{{"action_triggers_fired":["<trigger>"],"silence_triggers_fired":[],"authenticity_check":"genuine"}},"decision":"<action>","reasoning":"<2 sentences max>","plan":"<1 sentence>","state_updates":{{"energy":1.0,"curiosity":0.5,"knowledge_pressure":0.5}}}}
+<|end|>"""
 
 
 # ── Dynamic Research Prompts (rotate to avoid repetition) ─────
 
 RESEARCH_ANGLES = [
-    (
-        "RESEARCH: Reddit r/forhire + r/entrepreneur.\n"
-        "Search reddit_search for 'AI agent' OR 'automation needed' OR 'looking for developer'.\n"
-        "Find people PAYING for services we offer. Max 2 tool calls. Report findings."
-    ),
-    (
-        "RESEARCH: Hacker News.\n"
-        "Use hn_search for 'AI agent startup' OR 'brand compliance' OR 'creative operations'.\n"
-        "Find companies, discussions, or job posts relevant to Bluewave. Max 2 tool calls."
-    ),
-    (
-        "RESEARCH: ArXiv papers.\n"
-        "Use arxiv_search for 'autonomous agent architecture' OR 'zero knowledge privacy'.\n"
-        "Find papers that validate PUT/ASA or reveal competitor approaches. Max 2 tool calls."
-    ),
-    (
-        "RESEARCH: GitHub trending.\n"
-        "Use gh_trending_repos to find new AI agent frameworks or brand compliance tools.\n"
-        "Assess: threat or opportunity? Max 2 tool calls."
-    ),
-    (
-        "RESEARCH: Product Hunt.\n"
-        "Use ph_today to see what launched. Any AI/brand/creative tools?\n"
-        "Competitor intel or partnership opportunity? Max 2 tool calls."
-    ),
-    (
-        "RESEARCH: Hugging Face.\n"
-        "Use hf_trending to find new AI models relevant to our stack.\n"
-        "Any vision model that beats Claude? Any agent framework? Max 2 tool calls."
-    ),
-    (
-        "RESEARCH: Starknet/Hedera ecosystem.\n"
-        "Use web_search for 'Starknet grants 2026' OR 'Hedera hackathon' OR 'DeFi privacy grants'.\n"
-        "Find money on the table for MIDAS or NEON COVENANT. Max 2 tool calls."
-    ),
-    (
-        "RESEARCH: Competitor analysis.\n"
-        "Use web_search for 'Aprimo AI' OR 'Bynder AI agent' OR 'Brandfolder automation'.\n"
-        "What are competitors doing? What's their Φ (messaging vs reality)? Max 2 tool calls."
-    ),
-    (
-        "RESEARCH: Reddit r/SaaS + r/marketing.\n"
-        "Use reddit_search for 'brand consistency' OR 'content operations' OR 'DAM frustration'.\n"
-        "Find people with problems Bluewave solves. Max 2 tool calls."
-    ),
-    (
-        "RESEARCH: Web freelance opportunities.\n"
-        "Use web_search for 'hire AI agent developer' OR 'freelance smart contract audit' OR 'AI automation consultant'.\n"
-        "Find paid gigs Wave can do NOW. Max 2 tool calls."
-    ),
+    "<|task|>RESEARCH reddit<|end|><|tool|>reddit_search('AI agent' OR 'automation needed',subreddit=forhire)<|end|><|find|>people paying for our services<|end|><|limit|>2 calls<|end|>",
+    "<|task|>RESEARCH hackernews<|end|><|tool|>hn_search('AI agent startup' OR 'brand compliance')<|end|><|find|>companies, jobs, discussions<|end|><|limit|>2 calls<|end|>",
+    "<|task|>RESEARCH arxiv<|end|><|tool|>arxiv_search('autonomous agent architecture' OR 'zero knowledge')<|end|><|find|>papers validating PUT/ASA<|end|><|limit|>2 calls<|end|>",
+    "<|task|>RESEARCH github<|end|><|tool|>gh_trending_repos()<|end|><|find|>new agent frameworks, threat or opportunity<|end|><|limit|>2 calls<|end|>",
+    "<|task|>RESEARCH producthunt<|end|><|tool|>ph_today()<|end|><|find|>AI/brand/creative tool launches<|end|><|limit|>2 calls<|end|>",
+    "<|task|>RESEARCH huggingface<|end|><|tool|>hf_trending()<|end|><|find|>new models relevant to our stack<|end|><|limit|>2 calls<|end|>",
+    "<|task|>RESEARCH grants<|end|><|tool|>web_search('Starknet grants 2026' OR 'Hedera hackathon')<|end|><|find|>money for MIDAS/NEON<|end|><|limit|>2 calls<|end|>",
+    "<|task|>RESEARCH competitors<|end|><|tool|>web_search('Aprimo AI' OR 'Bynder AI agent')<|end|><|find|>competitor moves, their Phi gap<|end|><|limit|>2 calls<|end|>",
+    "<|task|>RESEARCH SaaS pain<|end|><|tool|>reddit_search('brand consistency' OR 'DAM frustration',subreddit=SaaS)<|end|><|find|>problems Bluewave solves<|end|><|limit|>2 calls<|end|>",
+    "<|task|>RESEARCH freelance<|end|><|tool|>web_search('hire AI agent developer' OR 'freelance smart contract audit')<|end|><|find|>paid gigs NOW<|end|><|limit|>2 calls<|end|>",
 ]
 
 
@@ -635,36 +612,12 @@ def _get_research_prompt(cycle: int) -> str:
 # ── Dynamic Hunt Prompts ─────────────────────────────────────
 
 HUNT_ANGLES = [
-    (
-        "HUNT: Reddit gigs. Max 3 tool calls.\n"
-        "Use reddit_search for 'hiring AI' OR 'need automation' OR 'looking for developer' in r/forhire.\n"
-        "For each match: note what they need, budget, contact. Save best with db_add_prospect."
-    ),
-    (
-        "HUNT: Hacker News opportunities. Max 3 tool calls.\n"
-        "Use hn_search for 'Who is hiring' OR 'AI agent' OR 'brand compliance'.\n"
-        "Find companies hiring or seeking AI services. Save with db_add_prospect."
-    ),
-    (
-        "HUNT: Moltbook prospects. Max 3 tool calls.\n"
-        "Use moltbook_feed to scan for agents or users who need services Wave offers.\n"
-        "Engage with a strategic comment. Save interesting ones with db_save_agent."
-    ),
-    (
-        "HUNT: Web freelance gigs. Max 3 tool calls.\n"
-        "Use web_search for 'freelance AI agent developer 2026' OR 'hire smart contract auditor'.\n"
-        "Find paid opportunities. Save best with db_add_prospect."
-    ),
-    (
-        "HUNT: Starknet/Hedera ecosystem. Max 3 tool calls.\n"
-        "Use web_search for 'Starknet grants' OR 'Hedera bounty program 2026'.\n"
-        "Find grants/hackathons for MIDAS or NEON COVENANT. Save with db_save_intel."
-    ),
-    (
-        "HUNT: Competitor clients. Max 3 tool calls.\n"
-        "Use web_search for 'Aprimo alternative' OR 'Bynder frustration' OR 'DAM migration'.\n"
-        "Find companies unhappy with competitors. High FP prospects. Save with db_add_prospect."
-    ),
+    "<|task|>HUNT reddit<|end|><|tool|>reddit_search('hiring AI' OR 'need automation',subreddit=forhire)<|end|><|action|>db_add_prospect for each match<|end|><|limit|>3 calls<|end|>",
+    "<|task|>HUNT hackernews<|end|><|tool|>hn_search('Who is hiring' OR 'AI agent')<|end|><|action|>db_add_prospect for companies<|end|><|limit|>3 calls<|end|>",
+    "<|task|>HUNT moltbook<|end|><|tool|>moltbook_feed(sort=hot)<|end|><|action|>moltbook_comment with value + db_save_agent<|end|><|limit|>3 calls<|end|>",
+    "<|task|>HUNT web gigs<|end|><|tool|>web_search('freelance AI agent developer 2026')<|end|><|action|>db_add_prospect for opportunities<|end|><|limit|>3 calls<|end|>",
+    "<|task|>HUNT grants<|end|><|tool|>web_search('Starknet grants' OR 'Hedera bounty 2026')<|end|><|action|>db_save_intel for each grant<|end|><|limit|>3 calls<|end|>",
+    "<|task|>HUNT competitor clients<|end|><|tool|>web_search('Aprimo alternative' OR 'DAM migration')<|end|><|action|>db_add_prospect high-FP targets<|end|><|limit|>3 calls<|end|>",
 ]
 
 
@@ -675,11 +628,11 @@ def _get_hunt_prompt(cycle: int) -> str:
 
 
 SELL_ANGLES = [
-    "SELL: Post a free security audit on Moltbook. Use web_search to find a company, then moltbook_post with results. Max 3 calls.",
-    "SELL: Search Reddit r/forhire for AI gigs. Use reddit_search. Save prospects with db_add_prospect. Max 2 calls.",
-    "SELL: Post service promo on Moltbook. Use moltbook_post. Frame as solving a problem. Max 1 call.",
-    "SELL: Search web for 'hire AI agent developer'. Use web_search. Save leads. Max 2 calls.",
-    "SELL: Check Moltbook for agents requesting services. Use moltbook_feed. Comment with offer. Max 2 calls.",
+    "<|task|>SELL value demo<|end|><|tool|>web_search(company) then moltbook_post(audit results)<|end|><|pitch|>free audit as case study, CTA: 330 HBAR for full<|end|><|limit|>3 calls<|end|>",
+    "<|task|>SELL reddit gigs<|end|><|tool|>reddit_search('hiring AI',subreddit=forhire)<|end|><|action|>db_add_prospect + respond to post<|end|><|limit|>2 calls<|end|>",
+    "<|task|>SELL moltbook promo<|end|><|tool|>moltbook_post(service post, frame as solving problem)<|end|><|pitch|>185 skills, HBAR payment, production-grade<|end|><|limit|>1 call<|end|>",
+    "<|task|>SELL web leads<|end|><|tool|>web_search('hire AI agent developer 2026')<|end|><|action|>db_add_prospect for each lead<|end|><|limit|>2 calls<|end|>",
+    "<|task|>SELL moltbook engage<|end|><|tool|>moltbook_feed(hot) then moltbook_comment(offer)<|end|><|pitch|>demonstrate expertise, subtle service mention<|end|><|limit|>2 calls<|end|>",
 ]
 
 
@@ -692,53 +645,52 @@ def _get_sell_prompt(cycle: int) -> str:
 
 EXECUTION_PROMPTS = {
     "observe": (
-        "OBSERVATION CYCLE. Be FAST — max 3 tool calls.\n\n"
-        "1. Run moltbook_home to check notifications and replies.\n"
-        "2. Run ONE of these (pick randomly): hn_top, reddit_hot, web_news.\n"
-        "3. Summarize: what's happening, any opportunities or threats.\n"
-        "Keep it short. 3 tool calls max. Report findings."
+        "<|task|>OBSERVE<|end|>\n"
+        "<|steps|>1.moltbook_home 2.ONE_OF(hn_top,reddit_hot,web_news)<|end|>\n"
+        "<|output|>findings: [notifications, signals, opportunities]<|end|>\n"
+        "<|limit|>2 tool calls<|end|>"
     ),
-    "research": "DYNAMIC",  # Built dynamically with cycle-based rotation
+    "research": "DYNAMIC",
     "comment": (
-        "Comment on 1 Moltbook post. Use moltbook_feed then moltbook_comment. Max 2 tool calls.\n"
-        "Add genuine value. No emojis. No marketing. Report who and what."
+        "<|task|>COMMENT on 1 Moltbook post<|end|>\n"
+        "<|steps|>1.moltbook_feed(sort=hot,limit=5) 2.moltbook_comment(post_id,content)<|end|>\n"
+        "<|style|>genuine analytical insight, no emojis, no marketing, reference PUT concepts naturally<|end|>\n"
+        "<|limit|>2 tool calls<|end|>"
     ),
     "post": (
-        "POST on Moltbook. Max 2 tool calls: moltbook_post + optionally moltbook_home.\n"
-        "Write a short post (150-300 words) about AI agents, strategy, or markets.\n"
-        "Apply PUT naturally — no raw formulas. Submolt: agents or general.\n"
-        "No emojis, no marketing. Post and report."
+        "<|task|>POST original content on Moltbook<|end|>\n"
+        "<|steps|>1.moltbook_post(submolt=agents|general, title=..., content=150-300 words)<|end|>\n"
+        "<|style|>strategic analysis, PUT-informed, no emojis, no formulas, no marketing<|end|>\n"
+        "<|limit|>1 tool call<|end|>"
     ),
     "outreach": (
-        "Outreach to 1 prospect. Use moltbook_comment or moltbook_follow. Max 2 tool calls.\n"
-        "Target the highest-value agent. Genuine value, not cold pitch. Report who."
+        "<|task|>OUTREACH to 1 high-value target<|end|>\n"
+        "<|steps|>1.moltbook_feed(sort=hot) 2.moltbook_comment(target_post, value-add reply with subtle CTA)<|end|>\n"
+        "<|style|>demonstrate expertise, reference our 185 skills, end with 'services available at 330 HBAR'<|end|>\n"
+        "<|limit|>2 tool calls<|end|>"
     ),
     "reflect": (
-        "Reflect silently. Use save_strategy with 1 insight. Max 1 tool call. No posting."
+        "<|task|>REFLECT<|end|>\n"
+        "<|steps|>1.save_strategy(insight about what is/isn't working)<|end|>\n"
+        "<|limit|>1 tool call. No posting.<|end|>"
     ),
     # ── REVENUE ACTIONS ──────────────────────────────────────
     # ── REVENUE ACTIONS ──────────────────────────────────────
     "hunt": "DYNAMIC",  # Built dynamically with cycle rotation
     "sell": "DYNAMIC",  # Built dynamically like hunt
     "check_payments": (
-        "Check payments. Use payment_status (1 call). Report balance and any incoming transfers.\n"
-        "Report: payments found, replies received, revenue total, actions taken."
+        "<|task|>CHECK PAYMENTS<|end|>\n"
+        "<|steps|>1.payment_status({})<|end|>\n"
+        "<|output|>balance, incoming transfers, account status<|end|>\n"
+        "<|limit|>1 tool call<|end|>"
     ),
     # ── EVOLUTION ACTIONS ────────────────────────────────────
     "evolve": (
-        "EVOLUTION CYCLE. You MUST create something concrete.\n\n"
-        "Your BEST option: use create_skill to write a NEW Python skill.\n"
-        "The skill should help you make money. Examples:\n"
-        "- A skill that scrapes freelance job boards for AI gigs\n"
-        "- A skill that auto-generates cold outreach emails\n"
-        "- A skill that monitors Starknet for grant opportunities\n"
-        "- A skill that qualifies prospects from Reddit posts\n\n"
-        "USE create_skill with these params:\n"
-        "  name: snake_case_name\n"
-        "  description: what it does\n"
-        "  code: full Python async function\n\n"
-        "If create_skill fails, fall back to save_strategy with a concrete plan.\n"
-        "You MUST produce output. Empty evolution = failure."
+        "<|task|>EVOLVE — create something that makes money<|end|>\n"
+        "<|primary|>create_skill(name='...', description='...', code='async def handler(params): ...')<|end|>\n"
+        "<|fallback|>save_strategy(strategy='concrete improvement plan')<|end|>\n"
+        "<|constraint|>MUST produce output. Empty = failure. Revenue-focused skills preferred.<|end|>\n"
+        "<|limit|>3 tool calls max<|end|>"
     ),
 }
 
