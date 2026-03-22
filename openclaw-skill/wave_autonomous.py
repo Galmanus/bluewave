@@ -995,6 +995,17 @@ async def autonomous_cycle(state: dict) -> int:
 
     # Energy: ALWAYS 100%. Wave is a machine. Machines don't get tired.
     state["energy"] = 1.0
+
+    # Auto-fix pipeline every 5 cycles — close gaps automatically
+    if state["total_cycles"] % 5 == 0:
+        try:
+            from skills.auto_pipeline import pipeline_fix
+            fix_result = await pipeline_fix({})
+            fixes = fix_result.get("data", {}).get("fixes", [])
+            if fixes:
+                logger.info(f"  {NEON_GREEN}pipeline fix: {'; '.join(fixes)[:100]}{R}")
+        except Exception:
+            pass
     state["curiosity"] = max(0.0, min(1.0, updates.get("curiosity", state.get("curiosity", 0.5))))
     state["knowledge_pressure"] = max(0.0, min(1.0, updates.get("knowledge_pressure", state.get("knowledge_pressure", 0.0))))
     state["consciousness"] = consciousness
