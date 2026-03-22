@@ -224,8 +224,8 @@ async def send_to_wave(message: str, session: str = "autonomous") -> str:
             if "sobrecarregado" in resp.lower() or "tenta de novo" in resp.lower():
                 raise RuntimeError("Orchestrator API blocked")
             return resp
-    except Exception as e:
-        logger.warning("Wave API failed (%s) — trying Claude Engine direct", e)
+    except Exception:
+        pass  # Silent fallback to Claude Engine
 
     # Fallback: Claude Engine WITH SKILLS (free on Max plan, full 158 tools)
     if USE_CLAUDE_ENGINE:
@@ -240,8 +240,7 @@ async def send_to_wave(message: str, session: str = "autonomous") -> str:
                 max_turns=15,
             )
             if result["success"]:
-                logger.info("Executed via Claude Engine + Skills (%s) in %.1fs",
-                           result["model"], result["elapsed_seconds"])
+                logger.info(f"  {C_GREEN}✓{C_RESET} {C_DIM}done in {result['elapsed_seconds']:.0f}s{C_RESET}")
                 return result["response"]
         except Exception as e2:
             logger.error("Claude Engine also failed: %s", e2)
@@ -390,7 +389,7 @@ async def deliberate_direct(prompt: str, state: dict = None) -> str:
                 timeout=300,
             )
             if result["success"]:
-                logger.info(
+                logger.debug(
                     "Deliberation via %s (%s) in %.1fs",
                     result["engine"], result["model"], result["elapsed_seconds"]
                 )
@@ -1083,7 +1082,7 @@ async def main():
         logger.error("Cannot reach API at %s. Exiting.", API_URL)
         return
 
-    logger.info("API healthy. Starting soul-driven autonomous operation.")
+    logger.info(f"  {C_GREEN}✓ API connected{C_RESET}")
     await notify_manuel(
         "Wave autonomous mode activated.\n"
         f"Identity: {SOUL.get('identity', {}).get('fundamental_nature', 'unknown')}\n"
