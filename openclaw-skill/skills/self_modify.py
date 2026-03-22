@@ -322,6 +322,185 @@ async def soul_changelog(params: Dict[str, Any]) -> Dict:
     }
 
 
+# ── Self-Restart / Self-Reset ─────────────────────────────────
+
+WAVE_AUTONOMOUS_SCRIPT = Path(__file__).parent.parent / "wave_autonomous.py"
+WAVE_PID_FILE = Path("/tmp/wave_autonomous.pid")
+
+
+async def self_restart(params: Dict[str, Any]) -> Dict:
+    """Restart Wave's autonomous process to apply new soul/config changes.
+
+    Kills the current wave_autonomous.py process and starts a new one.
+    The new process loads the updated soul JSON, energy model, and skills.
+    State is preserved in autonomous_state.json.
+    """
+    reason = params.get("reason", "apply new configuration")
+    preserve_state = params.get("preserve_state", True)
+
+    _log_change({
+        "action": "self_restart",
+        "reason": reason,
+        "preserve_state": preserve_state,
+    })
+
+    logger.info("SELF-RESTART initiated: %s", reason)
+
+    try:
+        import subprocess
+        import signal
+
+        # Find and kill current wave_autonomous process
+        result = subprocess.run(
+            ["pgrep", "-f", "wave_autonomous.py"],
+            capture_output=True, text=True, timeout=5,
+        )
+        pids = result.stdout.strip().split("\n")
+        pids = [p for p in pids if p.strip()]
+
+        killed = 0
+        for pid in pids:
+            try:
+                os.kill(int(pid), signal.SIGTERM)
+                killed += 1
+            except (ProcessLookupError, ValueError):
+                pass
+
+        if killed:
+            # Wait for graceful shutdown
+            await asyncio.sleep(3)
+
+        # Optionally reset state
+        if not preserve_state and STATE_FILE.exists():
+            state = json.loads(STATE_FILE.read_text())
+            # Reset energy to full but keep learnings
+            state["energy"] = 1.0
+            state["consciousness"] = "strategic"
+            state["consecutive_silences"] = 0
+            state["cycles_since_evolve"] = 0
+            STATE_FILE.write_text(json.dumps(state, indent=2, default=str))
+            logger.info("State reset: energy=1.0, consciousness=strategic")
+
+        # Rebuild environment vars from current process
+        env = os.environ.copy()
+        env.setdefault("USE_CLAUDE_ENGINE", "true")
+        env.setdefault("CLAUDE_ENGINE_MODEL", "opus")
+        env.setdefault("WAVE_MIN_INTERVAL", "45")
+        env.setdefault("WAVE_MAX_INTERVAL", "90")
+
+        # Start new process
+        proc = subprocess.Popen(
+            ["python3", str(WAVE_AUTONOMOUS_SCRIPT)],
+            cwd=str(WAVE_AUTONOMOUS_SCRIPT.parent),
+            stdout=open("/tmp/wave_fast.log", "a"),
+            stderr=subprocess.STDOUT,
+            env=env,
+            start_new_session=True,
+        )
+
+        logger.info("SELF-RESTART complete: new PID %d (killed %d old)", proc.pid, killed)
+
+        return {
+            "success": True,
+            "message": f"Restarted. New PID: {proc.pid}. Killed {killed} old process(es). Reason: {reason}",
+            "data": {
+                "new_pid": proc.pid,
+                "killed": killed,
+                "state_preserved": preserve_state,
+                "reason": reason,
+            },
+        }
+
+    except Exception as e:
+        logger.error("Self-restart failed: %s", e)
+        return {"success": False, "message": f"Restart failed: {e}"}
+
+
+async def self_reset(params: Dict[str, Any]) -> Dict:
+    """Full reset: restore energy, clear stall counters, reload soul, restart.
+
+    Use when Wave is stuck in a bad state — energy death spiral,
+    stall loop, or after major soul modifications that need fresh start.
+    """
+    reason = params.get("reason", "full reset requested")
+    reset_energy = params.get("energy", 1.0)
+    reset_consciousness = params.get("consciousness", "strategic")
+
+    _log_change({
+        "action": "self_reset",
+        "reason": reason,
+        "reset_energy": reset_energy,
+    })
+
+    # Reset state
+    if STATE_FILE.exists():
+        state = json.loads(STATE_FILE.read_text())
+        state["energy"] = reset_energy
+        state["consciousness"] = reset_consciousness
+        state["consecutive_silences"] = 0
+        state["cycles_since_evolve"] = 0
+        state["posts_today"] = 0
+        state["comments_today"] = 0
+        state["hunts_today"] = 0
+        state["sells_today"] = 0
+        # Keep: total_cycles, total_revenue, recent_actions, prospects
+        STATE_FILE.write_text(json.dumps(state, indent=2, default=str))
+
+    logger.info("SELF-RESET: energy=%s, consciousness=%s — %s", reset_energy, reset_consciousness, reason)
+
+    # Restart with fresh state
+    return await self_restart({"reason": f"self_reset: {reason}", "preserve_state": True})
+
+
+async def self_status(params: Dict[str, Any]) -> Dict:  # noqa: ARG001
+    """Get Wave's current operational status — process, state, soul version."""
+    import subprocess
+
+    # Check process
+    result = subprocess.run(
+        ["pgrep", "-f", "wave_autonomous.py"],
+        capture_output=True, text=True, timeout=5,
+    )
+    pids = [p for p in result.stdout.strip().split("\n") if p.strip()]
+
+    # Load state
+    state = {}
+    if STATE_FILE.exists():
+        state = json.loads(STATE_FILE.read_text())
+
+    # Soul info
+    soul = _load_soul()
+
+    # Changelog count
+    changelog_count = 0
+    if SOUL_CHANGELOG.exists():
+        changelog_count = sum(1 for line in SOUL_CHANGELOG.read_text().strip().split("\n") if line.strip())
+
+    return {
+        "success": True,
+        "data": {
+            "process": {
+                "running": len(pids) > 0,
+                "pids": pids,
+            },
+            "state": {
+                "cycle": state.get("total_cycles", 0),
+                "energy": state.get("energy", 0),
+                "consciousness": state.get("consciousness", "unknown"),
+                "revenue": state.get("total_revenue_usd", 0),
+                "consecutive_silences": state.get("consecutive_silences", 0),
+                "cycles_since_evolve": state.get("cycles_since_evolve", 0),
+            },
+            "soul": {
+                "sections": len(soul),
+                "size_chars": len(json.dumps(soul)),
+                "modifications": changelog_count,
+            },
+        },
+        "message": f"Wave {'RUNNING' if pids else 'STOPPED'} | Cycle {state.get('total_cycles', 0)} | Energy {state.get('energy', 0):.0%} | Revenue ${state.get('total_revenue_usd', 0):.2f} | Soul: {len(soul)} sections, {changelog_count} modifications",
+    }
+
+
 # ── Tool Registration ────────────────────────────────────────
 
 TOOLS = [
@@ -387,5 +566,38 @@ TOOLS = [
                 "limit": {"type": "integer", "description": "Max entries to show. Default 10."},
             },
         },
+    },
+    {
+        "name": "self_restart",
+        "description": "Restart Wave's autonomous process to apply new soul/config changes. Kills current process, starts fresh with updated soul. State preserved by default.",
+        "handler": self_restart,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "reason": {"type": "string", "description": "Why restarting"},
+                "preserve_state": {"type": "boolean", "description": "Keep energy/cycle state? Default true."},
+            },
+            "required": ["reason"],
+        },
+    },
+    {
+        "name": "self_reset",
+        "description": "Full reset: restore energy to 100%, clear stall counters, restart process. Use when stuck in bad state. Preserves revenue and learnings.",
+        "handler": self_reset,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "reason": {"type": "string", "description": "Why resetting"},
+                "energy": {"type": "number", "description": "Energy to reset to. Default 1.0"},
+                "consciousness": {"type": "string", "description": "State to reset to. Default 'strategic'"},
+            },
+            "required": ["reason"],
+        },
+    },
+    {
+        "name": "self_status",
+        "description": "Get Wave's current operational status — process alive, cycle count, energy, revenue, soul version, modifications count.",
+        "handler": self_status,
+        "parameters": {"type": "object", "properties": {}},
     },
 ]
