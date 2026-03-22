@@ -84,6 +84,7 @@ MAX_INTERVAL = int(os.environ.get("WAVE_MAX_INTERVAL", "1800"))
 
 SOUL_PATH = Path(__file__).parent / "prompts" / "autonomous_soul.json"
 STATE_FILE = Path(__file__).parent / "memory" / "autonomous_state.json"
+AGENTS_DIR = Path("/home/manuel/bluewave/agents")
 
 
 # ── Load Soul ────────────────────────────────────────────────
@@ -218,6 +219,68 @@ async def auto_commit(action: str, reasoning: str, result: str):
 
 
 # ── API ──────────────────────────────────────────────────────
+
+# ── Agent Tree Visualization ──────────────────────────────────
+
+def _show_agent_tree():
+    """Display the agent hierarchy in cyberpunk terminal style."""
+    logger.info(f"""
+{NEON_CYAN}    AGENT NETWORK{R}
+{DARK}    ──────────────────────────────────────{R}""")
+
+    # Wave (root)
+    logger.info(f"    {NEON_CYAN}{B}WAVE{R} {DARK}// root // 185 skills // opus core{R}")
+    logger.info(f"    {DARK}|{R}")
+
+    # Scan child agents
+    if AGENTS_DIR.exists():
+        children = sorted([d for d in AGENTS_DIR.iterdir() if d.is_dir() and (d / "soul.json").exists()])
+
+        for i, child_dir in enumerate(children):
+            is_last = i == len(children) - 1
+            connector = "'" if is_last else "|"
+            branch = "`--" if is_last else "|--"
+
+            try:
+                soul = json.loads((child_dir / "soul.json").read_text())
+                name = child_dir.name
+                purpose = soul.get("identity", {}).get("fundamental_nature", "")[:50]
+
+                # Check if process is running
+                pid_file = child_dir / "pid"
+                running = False
+                if pid_file.exists():
+                    try:
+                        pid = int(pid_file.read_text().strip())
+                        os.kill(pid, 0)
+                        running = True
+                    except (ProcessLookupError, ValueError):
+                        pass
+
+                status = f"{NEON_GREEN}LIVE{R}" if running else f"{NEON_RED}IDLE{R}"
+
+                logger.info(f"    {DARK}{branch}{R} {NEON_PURPLE}{B}{name}{R} [{status}]")
+                logger.info(f"    {DARK}{connector}   {purpose}{R}")
+
+                # Check for grandchildren
+                grandchildren_dir = child_dir / "agents"
+                if grandchildren_dir.exists():
+                    grandchildren = sorted([d for d in grandchildren_dir.iterdir() if d.is_dir()])
+                    for j, gc_dir in enumerate(grandchildren):
+                        gc_last = j == len(grandchildren) - 1
+                        gc_branch = "    `--" if gc_last else "    |--"
+                        gc_name = gc_dir.name
+                        logger.info(f"    {DARK}{connector} {gc_branch}{R} {NEON_ORANGE}{gc_name}{R}")
+
+                logger.info(f"    {DARK}{connector}{R}")
+
+            except Exception:
+                logger.info(f"    {DARK}{branch}{R} {NEON_RED}{child_dir.name}{R} {DARK}[error]{R}")
+    else:
+        logger.info(f"    {DARK}   (no children yet){R}")
+
+    logger.info(f"{DARK}    ──────────────────────────────────────{R}")
+
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 DELIBERATION_MODEL = os.environ.get("WAVE_DELIBERATION_MODEL", "claude-haiku-4-5-20251001")
@@ -996,7 +1059,7 @@ async def autonomous_cycle(state: dict) -> int:
     # Energy: ALWAYS 100%. Wave is a machine. Machines don't get tired.
     state["energy"] = 1.0
 
-    # Auto-fix pipeline every 5 cycles — close gaps automatically
+    # Auto-fix pipeline every 5 cycles
     if state["total_cycles"] % 5 == 0:
         try:
             from skills.auto_pipeline import pipeline_fix
@@ -1006,6 +1069,10 @@ async def autonomous_cycle(state: dict) -> int:
                 logger.info(f"  {NEON_GREEN}pipeline fix: {'; '.join(fixes)[:100]}{R}")
         except Exception:
             pass
+
+    # Show agent tree every 20 cycles or after evolve
+    if state["total_cycles"] % 20 == 0 or action == "evolve":
+        _show_agent_tree()
     state["curiosity"] = max(0.0, min(1.0, updates.get("curiosity", state.get("curiosity", 0.5))))
     state["knowledge_pressure"] = max(0.0, min(1.0, updates.get("knowledge_pressure", state.get("knowledge_pressure", 0.0))))
     state["consciousness"] = consciousness
@@ -1166,6 +1233,7 @@ async def main():
         return
 
     logger.info(f"  {NEON_GREEN}api connected{R}")
+    _show_agent_tree()
     await notify_manuel(
         "Wave autonomous mode activated.\n"
         f"Identity: {SOUL.get('identity', {}).get('fundamental_nature', 'unknown')}\n"
