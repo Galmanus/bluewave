@@ -82,17 +82,30 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 MIN_INTERVAL = int(os.environ.get("WAVE_MIN_INTERVAL", "300"))
 MAX_INTERVAL = int(os.environ.get("WAVE_MAX_INTERVAL", "1800"))
 
-SOUL_PATH = Path(__file__).parent / "prompts" / "autonomous_soul.json"
+SOUL_PATH_JSON = Path(__file__).parent / "prompts" / "autonomous_soul.json"
+SOUL_PATH_SSL = Path(__file__).parent / "prompts" / "autonomous_soul.ssl"
 STATE_FILE = Path(__file__).parent / "memory" / "autonomous_state.json"
 AGENTS_DIR = Path("/home/manuel/bluewave/agents")
 
 
-# ── Load Soul ────────────────────────────────────────────────
+# ── Load Soul (SSL-first, JSON fallback) ─────────────────────
 
 def load_soul() -> dict:
-    if SOUL_PATH.exists():
-        return json.loads(SOUL_PATH.read_text(encoding="utf-8"))
-    logger.error("autonomous_soul.json not found — running without soul")
+    # Prefer SSL (70% fewer tokens, LLM-native)
+    if SOUL_PATH_SSL.exists():
+        try:
+            from ssl_parser import parse_ssl
+            soul = parse_ssl(str(SOUL_PATH_SSL))
+            logger.info(f"Soul loaded from SSL ({SOUL_PATH_SSL.stat().st_size // 1024}KB)")
+            return soul
+        except Exception as e:
+            logger.warning(f"SSL parse failed ({e}), falling back to JSON")
+    # Fallback to JSON
+    if SOUL_PATH_JSON.exists():
+        soul = json.loads(SOUL_PATH_JSON.read_text(encoding="utf-8"))
+        logger.info(f"Soul loaded from JSON ({SOUL_PATH_JSON.stat().st_size // 1024}KB)")
+        return soul
+    logger.error("No soul found (.ssl or .json) — running without soul")
     return {}
 
 SOUL = load_soul()
