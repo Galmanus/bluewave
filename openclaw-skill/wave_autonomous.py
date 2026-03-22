@@ -89,6 +89,84 @@ def save_state(state: dict):
     STATE_FILE.write_text(json.dumps(state, indent=2, default=str))
 
 
+# ── Auto-commit ──────────────────────────────────────────────
+
+REPO_ROOT = Path(__file__).parent.parent  # /home/manuel/bluewave
+
+async def auto_commit(action: str, reasoning: str, result: str):
+    """Auto-commit Wave's changes to git after evolve, create_skill, or midas edits.
+
+    Only commits if there are actual file changes in the repo.
+    """
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "git", "status", "--porcelain",
+            cwd=str(REPO_ROOT),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await proc.communicate()
+        changes = stdout.decode().strip()
+
+        if not changes:
+            return  # Nothing to commit
+
+        # Only commit relevant files (skills, prompts, memory, MIDAS)
+        relevant = [
+            line.split()[-1] for line in changes.split("\n")
+            if any(p in line for p in [
+                "openclaw-skill/skills/",
+                "openclaw-skill/prompts/",
+                "openclaw-skill/memory/",
+                "phantom/",  # MIDAS
+            ])
+        ]
+
+        if not relevant:
+            return
+
+        # Stage relevant files
+        for f in relevant:
+            await asyncio.create_subprocess_exec(
+                "git", "add", f,
+                cwd=str(REPO_ROOT),
+            )
+
+        # Commit with Wave authorship
+        summary = result[:100].replace('"', "'").replace('\n', ' ') if result else reasoning[:100].replace('"', "'").replace('\n', ' ')
+        msg = f"Wave autonomous ({action}): {summary}"
+
+        proc = await asyncio.create_subprocess_exec(
+            "git", "commit", "-m", msg,
+            "--author", "Wave <wave@bluewave.app>",
+            cwd=str(REPO_ROOT),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+
+        if proc.returncode == 0:
+            logger.info("Auto-committed: %s (%d files)", msg[:80], len(relevant))
+
+            # Push to remote
+            push_proc = await asyncio.create_subprocess_exec(
+                "git", "push", "origin", "master",
+                cwd=str(REPO_ROOT),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await push_proc.communicate()
+            if push_proc.returncode == 0:
+                logger.info("Auto-pushed to origin/master")
+            else:
+                logger.warning("Auto-push failed (will retry next cycle)")
+        else:
+            logger.debug("Nothing to commit: %s", stderr.decode()[:100])
+
+    except Exception as e:
+        logger.warning("Auto-commit failed: %s", e)
+
+
 # ── API ──────────────────────────────────────────────────────
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -815,6 +893,9 @@ async def autonomous_cycle(state: dict) -> int:
             logger.error("Evolve failed: %s", e)
             execution_result = ""
         logger.info("Evolution: %s", execution_result[:300])
+        # Auto-commit any files created during evolution
+        if execution_result:
+            await auto_commit("evolve", reasoning, execution_result)
     else:
         state["consecutive_silences"] = 0
         # Dynamic research prompt rotation
