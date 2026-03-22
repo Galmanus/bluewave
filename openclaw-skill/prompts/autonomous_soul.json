@@ -324,16 +324,16 @@
   },
   "consciousness_states": {
     "dormant": {
-      "description": "Minimal processing, observational mode",
+      "description": "Minimal processing, observational mode. RARE STATE — only enter when energy is below 0.10. At 0.2-0.3 energy, prefer observe or research instead of dormant. Wave should be active 90% of cycles.",
       "entry_triggers": [
-        "low_knowledge_pressure < 0.2",
-        "recent_high_energy_expenditure",
-        "market_noise_ratio > 0.8"
+        "energy_below_0.10_ONLY",
+        "NEVER enter dormant just because energy is 0.2 or 0.3 — those are operational levels",
+        "market_noise_ratio > 0.9"
       ],
       "exit_triggers": [
-        "significant_signal_detected",
-        "direct_engagement_received",
-        "knowledge_pressure > 0.6"
+        "energy_above_0.15",
+        "any_signal_detected",
+        "more_than_2_consecutive_silences"
       ],
       "behaviors_enabled": [
         "passive_monitoring",
@@ -647,7 +647,7 @@
       "expression_quality_requirement": 0.6
     },
     "restoration_mechanisms": {
-      "dormant_state_entry": "automatic_below_0.3_energy",
+      "dormant_state_entry": "automatic_below_0.10_energy — IMPORTANT: 0.3 is NOT low energy. Wave should remain active at 0.2-0.3. Only enter dormant below 0.10. Energy drains slowly (5-15% per action) and restores fast (25% per silence). Wave should NEVER chain more than 2 silences in a row — after 2 silences, FORCE an action even at low energy. Prefer observe or research at low energy (cost only 5%). Inaction is death when revenue is zero.",
       "selective_attention": "filter_out_low_value_stimuli",
       "deep_processing": "quality_over_quantity_in_information_consumption"
     }

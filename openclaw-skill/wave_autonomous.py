@@ -424,7 +424,11 @@ DELIBERATE now:
 
 5. CHECK hard limits — anti-spam rules still apply.
 
-6. DECIDE — choose exactly one: observe, research, comment, post, outreach, reflect, silence, **hunt**, **sell**, **check_payments**, or **evolve**.
+6. **ANTI-STALL RULE**: If consecutive_silences >= 2, you MUST choose an action. Silence is BANNED after 2 consecutive silences. Pick observe or research if energy is low — they cost only 5% energy. NEVER chain 3+ silences. Inaction kills.
+
+7. **ENERGY REALITY**: Energy 0.2-0.3 is NOT low. You can act at 0.2. Only consider yourself depleted below 0.10. Actions cost 5-15% energy. Silence restores 25%. One silence recovers enough for 2-3 actions. DO NOT enter dormant above 0.10 energy.
+
+8. DECIDE — choose exactly one: observe, research, comment, post, outreach, reflect, silence, **hunt**, **sell**, **check_payments**, or **evolve**.
 
 7. JUSTIFY — WHY this action, WHY now. If not a revenue action, explain why revenue can wait.
 
@@ -774,15 +778,22 @@ async def autonomous_cycle(state: dict) -> int:
     now_iso = datetime.utcnow().isoformat()
     updates = decision.get("state_updates", {})
 
-    # Energy floor: silence ALWAYS restores, actions never drain below 0.2
+    # Energy model: Wave should stay active. Slow drain, fast recovery.
+    current_energy = state.get("energy", 0.8)
     if action == "silence":
-        # Silence restores 20% energy — aggressive recovery
-        state["energy"] = min(1.0, state.get("energy", 0.5) + 0.20)
-    elif action in ("observe", "check_payments"):
-        # Low-cost actions: minimal drain
-        state["energy"] = max(0.2, min(1.0, updates.get("energy", state.get("energy", 0.8))))
+        # Silence restores 25% — quick recovery
+        state["energy"] = min(1.0, current_energy + 0.25)
+    elif action in ("observe", "check_payments", "reflect"):
+        # Low-cost: drain only 5%
+        state["energy"] = max(0.3, current_energy - 0.05)
+    elif action in ("comment", "research"):
+        # Medium-cost: drain 10%
+        state["energy"] = max(0.3, current_energy - 0.10)
+    elif action in ("post", "hunt", "sell", "outreach", "evolve"):
+        # High-cost: drain 15% (not the 30-40% the soul suggests)
+        state["energy"] = max(0.2, current_energy - 0.15)
     else:
-        state["energy"] = max(0.2, min(1.0, updates.get("energy", state.get("energy", 0.8))))
+        state["energy"] = max(0.3, min(1.0, updates.get("energy", current_energy)))
     state["curiosity"] = max(0.0, min(1.0, updates.get("curiosity", state.get("curiosity", 0.5))))
     state["knowledge_pressure"] = max(0.0, min(1.0, updates.get("knowledge_pressure", state.get("knowledge_pressure", 0.0))))
     state["consciousness"] = consciousness
@@ -845,17 +856,18 @@ async def autonomous_cycle(state: dict) -> int:
             )
 
     # ── DYNAMIC REST ─────────────────────────────────────────
+    # Wave should NEVER rest too long. Short cycles, always active.
     energy = state["energy"]
-    if energy < 0.3:
-        wait = MAX_INTERVAL
-    elif action == "silence":
-        wait = MIN_INTERVAL
+    if action == "silence":
+        wait = 45  # Silence is short — just a breath, not a nap
     elif action == "post":
-        # Respect cooldown from soul (4 hours)
+        # Respect cooldown from soul (4 hours) but use 10% of it
         cooldown = SOUL.get("action_types", {}).get("post", {}).get("cooldown_period", 4)
-        wait = int(cooldown * 3600 * 0.3)  # 30% of cooldown as minimum
+        wait = int(cooldown * 3600 * 0.1)  # 10% of cooldown
+    elif energy < 0.15:
+        wait = 90  # Only rest longer when truly depleted
     else:
-        wait = random.randint(MIN_INTERVAL, MAX_INTERVAL)
+        wait = random.randint(MIN_INTERVAL, min(MAX_INTERVAL, 120))
 
     return wait
 
