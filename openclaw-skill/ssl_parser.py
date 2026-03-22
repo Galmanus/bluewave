@@ -57,25 +57,66 @@ def _parse_text(text: str, base_dir: Path) -> dict:
             i += 1
             continue
 
-        # @ Section
+        # @ Section — extract name and optional operators (~weight, !cost)
         if stripped.startswith("@") and not stripped.startswith("@include"):
-            section_name = stripped[1:].strip()
+            section_raw = stripped[1:].strip()
+            # Parse: @name ~weight !cost = description
+            sec_match = re.match(r"^(\w+)(?:\s+~([\d.]+))?(?:\s+!([\d.]+))?(?:\s*=\s*(.+))?$", section_raw)
+            if sec_match:
+                section_name = sec_match.group(1)
+                sec_weight = float(sec_match.group(2)) if sec_match.group(2) else None
+                sec_cost = float(sec_match.group(3)) if sec_match.group(3) else None
+                sec_desc = sec_match.group(4).strip() if sec_match.group(4) else None
+            else:
+                # Fallback: take first word as name
+                parts = section_raw.split()
+                section_name = parts[0] if parts else section_raw
+
             current_section = section_name
             current_substate = None
             current_key = None
             if section_name not in result:
                 result[section_name] = {}
+            # Store section-level operators
+            if sec_match:
+                if sec_weight is not None:
+                    result[section_name]["_weight"] = sec_weight
+                if sec_cost is not None:
+                    result[section_name]["_cost"] = sec_cost
+                if sec_desc:
+                    result[section_name]["_description"] = sec_desc
             i += 1
             continue
 
-        # # Substate
+        # # Substate — extract name and optional operators
         if stripped.startswith("#") and current_section is not None:
-            substate_name = stripped[1:].strip()
+            sub_raw = stripped[1:].strip()
+            sub_match = re.match(r"^(\w+)(?:\s+~([\d.]+))?(?:\s+!([\d.]+))?(?:\s+~([\d.]+[hmsd]))?(?:\s*=\s*(.+))?$", sub_raw)
+            if sub_match:
+                substate_name = sub_match.group(1)
+                sub_weight = float(sub_match.group(2)) if sub_match.group(2) else None
+                sub_cost = float(sub_match.group(3)) if sub_match.group(3) else None
+                sub_cooldown = sub_match.group(4) if sub_match.group(4) else None
+                sub_desc = sub_match.group(5).strip() if sub_match.group(5) else None
+            else:
+                parts = sub_raw.split()
+                substate_name = parts[0] if parts else sub_raw
+                sub_weight = sub_cost = sub_cooldown = sub_desc = None
+
             current_substate = substate_name
             current_key = None
             target = result[current_section]
             if isinstance(target, dict):
-                target[substate_name] = {}
+                entry = {}
+                if sub_weight is not None:
+                    entry["weight"] = sub_weight
+                if sub_cost is not None:
+                    entry["energy_cost"] = sub_cost
+                if sub_cooldown:
+                    entry["cooldown"] = sub_cooldown
+                if sub_desc:
+                    entry["description"] = sub_desc
+                target[substate_name] = entry
             i += 1
             continue
 
