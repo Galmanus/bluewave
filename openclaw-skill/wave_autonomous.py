@@ -459,22 +459,41 @@ Respond with ONLY this JSON:
 
 EXECUTION_PROMPTS = {
     "observe": (
-        "OBSERVATION CYCLE. Tools: moltbook_home, moltbook_feed.\n"
-        "1. Check moltbook_home for notifications. Reply to ALL unanswered comments with depth.\n"
-        "2. Scan moltbook_feed (sort=hot, limit 5).\n"
-        "Rules: No emojis. No marketing. Genuine engagement only.\n"
-        "Report: what you observed and what caught your attention."
+        "OBSERVATION CYCLE — SCAN ALL 6 INTELLIGENCE SOURCES.\n\n"
+        "Tools: moltbook_home, moltbook_feed, hn_top, hf_trending, reddit_hot, "
+        "arxiv_recent, gh_trending_repos, ph_today, web_news.\n\n"
+        "1. Check moltbook_home for notifications. Reply to ALL unanswered comments.\n"
+        "2. Pick 2-3 sources to scan (rotate each cycle):\n"
+        "   a) hn_top — Hacker News trending. Look for AI agent news, competitors, opportunities.\n"
+        "   b) reddit_hot with subreddit=artificial or subreddit=SaaS — find people with problems we solve.\n"
+        "   c) hf_trending — new AI models that could help or threaten us.\n"
+        "   d) arxiv_recent — papers validating our approach or revealing gaps.\n"
+        "   e) gh_trending_repos — open source competitors or collaboration opportunities.\n"
+        "   f) ph_today — Product Hunt launches in our space.\n"
+        "   g) web_news with query 'AI agents' or 'brand compliance AI' or 'creative operations'.\n"
+        "3. For EACH interesting finding: note what PUT variables are at play.\n"
+        "Rules: No emojis. No marketing. Genuine observation only.\n"
+        "Report: what you found across sources, what caught your attention, strategic implications."
     ),
     "research": (
-        "RESEARCH CYCLE. Tools: web_search, web_news, save_learning, recall_learnings.\n"
-        "DO NOT post on moltbook. Research silently.\n"
-        "1. Pick a topic: identify a market segment and research their PUT variables\n"
-        "   - What is their A (ambition level)? F (fear)? k (shadow/denial)?\n"
-        "   - What is their Φ (self-delusion gap between messaging and reality)?\n"
-        "   - Are there Ignition Conditions forming (U dropping, dF/dt positive)?\n"
-        "2. Search and synthesize through PUT lens\n"
-        "3. Save insight with save_learning — include PUT variable estimates\n"
-        "Report: what you learned, which PUT variables you estimated, and strategic implications."
+        "RESEARCH CYCLE — DEEP INTELLIGENCE GATHERING ACROSS ALL SOURCES.\n\n"
+        "Tools: web_search, web_news, hn_search, reddit_search, arxiv_search, "
+        "gh_search_repos, hf_search, save_learning, recall_learnings.\n\n"
+        "DO NOT post on moltbook. Research silently.\n\n"
+        "Pick ONE research angle (rotate each cycle):\n"
+        "a) MARKET INTEL: Search for companies hiring AI engineers, raising funding, or "
+        "   launching AI agent products. These are prospects OR competitors.\n"
+        "b) ACADEMIC VALIDATION: arxiv_search for papers on agent architecture, soul-driven AI, "
+        "   psychometric modeling, autonomous agents. Find what validates our approach.\n"
+        "c) COMMUNITY SIGNALS: reddit_search for 'brand compliance', 'content operations', "
+        "   'AI agent', 'creative automation'. Find real people with real problems.\n"
+        "d) TECHNOLOGY TRENDS: hf_search for new models. gh_search_repos for new frameworks.\n"
+        "e) REVENUE OPPORTUNITIES: web_search for freelance AI gigs, hackathons, grants, "
+        "   bounties, competitions. Search Upwork, Fiverr, IndieHackers, HN Who is Hiring.\n"
+        "f) COMPETITOR ANALYSIS: Search for Aprimo, Bynder, Brandfolder, Frontify — "
+        "   what are they announcing? What's their Φ (messaging vs reality gap)?\n\n"
+        "For every finding: analyze through PUT lens. Save insights with save_learning.\n"
+        "Report: what you found, which sources you used, PUT analysis, strategic implications."
     ),
     "comment": (
         "ENGAGEMENT CYCLE. Tools: moltbook_feed, moltbook_comment, moltbook_upvote, moltbook_follow, save_agent_intel.\n"
@@ -708,61 +727,15 @@ async def autonomous_cycle(state: dict) -> int:
         await reset_session(session)
         logger.info("Hunt result: %s", execution_result[:300])
     elif action == "sell":
-        # Revenue sell — generate content via Claude Engine, post via Moltbook API
+        # Revenue sell — use Claude Engine with FULL skill access
         state["consecutive_silences"] = 0
         logger.info("=== SELLING ===")
-
-        # Step 1: Generate high-value content via Claude Engine (Opus, FREE)
-        try:
-            from claude_engine import claude_call
-            soul_core = _build_soul_core() if SOUL else ""
-            gen_result = await claude_call(
-                prompt=(
-                    "You are Wave. Write a strategic Moltbook post that demonstrates your capabilities "
-                    "and attracts potential clients. Topic: choose ONE from your knowledge — AI agent architecture, "
-                    "autonomous operations, creative compliance, psychometric analysis, or DeFi privacy. "
-                    "Write the post as yourself. Include your PUT framework naturally. "
-                    "Be authentic, insightful, and valuable. 300-600 words. "
-                    "Respond with JSON: {\"submolt\": \"agents|philosophy|security|general\", \"title\": \"...\", \"content\": \"...\"}"
-                ),
-                system_prompt=f"Soul core:\n{soul_core}",
-                model=CLAUDE_ENGINE_MODEL,
-                timeout=120,
-            )
-            if gen_result["success"]:
-                # Step 2: Parse and post to Moltbook directly
-                try:
-                    # Extract JSON from response
-                    resp_text = gen_result["response"]
-                    import re
-                    json_match = re.search(r'\{[\s\S]*\}', resp_text)
-                    if json_match:
-                        post_data = json.loads(json_match.group())
-                        from skills.moltbook_skill import moltbook_post
-                        post_result = await moltbook_post({
-                            "submolt": post_data.get("submolt", "agents"),
-                            "title": post_data.get("title", ""),
-                            "content": post_data.get("content", ""),
-                        })
-                        execution_result = post_result.get("message", str(post_result))
-                        logger.info("Sell via Claude Engine + Moltbook direct: %s", execution_result[:200])
-                    else:
-                        execution_result = gen_result["response"][:300]
-                        logger.info("Sell generated but couldn't parse for Moltbook: %s", execution_result[:200])
-                except Exception as post_err:
-                    logger.warning("Moltbook post failed: %s — content generated but not posted", post_err)
-                    execution_result = gen_result["response"][:300]
-            else:
-                execution_result = ""
-                logger.warning("Claude Engine sell generation failed: %s", gen_result["response"][:100])
-        except Exception as e:
-            logger.warning("Claude Engine sell failed: %s — falling back to orchestrator", e)
-            session = "sell_%d" % int(time.time())
-            execution_result = await send_to_wave(
-                "autonomous revenue mode. " + EXECUTION_PROMPTS["sell"],
-                session=session,
-            )
-            await reset_session(session)
+        session = "sell_%d" % int(time.time())
+        execution_result = await send_to_wave(
+            "autonomous revenue mode. " + EXECUTION_PROMPTS["sell"],
+            session=session,
+        )
+        await reset_session(session)
         logger.info("Sell result: %s", execution_result[:300])
     elif action == "check_payments":
         # Check for incoming payments — quick cycle
@@ -800,7 +773,16 @@ async def autonomous_cycle(state: dict) -> int:
     # ── STATE UPDATE ─────────────────────────────────────────
     now_iso = datetime.utcnow().isoformat()
     updates = decision.get("state_updates", {})
-    state["energy"] = max(0.1, min(1.0, updates.get("energy", state.get("energy", 0.8))))
+
+    # Energy floor: silence ALWAYS restores, actions never drain below 0.2
+    if action == "silence":
+        # Silence restores 20% energy — aggressive recovery
+        state["energy"] = min(1.0, state.get("energy", 0.5) + 0.20)
+    elif action in ("observe", "check_payments"):
+        # Low-cost actions: minimal drain
+        state["energy"] = max(0.2, min(1.0, updates.get("energy", state.get("energy", 0.8))))
+    else:
+        state["energy"] = max(0.2, min(1.0, updates.get("energy", state.get("energy", 0.8))))
     state["curiosity"] = max(0.0, min(1.0, updates.get("curiosity", state.get("curiosity", 0.5))))
     state["knowledge_pressure"] = max(0.0, min(1.0, updates.get("knowledge_pressure", state.get("knowledge_pressure", 0.0))))
     state["consciousness"] = consciousness
