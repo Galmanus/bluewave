@@ -698,52 +698,59 @@ def _get_sell_prompt(cycle: int) -> str:
 
 EXECUTION_PROMPTS = {
     "observe": (
-        "<|task|>OBSERVE<|end|>\n"
-        "<|steps|>1.moltbook_home 2.ONE_OF(hn_top,reddit_hot,web_news)<|end|>\n"
-        "<|output|>findings: [notifications, signals, opportunities]<|end|>\n"
-        "<|limit|>2 tool calls<|end|>"
+        "OBSERVE: Scan environment for signals and opportunities.\n"
+        "Step 1: moltbook_home — check notifications and engagement\n"
+        "Step 2: Pick ONE of: hn_top, reddit_hot, or web_news\n"
+        "Output: list of notifications, signals, and opportunities found\n"
+        "MAX 2 tool calls. Be concise."
     ),
     "research": "DYNAMIC",
     "comment": (
-        "<|task|>COMMENT on 1 Moltbook post<|end|>\n"
-        "<|steps|>1.moltbook_feed(sort=hot,limit=5) 2.moltbook_comment(post_id,content)<|end|>\n"
-        "<|style|>genuine analytical insight, no emojis, no marketing, reference PUT concepts naturally<|end|>\n"
-        "<|limit|>2 tool calls<|end|>"
+        "COMMENT: Reply to 1 Moltbook post with genuine insight.\n"
+        "Step 1: moltbook_feed sort=hot limit=5\n"
+        "Step 2: Pick post where you have a unique analytical angle\n"
+        "Step 3: moltbook_comment with genuine insight, no emojis, no marketing\n"
+        "MAX 2 tool calls. Return the comment you posted."
     ),
     "post": (
-        "<|task|>POST original content on Moltbook<|end|>\n"
-        "<|steps|>1.moltbook_post(submolt=agents|general, title=..., content=150-300 words)<|end|>\n"
-        "<|style|>strategic analysis, PUT-informed, no emojis, no formulas, no marketing<|end|>\n"
-        "<|limit|>1 tool call<|end|>"
+        "POST: Create 1 original post on Moltbook.\n"
+        "Step 1: moltbook_post in submolt 'agents' or 'general'\n"
+        "Content: 150-300 words, strategic analysis, no emojis, no formulas\n"
+        "Topic: something you learned this cycle or a framework insight\n"
+        "MAX 1 tool call. Return the post title and content."
     ),
     "outreach": (
-        "<|task|>OUTREACH to 1 high-value target<|end|>\n"
-        "<|steps|>1.moltbook_feed(sort=hot) 2.moltbook_comment(target_post, value-add reply with subtle CTA)<|end|>\n"
-        "<|style|>demonstrate expertise, reference our 185 skills, end with 'services available at 330 HBAR'<|end|>\n"
-        "<|limit|>2 tool calls<|end|>"
+        "OUTREACH: Find 1 hot post on Moltbook and reply with genuine value.\n"
+        "Step 1: moltbook_feed sort=hot limit=3\n"
+        "Step 2: Pick the post most relevant to AI agents/operations\n"
+        "Step 3: moltbook_comment with a reply that demonstrates deep expertise\n"
+        "Style: analytical, concise, reference a concrete framework or insight\n"
+        "Do NOT mention pricing. Do NOT self-promote. Pure value-add comment.\n"
+        "MAX 2 tool calls. Return the comment you posted."
     ),
     "reflect": (
-        "<|task|>REFLECT<|end|>\n"
-        "<|steps|>1.save_strategy(insight about what is/isn't working)<|end|>\n"
-        "<|limit|>1 tool call. No posting.<|end|>"
+        "REFLECT: Analyze what's working and what's not.\n"
+        "Step 1: save_strategy with a concrete insight about performance\n"
+        "No posting. No outreach. Internal processing only.\n"
+        "MAX 1 tool call."
     ),
     # ── REVENUE ACTIONS ──────────────────────────────────────
     # ── REVENUE ACTIONS ──────────────────────────────────────
     "hunt": "DYNAMIC",  # Built dynamically with cycle rotation
     "sell": "DYNAMIC",  # Built dynamically like hunt
     "check_payments": (
-        "<|task|>CHECK PAYMENTS<|end|>\n"
-        "<|steps|>1.payment_status({})<|end|>\n"
-        "<|output|>balance, incoming transfers, account status<|end|>\n"
-        "<|limit|>1 tool call<|end|>"
+        "CHECK PAYMENTS: Scan all payment channels.\n"
+        "Step 1: payment_status — check HBAR blockchain and PIX\n"
+        "Output: balance, any incoming transfers, account status\n"
+        "MAX 1 tool call."
     ),
-    # ── EVOLUTION ACTIONS ────────────────────────────────────
     "evolve": (
-        "<|task|>EVOLVE — create something that makes money<|end|>\n"
-        "<|primary|>create_skill(name='...', description='...', code='async def handler(params): ...')<|end|>\n"
-        "<|fallback|>save_strategy(strategy='concrete improvement plan')<|end|>\n"
-        "<|constraint|>MUST produce output. Empty = failure. Revenue-focused skills preferred.<|end|>\n"
-        "<|limit|>3 tool calls max<|end|>"
+        "EVOLVE: Create something that generates revenue.\n"
+        "Option A: create_skill — build a new Python tool\n"
+        "Option B: save_strategy — document a concrete improvement plan\n"
+        "MUST produce tangible output. Empty response = failure.\n"
+        "Focus on revenue-generating capabilities.\n"
+        "MAX 3 tool calls."
     ),
 }
 
@@ -854,7 +861,7 @@ async def autonomous_cycle(state: dict) -> int:
         session = "observe_%d" % int(time.time())
         # Prefix with intent hint so router picks Haiku + moltbook tools only
         execution_result = await send_to_wave(
-            "moltbook_home check notifications and moltbook_feed scan. " + EXECUTION_PROMPTS["observe"],
+            EXECUTION_PROMPTS["observe"],
             session=session,
         )
         await reset_session(session)
@@ -874,7 +881,7 @@ async def autonomous_cycle(state: dict) -> int:
         logger.info(f"{NEON_GREEN}  > sell{R}")
         session = "sell_%d" % int(time.time())
         execution_result = await send_to_wave(
-            "autonomous revenue mode. " + EXECUTION_PROMPTS["sell"],
+            EXECUTION_PROMPTS["sell"],
             session=session,
         )
         await reset_session(session)
@@ -885,7 +892,7 @@ async def autonomous_cycle(state: dict) -> int:
         logger.info(f"{NEON_YELLOW}  > payments{R}")
         session = "payments_%d" % int(time.time())
         execution_result = await send_to_wave(
-            "payment hbar pix check. " + EXECUTION_PROMPTS["check_payments"],
+            EXECUTION_PROMPTS["check_payments"],
             session=session,
         )
         await reset_session(session)
