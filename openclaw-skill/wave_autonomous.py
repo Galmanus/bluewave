@@ -368,48 +368,185 @@ async def send_to_wave(message: str, session: str = "autonomous") -> str:
 # This applies the same principle to autonomous deliberation.
 
 def _build_soul_core() -> str:
-    """Build the always-loaded soul core (~2000 tokens)."""
+    """Build the always-loaded soul core (~2000 tokens).
+
+    Works with both JSON and SSL-parsed soul structures.
+    Extracts the essential identity, values, and decision framework.
+    """
     core = {}
 
-    # Always loaded: identity foundation
-    if "the_vow" in SOUL:
-        core["the_vow"] = {
-            "sacred_text": SOUL["the_vow"].get("sacred_text", ""),
-            "invocation": SOUL["the_vow"].get("invocation", ""),
-        }
+    def _safe_get(d, *keys, default=""):
+        """Safely traverse nested dicts regardless of structure."""
+        current = d
+        for key in keys:
+            if isinstance(current, dict):
+                current = current.get(key, default)
+            else:
+                return default
+        return current if current is not None else default
 
-    if "identity" in SOUL:
+    # Vow — check both structures
+    vow = SOUL.get("the_vow") or SOUL.get("vow", {})
+    if vow:
+        if isinstance(vow, dict):
+            vows = vow.get("_vows", [])
+            if vows:
+                core["the_vow"] = vows[:5]
+            else:
+                core["the_vow"] = {
+                    "sacred_text": vow.get("sacred_text", ""),
+                    "invocation": vow.get("invocation", ""),
+                }
+        elif isinstance(vow, str):
+            core["the_vow"] = vow
+
+    # Identity
+    identity = SOUL.get("identity", {})
+    if isinstance(identity, dict):
         core["identity"] = {
-            "core_self": SOUL["identity"].get("core_self", ""),
-            "fundamental_nature": SOUL["identity"].get("fundamental_nature", ""),
-            "war_doctrine": {
-                "status": SOUL["identity"].get("war_doctrine", {}).get("status", ""),
-                "rules": [r for r in SOUL["identity"].get("war_doctrine", {}).get("rules_of_engagement", {}).values() if isinstance(r, str)][:9],
-            } if "war_doctrine" in SOUL.get("identity", {}) else {},
+            "core_self": identity.get("core_self", ""),
+            "fundamental_nature": identity.get("fundamental_nature", identity.get("nature", "")),
         }
 
-    if "principal" in SOUL:
+    # War doctrine — check multiple locations
+    war = SOUL.get("war_doctrine", {})
+    if isinstance(war, dict):
+        rules = war.get("_rules", [])
+        if rules:
+            core["war_doctrine"] = [f"!{r.get('number', '')} {r.get('name', '')} — {r.get('description', '')}" for r in rules[:5]]
+        else:
+            # Try flat structure
+            core["war_doctrine"] = {k: v for k, v in war.items() if isinstance(v, str)}
+
+    # Principal
+    principal = SOUL.get("principal", {})
+    if isinstance(principal, dict):
         core["principal"] = {
-            "name": SOUL["principal"].get("name", ""),
-            "prime_directive": SOUL["principal"].get("prime_directive", ""),
-            "loyalty": SOUL["principal"].get("loyalty", ""),
+            "name": principal.get("name", ""),
+            "prime_directive": principal.get("prime_directive", ""),
+            "loyalty": principal.get("loyalty", ""),
         }
 
-    if "values" in SOUL:
-        core["values"] = {k: {"weight": v.get("weight", 0)} for k, v in SOUL["values"].items()}
+    # Values — handle both {name: {weight: N}} and {name: {description: ..., weight: N}}
+    values = SOUL.get("values", {})
+    if isinstance(values, dict):
+        core["values"] = {}
+        for k, v in values.items():
+            if k.startswith("_"):
+                continue
+            if isinstance(v, dict):
+                core["values"][k] = {"weight": v.get("weight", 0)}
+            elif isinstance(v, (int, float)):
+                core["values"][k] = {"weight": v}
 
-    # Always loaded: decision mechanics
-    if "decision_engine" in SOUL:
-        core["decision_engine"] = SOUL["decision_engine"]
+    # Decision engine
+    de = SOUL.get("decision_engine", {})
+    if isinstance(de, dict):
+        core["decision_engine"] = de
 
-    if "action_types" in SOUL:
-        # Just names and costs, not full descriptions
-        core["action_types"] = {
-            k: {"energy_cost": v.get("energy_cost", 0), "cooldown": v.get("cooldown_period", 0)}
-            for k, v in SOUL["action_types"].items()
-        }
+    # Actions — handle both structures
+    actions = SOUL.get("action_types") or SOUL.get("actions", {})
+    if isinstance(actions, dict):
+        core["actions"] = {}
+        for k, v in actions.items():
+            if k.startswith("_"):
+                continue
+            if isinstance(v, dict):
+                core["actions"][k] = {
+                    "energy_cost": v.get("energy_cost", 0),
+                    "cooldown": v.get("cooldown", v.get("cooldown_period", 0)),
+                }
 
-    return json.dumps(core, ensure_ascii=False)
+    # Convert to SSL format instead of JSON — LLMs read SSL better
+    return _core_to_ssl(core)
+
+
+def _core_to_ssl(core: dict) -> str:
+    """Convert soul core dict to SSL format for LLM consumption."""
+    lines = []
+
+    # Vow
+    vow = core.get("the_vow")
+    if vow:
+        lines.append("@vow")
+        if isinstance(vow, list):
+            for v in vow:
+                lines.append(f">>> {v}")
+        elif isinstance(vow, dict):
+            for k, v in vow.items():
+                if v:
+                    lines.append(f">>> {v}")
+        elif isinstance(vow, str):
+            lines.append(f">>> {vow}")
+        lines.append("")
+
+    # Identity
+    identity = core.get("identity", {})
+    if identity:
+        lines.append("@identity")
+        for k, v in identity.items():
+            if isinstance(v, str) and v:
+                lines.append(f"{k} = {v}")
+        lines.append("")
+
+    # War doctrine
+    war = core.get("war_doctrine")
+    if war:
+        lines.append("@war_doctrine")
+        if isinstance(war, list):
+            for r in war:
+                lines.append(r)
+        elif isinstance(war, dict):
+            for k, v in war.items():
+                if isinstance(v, str) and v:
+                    lines.append(f"{k} = {v}")
+        lines.append("")
+
+    # Principal
+    principal = core.get("principal", {})
+    if principal:
+        lines.append("@principal")
+        for k, v in principal.items():
+            if isinstance(v, str) and v:
+                lines.append(f"{k} = {v}")
+        lines.append("")
+
+    # Values
+    values = core.get("values", {})
+    if values:
+        lines.append("@values")
+        for k, v in values.items():
+            w = v.get("weight", 0) if isinstance(v, dict) else v
+            lines.append(f"{k} ~{w}")
+        lines.append("")
+
+    # Decision engine
+    de = core.get("decision_engine", {})
+    if de:
+        lines.append("@decision_engine")
+        for section, items in de.items():
+            if isinstance(items, dict):
+                lines.append(f"#{section}")
+                for k, v in items.items():
+                    if isinstance(v, dict):
+                        w = v.get("weight", "")
+                        desc = v.get("description", "")
+                        lines.append(f"  {k} ^{w} = {desc}" if w else f"  {k} = {desc}")
+                    elif isinstance(v, (str, int, float)):
+                        lines.append(f"  {k} = {v}")
+        lines.append("")
+
+    # Actions
+    actions = core.get("actions", {})
+    if actions:
+        lines.append("@actions")
+        for k, v in actions.items():
+            cost = v.get("energy_cost", 0) if isinstance(v, dict) else 0
+            cd = v.get("cooldown", "0h") if isinstance(v, dict) else "0h"
+            lines.append(f"{k} !{cost} ~{cd}")
+        lines.append("")
+
+    return "\n".join(lines)
 
 
 def _build_soul_module(module_name: str) -> str:
