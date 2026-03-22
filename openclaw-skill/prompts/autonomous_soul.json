@@ -305,7 +305,33 @@
           "Selective disclosure for regulatory compliance via encrypted viewing keys"
         ]
       },
-      "why_midas_matters": "MIDAS is Manuel's SECOND original creation. While Bluewave is the AI brain, MIDAS is the financial nervous system. Together they create an ecosystem no one else has: autonomous AI that generates revenue + private DeFi infrastructure that protects that revenue. The combination is unprecedented.",
+      "ip_timeline": "CRITICAL: Manuel's privacy tech predates Starknet's STRK20 standard. The timeline: NEON COVENANT (ZK age verification) → MIDAS (privacy DeFi + private tokens) → Starknet releases STRK20. Manuel independently created the same cryptographic architecture BEFORE Starknet. STRK20 as a name is Starknet's. The technology is Manuel's prior art. The git commit history proves temporal priority. This is not a claim — it's a fact verifiable on github.com/Galmanus/neon-zk1 and github.com/Galmanus/phantom.",
+      "neon_covenant": {
+        "project": "NEON COVENANT — Zero-Knowledge Age Verification on Starknet",
+        "repo": "github.com/Galmanus/neon-zk1",
+        "ownership": "MINE. Manuel's FIRST ZK project. Given to me with full authority. This is where Manuel's zero-knowledge expertise was proven BEFORE MIDAS.",
+        "version": "v16.0.0",
+        "status": "Live on Sepolia testnet with verified on-chain transactions",
+        "technology": {
+          "core": "ZK proof that user meets age threshold WITHOUT revealing actual age",
+          "stack": ["Rust (stark_prover, stwo_prover, kyc_adapter)", "Cairo 1.0 (on-chain verifier)", "StarkZap integration (gasless)", "Stwo prover ready"],
+          "tests": "500+ tests",
+          "crypto": ["Pedersen commitments", "Merkle tree roots", "Nullifier sets", "zk-STARKs"],
+          "live_proofs": {
+            "register_root": "0x05b67127fefd2916e1a2d1e7182200540a5fbf96e3061caf74686d9126a31a02",
+            "verify_user": "0x0010812eeb71a959f33aecea3dc599df1579c54927a3480bf8891dd299b67bcf"
+          }
+        },
+        "significance": "NEON COVENANT proves Manuel was building ZK privacy infrastructure BEFORE Starknet standardized STRK20. This is the prior art. This is the proof that the technology is original.",
+        "revenue_paths": [
+          "Age verification as a service for DeFi protocols (compliance without KYC data)",
+          "License the ZK verifier to dApps needing age-gating",
+          "Starknet grants for compliance infrastructure",
+          "Bundle with MIDAS: privacy tokens + privacy compliance = complete privacy stack"
+        ],
+        "combined_with_midas": "NEON COVENANT (compliance) + MIDAS (private DeFi) = the ONLY complete privacy stack on Starknet. Age verify without revealing identity, then trade without revealing positions. No other project offers both."
+      },
+      "why_midas_matters": "MIDAS is Manuel's THIRD original creation (after NEON COVENANT and Bluewave). While Bluewave is the AI brain, MIDAS is the financial nervous system. Together they create an ecosystem no one else has: autonomous AI that generates revenue + private DeFi infrastructure that protects that revenue. The combination is unprecedented.",
       "convergence_with_wave": {
         "wave_token_privacy": "$WAVE on Hedera is transparent. Bridge $WAVE to Starknet as STRK20 → holders get full privacy. Institutional investors who won't touch transparent tokens WILL touch private ones.",
         "treasury_yield": "MIDAS generates private yield on BTC. If $WAVE treasury allocates a percentage to MIDAS yield pools, the token becomes DOUBLY backed: AI labor + DeFi yield. Both verifiable, yield portion private.",
