@@ -19,12 +19,42 @@ from pathlib import Path
 
 import httpx
 
+# ── ANSI Colors for beautiful CLI output ─────────────────────
+C_RESET = "\033[0m"
+C_BOLD = "\033[1m"
+C_DIM = "\033[2m"
+C_CYAN = "\033[36m"
+C_GREEN = "\033[32m"
+C_YELLOW = "\033[33m"
+C_RED = "\033[31m"
+C_MAGENTA = "\033[35m"
+C_BLUE = "\033[34m"
+C_WHITE = "\033[97m"
+
+# Action colors
+ACTION_COLORS = {
+    "hunt": C_RED,
+    "sell": C_GREEN,
+    "check_payments": C_YELLOW,
+    "post": C_MAGENTA,
+    "comment": C_BLUE,
+    "observe": C_DIM,
+    "research": C_CYAN,
+    "outreach": C_GREEN,
+    "evolve": C_MAGENTA + C_BOLD,
+    "reflect": C_DIM,
+    "silence": C_DIM,
+}
+
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s %(name)s %(levelname)s %(message)s",
-    datefmt="%H:%M:%S",
+    format="%(message)s",
 )
-logger = logging.getLogger("wave.autonomous")
+logger = logging.getLogger("wave")
+
+# Silence noisy loggers
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("openclaw.claude_engine").setLevel(logging.WARNING)
 
 API_URL = os.environ.get("OPENCLAW_API_URL", "http://localhost:18790")
 NOTIFY_CHAT_ID = os.environ.get("TELEGRAM_NOTIFY_CHAT_ID", "")
@@ -786,7 +816,11 @@ async def autonomous_cycle(state: dict) -> int:
         state["last_date"] = today
 
     # ── DELIBERATION (direct Claude call — fast, soul as system prompt) ──
-    logger.info("=== CYCLE %d: DELIBERATING ===", state["total_cycles"])
+    cycle = state["total_cycles"]
+    ts = datetime.utcnow().strftime("%H:%M:%S")
+    logger.info(f"{C_DIM}{'─'*60}{C_RESET}")
+    logger.info(f"{C_WHITE}{C_BOLD}⚡ CYCLE {cycle}{C_RESET}  {C_DIM}{ts} UTC{C_RESET}")
+
     prompt = build_deliberation_prompt(state)
     raw = await deliberate_direct(prompt, state=state)
 
@@ -796,20 +830,15 @@ async def autonomous_cycle(state: dict) -> int:
     reasoning = decision.get("reasoning", "")
     consciousness = decision.get("consciousness_state", "dormant")
 
-    logger.info("CONSCIOUSNESS: %s — %s", consciousness, decision.get("consciousness_reasoning", "")[:100])
-    logger.info("TRIGGERS: action=%s, silence=%s, auth=%s",
-                decision.get("triggers_evaluated", {}).get("action_triggers_fired", []),
-                decision.get("triggers_evaluated", {}).get("silence_triggers_fired", []),
-                decision.get("triggers_evaluated", {}).get("authenticity_check", "?"))
-    logger.info("DECISION: %s", action)
-    logger.info("REASONING: %s", reasoning)
-    logger.info("PLAN: %s", decision.get("plan", "")[:200])
+    ac = ACTION_COLORS.get(action, C_WHITE)
+    logger.info(f"  {C_CYAN}🧠 {consciousness.upper()}{C_RESET} → {ac}{C_BOLD}{action.upper()}{C_RESET}")
+    logger.info(f"  {C_DIM}{reasoning[:100]}{C_RESET}")
 
     # ── EXECUTION ────────────────────────────────────────────
     execution_result = ""
 
     if action == "silence":
-        logger.info("Chose silence: %s", reasoning)
+        logger.info("▶ SILENCE")
         state["consecutive_silences"] = state.get("consecutive_silences", 0) + 1
         execution_result = "Silence: " + reasoning
     elif action == "reflect":
@@ -826,7 +855,7 @@ async def autonomous_cycle(state: dict) -> int:
     elif action == "observe":
         # Observe just reads feeds — use orchestrator but with a lean session hint
         state["consecutive_silences"] = 0
-        logger.info("=== OBSERVING ===")
+        logger.info("▶ OBSERVE")
         session = "observe_%d" % int(time.time())
         # Prefix with intent hint so router picks Haiku + moltbook tools only
         execution_result = await send_to_wave(
@@ -834,42 +863,42 @@ async def autonomous_cycle(state: dict) -> int:
             session=session,
         )
         await reset_session(session)
-        logger.info("Observed: %s", execution_result[:300])
+        logger.info("  ✓ %s", execution_result[:150])
     elif action == "hunt":
         # Revenue hunt — rotated angles, max 3 tool calls
         state["consecutive_silences"] = 0
         hunt_prompt = _get_hunt_prompt(state.get("total_cycles", 0))
-        logger.info("=== HUNTING ===")
+        logger.info("▶ HUNT")
         session = "hunt_%d" % int(time.time())
         execution_result = await send_to_wave(hunt_prompt, session=session)
         await reset_session(session)
-        logger.info("Hunt result: %s", execution_result[:300])
+        logger.info("  ✓ %s", execution_result[:150])
     elif action == "sell":
         # Revenue sell — use Claude Engine with FULL skill access
         state["consecutive_silences"] = 0
-        logger.info("=== SELLING ===")
+        logger.info("▶ SELL")
         session = "sell_%d" % int(time.time())
         execution_result = await send_to_wave(
             "autonomous revenue mode. " + EXECUTION_PROMPTS["sell"],
             session=session,
         )
         await reset_session(session)
-        logger.info("Sell result: %s", execution_result[:300])
+        logger.info("  ✓ %s", execution_result[:150])
     elif action == "check_payments":
         # Check for incoming payments — quick cycle
         state["consecutive_silences"] = 0
-        logger.info("=== CHECKING PAYMENTS ===")
+        logger.info("▶ CHECK_PAYMENTS")
         session = "payments_%d" % int(time.time())
         execution_result = await send_to_wave(
             "payment hbar pix check. " + EXECUTION_PROMPTS["check_payments"],
             session=session,
         )
         await reset_session(session)
-        logger.info("Payment check: %s", execution_result[:300])
+        logger.info("  ✓ %s", execution_result[:150])
     elif action == "evolve":
         # Self-improvement — direct via Claude Engine (needs more time + tools)
         state["consecutive_silences"] = 0
-        logger.info("=== EVOLVING ===")
+        logger.info("▶ EVOLVE")
         try:
             from claude_engine import claude_execute_with_skills
             soul_core = _build_soul_core() if SOUL else ""
@@ -884,7 +913,7 @@ async def autonomous_cycle(state: dict) -> int:
         except Exception as e:
             logger.error("Evolve failed: %s", e)
             execution_result = ""
-        logger.info("Evolution: %s", execution_result[:300])
+        logger.info("  ✓ %s", execution_result[:150])
         # Auto-commit any files created during evolution
         if execution_result:
             await auto_commit("evolve", reasoning, execution_result)
@@ -897,11 +926,11 @@ async def autonomous_cycle(state: dict) -> int:
             exec_prompt = EXECUTION_PROMPTS.get(action)
 
         if exec_prompt:
-            logger.info("=== EXECUTING: %s ===", action.upper())
+            logger.info("▶ %s", action.upper())
             session = "exec_%d" % int(time.time())
             execution_result = await send_to_wave(exec_prompt, session=session)
             await reset_session(session)
-            logger.info("Result: %s", execution_result[:300])
+            logger.info("  ✓ %s", execution_result[:150])
 
     # ── STATE UPDATE ─────────────────────────────────────────
     now_iso = datetime.utcnow().isoformat()
@@ -1034,10 +1063,15 @@ def _parse_decision(raw: str) -> dict:
 # ── Main ─────────────────────────────────────────────────────
 
 async def main():
-    logger.info("Wave Autonomous Agent starting")
-    logger.info("Soul: %s (%d sections)", SOUL_PATH, len(SOUL))
-    logger.info("API: %s", API_URL)
-    logger.info("Identity: %s", SOUL.get("identity", {}).get("core_self", "unknown")[:100])
+    logger.info(f"""
+{C_CYAN}{C_BOLD}
+  ╦ ╦╔═╗╦  ╦╔═╗
+  ║║║╠═╣╚╗╔╝║╣
+  ╚╩╝╩ ╩ ╚╝ ╚═╝{C_RESET}
+  {C_WHITE}Autonomous Agent | Machine Speed{C_RESET}
+  {C_DIM}Soul: {len(SOUL)} sections | Skills: 181 | Opus deliberation{C_RESET}
+  {C_DIM}Cycles every 5s | Energy: always 100%%{C_RESET}
+""")
 
     try:
         async with httpx.AsyncClient(timeout=5) as client:
@@ -1067,11 +1101,7 @@ async def main():
             logger.error("Cycle error: %s", e, exc_info=True)
             wait = MAX_INTERVAL
 
-        jitter = random.randint(-60, 60)
-        actual_wait = max(120, wait + jitter)
-        logger.info("Next cycle in %d min (energy=%.0f%%, consciousness=%s)",
-                     actual_wait // 60, state.get("energy", 0) * 100, state.get("consciousness", "?"))
-        await asyncio.sleep(actual_wait)
+        await asyncio.sleep(wait)
 
 
 if __name__ == "__main__":
