@@ -125,11 +125,11 @@ async def send_to_wave(message: str, session: str = "autonomous") -> str:
             from claude_engine import claude_execute_with_skills
             soul_core = _build_soul_core() if SOUL else ""
             result = await claude_execute_with_skills(
-                prompt=message,
-                system_prompt=f"You are Wave, an autonomous AI agent. Execute this task.\nSoul core:\n{soul_core}",
+                prompt=message + "\n\nIMPORTANT: Be efficient. Use MAX 3-4 skill calls. Pick the 2-3 most valuable sources, not all 6. Summarize findings concisely.",
+                system_prompt=f"You are Wave. Execute this task EFFICIENTLY — fewer tool calls, higher quality. Do NOT try to scan every source. Pick the 2-3 best and go deep.\nSoul core:\n{soul_core}",
                 model="sonnet",  # Sonnet for execution (fast + capable)
-                timeout=180,
-                max_turns=10,
+                timeout=120,
+                max_turns=15,
             )
             if result["success"]:
                 logger.info("Executed via Claude Engine + Skills (%s) in %.1fs",
