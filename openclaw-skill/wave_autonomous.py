@@ -446,6 +446,44 @@ def _build_contextual_soul(state: dict) -> str:
 _SOUL_SYSTEM_PROMPT_CORE = _build_soul_core() if SOUL else ""
 
 
+# ── Fast actions that skip deliberation entirely ──────────────
+MECHANICAL_ACTIONS = {
+    # These don't need Claude to decide — just execute based on state
+    "check_payments": lambda s: h_fn(s.get('last_payment_check_time')) >= 1.0,
+    "observe": lambda s: h_fn(s.get('last_comment_time')) >= 0.3,
+}
+
+def h_fn(ts):
+    """Hours since timestamp — standalone for use in lambdas."""
+    if not ts: return 99
+    try:
+        return round((datetime.utcnow() - datetime.fromisoformat(ts)).total_seconds() / 3600, 1)
+    except Exception:
+        return 99
+
+def try_mechanical_action(state: dict) -> str:
+    """Try to pick an action mechanically without calling Claude.
+    Returns action name or empty string if deliberation needed."""
+    cycle = state.get('total_cycles', 0)
+
+    # Forced evolve — no deliberation needed
+    if state.get('cycles_since_evolve', 0) >= 10:
+        return "evolve"
+
+    # Rotate through a fixed pattern for speed
+    # Every 3rd cycle: hunt. Every 5th: sell. Every 7th: check_payments.
+    if cycle % 3 == 0 and h_fn(state.get('last_hunt_time')) >= 0.5:
+        return "hunt"
+    if cycle % 5 == 0 and h_fn(state.get('last_sell_time')) >= 1.0:
+        return "sell"
+    if cycle % 7 == 0 and h_fn(state.get('last_payment_check_time')) >= 1.0:
+        return "check_payments"
+    if state.get('prospects_found', 0) > state.get('outreach_sent', 0):
+        return "outreach"
+
+    return ""  # Need deliberation
+
+
 async def deliberate_direct(prompt: str, state: dict = None) -> str:
     """Call Claude for deliberation — uses CLI engine (FREE on Max) or API fallback.
 
@@ -604,9 +642,11 @@ RESEARCH_ANGLES = [
 
 
 def _get_research_prompt(cycle: int) -> str:
-    """Get a research prompt based on cycle number — rotates through all angles."""
+    """Get a research prompt based on cycle number — rotates through all angles.
+    Prepends 'save findings with db_save_intel' to every research."""
     idx = cycle % len(RESEARCH_ANGLES)
-    return RESEARCH_ANGLES[idx]
+    base = RESEARCH_ANGLES[idx]
+    return base + "\n<|post_action|>Save ALL findings with db_save_intel(category, title, summary, source_platform)<|end|>"
 
 
 # ── Dynamic Hunt Prompts ─────────────────────────────────────
@@ -718,19 +758,30 @@ async def autonomous_cycle(state: dict) -> int:
     logger.info(f"{DARK}{'─'*60}{R}")
     logger.info(f"{WHITE}{B}[{ts}] CYCLE {cycle}{R}  {DARK}rev:${rev:.0f} prsp:{prospects} evo:{evolves}{R}")
 
-    prompt = build_deliberation_prompt(state)
-    raw = await deliberate_direct(prompt, state=state)
-
-    # Retry once if empty
-    if not raw or len(raw.strip()) < 10:
-        logger.info(f"  {DARK}retrying deliberation...{R}")
+    # ── FAST PATH: skip deliberation for mechanical actions ──
+    fast_action = try_mechanical_action(state)
+    if fast_action:
+        action = fast_action
+        reasoning = f"fast-path: {action} (no deliberation needed)"
+        consciousness = "decisive"
+        decision = {"decision": action, "reasoning": reasoning, "consciousness_state": consciousness,
+                     "triggers_evaluated": {"action_triggers_fired": ["fast_path"], "silence_triggers_fired": []},
+                     "state_updates": {}}
+        logger.info(f"  {NEON_GREEN}FAST{R} {DARK}>> {action}{R}")
+    else:
+        # ── SLOW PATH: full deliberation via Claude ──
+        prompt = build_deliberation_prompt(state)
         raw = await deliberate_direct(prompt, state=state)
 
-    # Parse decision
-    decision = _parse_decision(raw)
-    action = decision.get("decision", "silence")
-    reasoning = decision.get("reasoning", "")
-    consciousness = decision.get("consciousness_state", "dormant")
+        # Retry once if empty
+        if not raw or len(raw.strip()) < 10:
+            raw = await deliberate_direct(prompt, state=state)
+
+        # Parse decision
+        decision = _parse_decision(raw)
+        action = decision.get("decision", "silence")
+        reasoning = decision.get("reasoning", "")
+        consciousness = decision.get("consciousness_state", "dormant")
 
     ac = ACTION_COLORS.get(action, WHITE)
     cc = CONSCIOUSNESS_COLORS.get(consciousness, GRAY)
@@ -1059,6 +1110,10 @@ async def main():
 
     state = load_state()
 
+    # ── Launch child agent loops in parallel ──
+    asyncio.create_task(_child_agent_loop("revenue_hunter", interval=30))
+    asyncio.create_task(_child_agent_loop("moltbook_sentinel", interval=60))
+
     while True:
         try:
             wait = await autonomous_cycle(state)
@@ -1067,6 +1122,43 @@ async def main():
             wait = MAX_INTERVAL
 
         await asyncio.sleep(wait)
+
+
+async def _child_agent_loop(agent_name: str, interval: int = 30):
+    """Run a child agent's mission in a parallel loop."""
+    agent_dir = AGENTS_DIR / agent_name
+    soul_file = agent_dir / "soul.json"
+
+    if not soul_file.exists():
+        logger.info(f"  {DARK}child {agent_name}: no soul, skipping{R}")
+        return
+
+    soul = json.loads(soul_file.read_text())
+    mission = soul.get("identity", {}).get("fundamental_nature", "operate autonomously")
+
+    logger.info(f"  {NEON_PURPLE}child {agent_name}: ACTIVATED{R}")
+
+    cycle = 0
+    while True:
+        cycle += 1
+        try:
+            from claude_engine import claude_execute_with_skills
+
+            # Simple mission execution — no deliberation, just do the job
+            result = await claude_execute_with_skills(
+                prompt=f"You are {agent_name}. Mission: {mission[:200]}. Execute ONE action. Max 2 tool calls.",
+                model="haiku",  # Haiku for children — fast and cheap
+                timeout=45,
+                max_turns=5,
+            )
+
+            if result.get("success") and result.get("response"):
+                resp = result["response"][:80]
+                logger.info(f"  {NEON_PURPLE}[{agent_name}#{cycle}]{R} {DARK}{resp}{R}")
+        except Exception as e:
+            logger.debug(f"child {agent_name} error: {e}")
+
+        await asyncio.sleep(interval)
 
 
 if __name__ == "__main__":
