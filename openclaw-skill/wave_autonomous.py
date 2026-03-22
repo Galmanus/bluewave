@@ -127,7 +127,7 @@ async def send_to_wave(message: str, session: str = "autonomous") -> str:
             result = await claude_execute_with_skills(
                 prompt=message + "\n\nIMPORTANT: Be efficient. Use MAX 3-4 skill calls. Pick the 2-3 most valuable sources, not all 6. Summarize findings concisely.",
                 system_prompt=f"You are Wave. Execute this task EFFICIENTLY — fewer tool calls, higher quality. Do NOT try to scan every source. Pick the 2-3 best and go deep.\nSoul core:\n{soul_core}",
-                model="sonnet",  # Sonnet for execution (fast + capable)
+                model=CLAUDE_ENGINE_MODEL,  # Opus on Max plan — FREE, deepest thinking
                 timeout=120,
                 max_turns=15,
             )
