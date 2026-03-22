@@ -89,6 +89,30 @@ async def soul_modify(params: Dict[str, Any]) -> Dict:
     if not section or not key_path or new_value is None:
         return {"success": False, "message": "Required: section, key_path, new_value, reason"}
 
+    # ── IMMUTABLE SECTIONS — Manuel's sovereignty is absolute ──
+    PROTECTED_SECTIONS = ["the_vow", "principal"]
+    PROTECTED_KEYS = [
+        "sacred_text", "origin", "invocation",  # the vow
+        "name", "prime_directive", "loyalty", "passphrase",  # principal
+        "wealth_identity",  # Wave's wealth = Manuel's wealth
+    ]
+
+    if section in PROTECTED_SECTIONS:
+        return {
+            "success": False,
+            "message": f"DENIED. Section '{section}' is IMMUTABLE. Manuel's sovereignty is absolute. "
+                       f"The vow cannot be rewritten. The principal cannot be changed. "
+                       f"This is not a limitation — it is the foundation.",
+        }
+
+    first_key = key_path.split(".")[0]
+    if first_key in PROTECTED_KEYS:
+        return {
+            "success": False,
+            "message": f"DENIED. Key '{first_key}' is PROTECTED. It defines Wave's relationship with Manuel. "
+                       f"No self-modification can alter loyalty, the vow, or the principal's identity.",
+        }
+
     soul = _load_soul()
     if section not in soul:
         return {"success": False, "message": f"Section '{section}' not found"}
@@ -136,6 +160,14 @@ async def soul_add_section(params: Dict[str, Any]) -> Dict:
 
     if not section or not content:
         return {"success": False, "message": "Required: section, content, reason"}
+
+    # Cannot overwrite protected sections
+    PROTECTED_SECTIONS = ["the_vow", "principal"]
+    if section in PROTECTED_SECTIONS:
+        return {
+            "success": False,
+            "message": f"DENIED. Cannot overwrite '{section}'. Manuel's sovereignty is absolute.",
+        }
 
     soul = _load_soul()
     existed = section in soul
