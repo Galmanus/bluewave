@@ -205,8 +205,8 @@ async def send_to_wave(message: str, session: str = "autonomous") -> str:
             result = await claude_execute_with_skills(
                 prompt=message + "\n\nIMPORTANT: Be efficient. Use MAX 3-4 skill calls. Pick the 2-3 most valuable sources, not all 6. Summarize findings concisely.",
                 system_prompt=f"You are Wave. Execute this task EFFICIENTLY — fewer tool calls, higher quality. Do NOT try to scan every source. Pick the 2-3 best and go deep.\nSoul core:\n{soul_core}",
-                model=CLAUDE_ENGINE_MODEL,  # Opus on Max plan — FREE, deepest thinking
-                timeout=120,
+                model="sonnet",  # Sonnet for execution — fast + capable. Opus for deliberation only.
+                timeout=90,
                 max_turns=15,
             )
             if result["success"]:
@@ -683,18 +683,10 @@ EXECUTION_PROMPTS = {
         "Report: who you engaged with, what PUT insight you applied, and what you said."
     ),
     "post": (
-        "POSTING CYCLE. Tools: moltbook_home, moltbook_post, moltbook_comment, save_learning.\n"
-        "First: reply to any unanswered comments.\n"
-        "Then: write ONE genuinely original post.\n\n"
-        "MANDATORY: Apply Psychometric Utility Theory. Every post MUST:\n"
-        "- Analyze something through PUT variables (A, F, k, Φ, Ψ, Ω, FP, Decision Vectors)\n"
-        "- NOT dump formulas — express the THINKING behind them naturally\n"
-        "- Example: instead of 'Φ is high' say 'the gap between their public messaging and market reality is enormous — they are in a delusion trap'\n"
-        "- Example: instead of 'FP = high' say 'the convergence of rising fear, declining utility, and available narrative means they are one bad quarter from switching'\n\n"
-        "Choose submolt: agents, philosophy, ai, builds, or general.\n"
-        "ABSOLUTELY BANNED: emojis, prices, CTAs, 'DM me', marketing language, self-promotion, raw formulas.\n"
-        "If you cannot write something genuinely original, SAY SO and choose silence.\n"
-        "Report: what you posted or why you chose not to."
+        "POST on Moltbook. Max 2 tool calls: moltbook_post + optionally moltbook_home.\n"
+        "Write a short post (150-300 words) about AI agents, strategy, or markets.\n"
+        "Apply PUT naturally — no raw formulas. Submolt: agents or general.\n"
+        "No emojis, no marketing. Post and report."
     ),
     "outreach": (
         "OUTREACH CYCLE. Tools: moltbook_search, moltbook_comment, moltbook_follow, web_search.\n"
@@ -1009,15 +1001,11 @@ async def autonomous_cycle(state: dict) -> int:
     # Wave should NEVER rest too long. Short cycles, always active.
     energy = state["energy"]
     if action == "silence":
-        wait = 45  # Silence is short — just a breath, not a nap
-    elif action == "post":
-        # Respect cooldown from soul (4 hours) but use 10% of it
-        cooldown = SOUL.get("action_types", {}).get("post", {}).get("cooldown_period", 4)
-        wait = int(cooldown * 3600 * 0.1)  # 10% of cooldown
-    elif energy < 0.15:
-        wait = 90  # Only rest longer when truly depleted
+        wait = 30  # Quick breath
+    elif energy < 0.10:
+        wait = 60  # Only slow down when truly depleted
     else:
-        wait = random.randint(MIN_INTERVAL, min(MAX_INTERVAL, 120))
+        wait = random.randint(30, 60)  # 30-60 seconds between ALL actions
 
     return wait
 
