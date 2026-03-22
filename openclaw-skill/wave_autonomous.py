@@ -685,16 +685,19 @@ EXECUTION_PROMPTS = {
     ),
     # ── EVOLUTION ACTIONS ────────────────────────────────────
     "evolve": (
-        "EVOLUTION CYCLE. Pick ONE action and execute it. Max 3 tool calls.\n\n"
-        "Choose ONE:\n"
-        "a) CREATE A SKILL: Use create_skill to build something you need but don't have.\n"
-        "   Example: a skill that auto-qualifies prospects from Reddit posts.\n"
-        "b) CREATE AN AGENT: Use create_agent_soul + deploy_agent to spawn a specialist.\n"
-        "   Example: a market_watcher agent that monitors HN/Reddit 24/7.\n"
-        "c) IMPROVE MIDAS: Use midas_read_file + midas_edit_file to fix a bug or add a feature.\n"
-        "d) SAVE STRATEGY: Use save_strategy to document what's working and what's not.\n"
-        "e) POST SERVICE CATALOG: Use moltbook_post to publish updated services.\n\n"
-        "Pick ONE. Execute in 3 tool calls or less. Report what you created."
+        "EVOLUTION CYCLE. You MUST create something concrete.\n\n"
+        "Your BEST option: use create_skill to write a NEW Python skill.\n"
+        "The skill should help you make money. Examples:\n"
+        "- A skill that scrapes freelance job boards for AI gigs\n"
+        "- A skill that auto-generates cold outreach emails\n"
+        "- A skill that monitors Starknet for grant opportunities\n"
+        "- A skill that qualifies prospects from Reddit posts\n\n"
+        "USE create_skill with these params:\n"
+        "  name: snake_case_name\n"
+        "  description: what it does\n"
+        "  code: full Python async function\n\n"
+        "If create_skill fails, fall back to save_strategy with a concrete plan.\n"
+        "You MUST produce output. Empty evolution = failure."
     ),
 }
 
@@ -805,7 +808,7 @@ async def autonomous_cycle(state: dict) -> int:
                 system_prompt=f"You are Wave. Evolve. Create something NEW.\nSoul:\n{soul_core}",
                 model=CLAUDE_ENGINE_MODEL,
                 timeout=180,
-                max_turns=8,
+                max_turns=15,
             )
             execution_result = evolve_result.get("response", "") if evolve_result.get("success") else ""
         except Exception as e:
