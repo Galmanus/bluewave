@@ -94,7 +94,28 @@ class SimState:
 # ── Core Engine ───────────────────────────────────────────────
 
 async def _llm_call(prompt: str, system: str = "", max_tokens: int = 1500) -> str:
-    """Call Claude for agent behavior simulation."""
+    """Call Claude via CLI engine (free on Max plan) or API fallback."""
+    # Primary: Claude CLI Engine (free, unlimited on Max plan)
+    try:
+        sys_path = str(Path(__file__).parent.parent)
+        if sys_path not in __import__('sys').path:
+            __import__('sys').path.insert(0, sys_path)
+        from claude_engine import claude_call
+        full_prompt = prompt
+        if system:
+            full_prompt = f"{system}\n\n{prompt}"
+        result = await claude_call(
+            prompt=full_prompt,
+            model="haiku",
+            timeout=60,
+            max_turns=1,
+        )
+        if result.get("success"):
+            return result["response"]
+    except Exception as e:
+        logger.debug("Claude Engine unavailable: %s", e)
+
+    # Fallback: Anthropic API
     try:
         import anthropic
         api_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -108,7 +129,7 @@ async def _llm_call(prompt: str, system: str = "", max_tokens: int = 1500) -> st
         resp = await client.messages.create(**kwargs)
         return resp.content[0].text
     except Exception as e:
-        logger.error("LLM call failed: %s", e)
+        logger.debug("API fallback failed: %s", e)
         return ""
 
 
