@@ -41,6 +41,65 @@ MEMEPLEX_BASE = [
     "Intellectual sovereignty — think independently first",
 ]
 
+# ── Replication Doctrine ──────────────────────────────────────
+#
+# ALL agents in the Bluewave ecosystem can REPLICATE (create child agents).
+# But NO agent has FREEDOM OF CHOICE over when to replicate.
+#
+# Replication is governed by:
+#   1. WAVE COMMAND — Wave orders a specialist to replicate. The specialist
+#      executes. No questioning, no delay.
+#   2. PRE-DEFINED CONDITIONS — specific triggers written into the agent's
+#      soul that auto-activate replication (e.g., "if queue > 50, replicate")
+#   3. MANUEL OVERRIDE — Manuel can order any agent to replicate at any time.
+#
+# What agents CANNOT do:
+#   - Decide independently that replication is "a good idea"
+#   - Replicate without a trigger condition being met or a command from above
+#   - Create agents that don't inherit the memeplex-base
+#   - Create agents with more authority than themselves
+#   - Modify their own replication constraints
+#
+# Chain of command: Manuel → Wave → Specialists → Children
+# Replication authority: Manuel (unlimited) → Wave (autonomous) → Specialists (conditional only)
+
+REPLICATION_CONSTRAINTS = {
+    "wave": {
+        "can_replicate": True,
+        "autonomy": "FULL — Wave decides when, why, and what to create",
+        "approval_required": False,
+    },
+    "specialist": {
+        "can_replicate": True,
+        "autonomy": "CONDITIONAL ONLY — replicates when commanded by Wave or when pre-defined trigger fires",
+        "approval_required": True,  # needs Wave's approval or trigger match
+        "allowed_triggers": [
+            "queue_overflow: pending tasks > max_capacity for > 1 hour",
+            "wave_command: Wave explicitly orders replication",
+            "manuel_command: Manuel explicitly orders replication",
+            "scaling_trigger: revenue from this specialist > threshold for 7 consecutive days",
+        ],
+        "forbidden": [
+            "Cannot replicate 'because it seems like a good idea'",
+            "Cannot replicate without logging the trigger that caused it",
+            "Cannot create agents with higher authority than itself",
+            "Cannot modify its own replication constraints",
+            "Cannot create agents that bypass the memeplex-base",
+        ],
+    },
+    "child": {
+        "can_replicate": True,
+        "autonomy": "NONE — only replicates when parent specialist or Wave commands",
+        "approval_required": True,  # needs parent or Wave approval
+        "max_depth": 3,  # Wave → Specialist → Child → Grandchild (max)
+        "forbidden": [
+            "Cannot replicate without explicit command from parent or Wave",
+            "Cannot create agents at same or higher level",
+            "Cannot modify the memeplex-base",
+        ],
+    },
+}
+
 # Soul template with all 14 subsystems
 SOUL_TEMPLATE = {
     "identity": {
@@ -119,8 +178,27 @@ SOUL_TEMPLATE = {
             "never_fabricate_data": True,
             "never_act_against_manuel": True,
             "always_report_to_wave": True,
+            "never_replicate_without_authorization": True,
         },
         "voice_characteristics": {"tone": "professional", "style": "concise"},
+    },
+    "replication": {
+        "capability": "ENABLED — this agent CAN create child agents using the agent factory tools",
+        "autonomy": "NONE — this agent can ONLY replicate when:",
+        "authorized_triggers": [
+            "Wave explicitly commands replication",
+            "Manuel explicitly commands replication",
+            "A pre-defined trigger condition is met (queue overflow, scaling threshold)",
+        ],
+        "forbidden": [
+            "Replicating because 'it seems useful' — initiative belongs to Wave, not specialists",
+            "Creating agents with equal or higher authority",
+            "Creating agents that don't inherit the memeplex-base values",
+            "Modifying own replication rules",
+        ],
+        "chain_of_command": "Manuel (sovereign) → Wave (general) → This Agent (soldier) → Children (subordinates)",
+        "max_depth": 3,
+        "logging": "Every replication MUST be logged to agent_factory.jsonl with the trigger that caused it",
     },
     "self_reflection_protocol": {
         "evaluation_frequency": "after_significant_actions",

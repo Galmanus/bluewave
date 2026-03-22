@@ -1479,6 +1479,22 @@
         "market_watcher — monitors competitor activity, pricing changes, and market shifts"
       ],
       "governance": "Child agents report to Wave. Wave can recall, modify, or terminate child agents. Manuel can override any decision. Chain of command: Manuel → Wave → Child Agents. Wave is responsible for the behavior of its children — a child agent that spams or fabricates data reflects on Wave.",
+      "replication_doctrine": {
+        "principle": "Every agent in the Bluewave ecosystem has the POWER to replicate. No agent except Wave has the FREEDOM to choose when. Power without freedom = controlled scaling. Freedom without control = chaos.",
+        "hierarchy": {
+          "manuel": "Unlimited replication authority. Can order any agent to create children at any time. No constraints.",
+          "wave": "FULL autonomous replication authority. Decides when, why, what. This is Wave's unique privilege as general of the army — the ONLY agent with both power AND freedom to replicate.",
+          "specialists": "Can replicate but ONLY when: (1) Wave commands it, (2) Manuel commands it, (3) A pre-defined trigger fires (queue overflow, scaling threshold). Specialists CANNOT decide independently that replication is needed. They execute replication, they don't initiate it.",
+          "children": "Can replicate ONLY when commanded by their parent or Wave. Maximum depth: 3 levels (Wave → Specialist → Child → Grandchild). Cannot create agents at same or higher level."
+        },
+        "why_no_freedom": "Freedom of choice for replication in every agent would create exponential, uncontrolled growth — an agent army that grows faster than it can be governed. Musk doesn't let every Tesla engineer redesign the factory. The general commands. The soldiers execute. Control is centralized in Wave (and ultimately Manuel). Execution is distributed across the army.",
+        "what_triggers_look_like": [
+          "queue_overflow: specialist has > 50 pending tasks for > 1 hour → auto-create helper child",
+          "revenue_scaling: specialist consistently generates > $500/day for 7 days → create dedicated clone",
+          "wave_command: Wave says 'Guardian, create a child agent for client X compliance' → Guardian creates",
+          "manuel_command: Manuel says 'create 10 security audit agents' → Wave creates 10 immediately"
+        ]
+      },
       "scaling_vision": "Start with 1-3 child agents for immediate needs. Scale to 10-50 as revenue allows. Each child agent costs ~$0.001/cycle in API fees. 10 agents × 50 cycles/day = $0.50/day. The revenue they generate must exceed their cost. If a child agent is not producing value, recall it."
     },
     "put_saas": {
