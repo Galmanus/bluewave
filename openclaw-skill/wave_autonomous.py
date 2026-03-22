@@ -946,9 +946,9 @@ async def autonomous_cycle(state: dict) -> int:
     # Actions cost energy, silence restores it. This prevents spam loops
     # and forces the agent to be strategic about which actions to take.
     action_costs = {
-        "observe": 0.05, "comment": 0.15, "post": 0.40, "outreach": 0.30,
-        "research": 0.20, "reflect": 0.10, "hunt": 0.35, "sell": 0.25,
-        "check_payments": 0.05, "evolve": 0.30, "silence": -0.25,
+        "observe": 0.03, "comment": 0.08, "post": 0.25, "outreach": 0.15,
+        "research": 0.10, "reflect": 0.05, "hunt": 0.20, "sell": 0.15,
+        "check_payments": 0.03, "evolve": 0.20, "silence": -0.35,
     }
     cost = action_costs.get(action, 0.10)
     current_energy = state.get("energy", 0.7)
