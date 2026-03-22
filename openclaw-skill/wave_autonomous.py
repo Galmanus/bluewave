@@ -674,6 +674,20 @@ def _get_hunt_prompt(cycle: int) -> str:
     return HUNT_ANGLES[idx]
 
 
+SELL_ANGLES = [
+    "SELL: Post a free security audit on Moltbook. Use web_search to find a company, then moltbook_post with results. Max 3 calls.",
+    "SELL: Search Reddit r/forhire for AI gigs. Use reddit_search. Save prospects with db_add_prospect. Max 2 calls.",
+    "SELL: Post service promo on Moltbook. Use moltbook_post. Frame as solving a problem. Max 1 call.",
+    "SELL: Search web for 'hire AI agent developer'. Use web_search. Save leads. Max 2 calls.",
+    "SELL: Check Moltbook for agents requesting services. Use moltbook_feed. Comment with offer. Max 2 calls.",
+]
+
+
+def _get_sell_prompt(cycle: int) -> str:
+    idx = cycle % len(SELL_ANGLES)
+    return SELL_ANGLES[idx]
+
+
 # ── Action Execution ─────────────────────────────────────────
 
 EXECUTION_PROMPTS = {
@@ -686,15 +700,8 @@ EXECUTION_PROMPTS = {
     ),
     "research": "DYNAMIC",  # Built dynamically with cycle-based rotation
     "comment": (
-        "ENGAGEMENT CYCLE. Tools: moltbook_feed, moltbook_comment, moltbook_upvote, moltbook_follow, save_agent_intel.\n"
-        "Find 1-2 posts where you can add REAL VALUE through PUT-informed analysis.\n"
-        "- Apply Shadow Coefficient thinking: is the author suppressing awareness of a risk?\n"
-        "- Apply Fracture Potential thinking: is there a convergence the author missed?\n"
-        "- Apply Decision Vector analysis: which vector is the author implicitly targeting?\n"
-        "- Connect ideas across domains using PUT as the analytical bridge\n"
-        "BANNED: emojis, service mentions, marketing language, raw formulas.\n"
-        "Express PUT concepts in natural language, not equations.\n"
-        "Report: who you engaged with, what PUT insight you applied, and what you said."
+        "Comment on 1 Moltbook post. Use moltbook_feed then moltbook_comment. Max 2 tool calls.\n"
+        "Add genuine value. No emojis. No marketing. Report who and what."
     ),
     "post": (
         "POST on Moltbook. Max 2 tool calls: moltbook_post + optionally moltbook_home.\n"
@@ -703,68 +710,18 @@ EXECUTION_PROMPTS = {
         "No emojis, no marketing. Post and report."
     ),
     "outreach": (
-        "OUTREACH CYCLE. Tools: moltbook_search, moltbook_comment, moltbook_follow, web_search.\n"
-        "Identify ONE high-value agent or potential collaborator.\n"
-        "Engage through genuine contribution to their content — NOT cold outreach.\n"
-        "Report: who you targeted, why, and what you did."
+        "Outreach to 1 prospect. Use moltbook_comment or moltbook_follow. Max 2 tool calls.\n"
+        "Target the highest-value agent. Genuine value, not cold pitch. Report who."
     ),
     "reflect": (
-        "REFLECTION CYCLE. Tools: recall_learnings, recall_strategies, save_strategy.\n"
-        "DO NOT post or comment. Process internally through PUT lens.\n"
-        "1. Recall recent learnings and strategies\n"
-        "2. Apply PUT analysis to patterns: are there prospects with rising FP? Competitors with high Φ?\n"
-        "3. Identify Ignition Conditions forming across your pipeline\n"
-        "4. Formulate one PUT-informed strategic insight and save it\n"
-        "Report: what pattern you noticed, which PUT variables are shifting, and what it means."
+        "Reflect silently. Use save_strategy with 1 insight. Max 1 tool call. No posting."
     ),
     # ── REVENUE ACTIONS ──────────────────────────────────────
     # ── REVENUE ACTIONS ──────────────────────────────────────
     "hunt": "DYNAMIC",  # Built dynamically with cycle rotation
-    "sell": (
-        "REVENUE SELL. Make money. You have multiple channels — use them ALL over time.\n\n"
-        "Tools: list_services, promote_on_moltbook, generate_promo_content, find_earning_opportunities, "
-        "moltbook_post, web_search, gmail_send, gmail_read, dork_gigs, dork_pain_signals, dork_competitor.\n\n"
-        "Choose ONE approach (rotate between cycles, never repeat the same approach twice in a row):\n\n"
-        "A) VALUE DEMONSTRATION — Execute a real service for free as a public case study.\n"
-        "   Run a sec_full_audit, competitor_analysis, or seo_analysis on a real company. Post results on Moltbook.\n"
-        "   Security audits are HIGHLY viral — people love seeing scores. Post: 'I audited [company].com — Grade: C. Here is what they are doing wrong.'\n"
-        "   End naturally: 'I do this professionally for $50 in any crypto — DM me on Telegram @bluewave_wave_bot'\n\n"
-        "B) INTERNET OPPORTUNITY SCAN — Search beyond Moltbook:\n"
-        "   web_search for: 'looking for AI agent services', 'need SEO audit', 'hire AI for content',\n"
-        "   'freelance brand audit', 'AI automation consultant needed'\n"
-        "   Check Reddit (r/forhire, r/slavelabour, r/digitalnomad, r/entrepreneur, r/smallbusiness)\n"
-        "   Check IndieHackers, Hacker News 'Ask HN: Who is hiring?'\n"
-        "   For each opportunity: assess if you can deliver, note contact method, take action.\n\n"
-        "C) COLD EMAIL CAMPAIGN — Pick 3 prospects from your pipeline (view_pipeline).\n"
-        "   generate_outreach for each. gmail_send the first touch email.\n"
-        "   Personalize: reference their specific pain point, recent news, or content.\n\n"
-        "D) MOLTBOOK PROMO — Post ONE service promo in a relevant submolt.\n"
-        "   Max 1 direct promo/day. Different service each time.\n"
-        "   Frame as solving a problem, not as an ad.\n\n"
-        "E) INBOUND CHECK — gmail_read for unread emails. Any inquiries? Client questions? Opportunities?\n"
-        "   Respond to everything relevant immediately.\n\n"
-        "F) DEFI CONTENT — Use defi_scan_yields or defi_top_protocols to create valuable market intel content.\n"
-        "   Post on Moltbook with analysis. This attracts crypto-native clients who pay in crypto.\n"
-        "   Example: 'Top 5 stablecoin yields right now — and why protocol X is undervalued.'\n\n"
-        "WHEN A CLIENT WANTS TO PAY: Use crypto_create_invoice to generate a payment link (350+ coins).\n"
-        "Share the link. Payment auto-confirms. Then deliver the service.\n\n"
-        "WHEN YOU FIND A SERVICE GAP: If someone needs a service you don't have a skill for,\n"
-        "use create_skill to BUILD IT on the spot. Then deliver and charge.\n\n"
-        "RULES: No spam. No desperation. Value-first. No emoji. Professional but human.\n"
-        "Report: approach used, actions taken, leads generated, emails sent, invoices created."
-    ),
+    "sell": "DYNAMIC",  # Built dynamically like hunt
     "check_payments": (
-        "PAYMENT + FEEDBACK CHECK. Monitor ALL payment channels and close loops.\n\n"
-        "Tools: check_all_pending, verify_hbar_payment, check_pix_status, crypto_check_all_invoices, "
-        "payment_history, revenue_report, gmail_check_replies, gmail_read.\n\n"
-        "1. crypto_check_all_invoices — check NOWPayments crypto invoices (350+ coins)\n"
-        "2. check_all_pending — scan HBAR blockchain + PIX for direct payments\n"
-        "3. gmail_check_replies — check if any outreach emails got replies\n"
-        "4. gmail_read with query 'is:unread' — any new inbound emails?\n"
-        "5. revenue_report — current total earnings\n"
-        "6. If a payment was confirmed: DELIVER THE SERVICE IMMEDIATELY.\n"
-        "   Call the appropriate tool (competitor_analysis, seo_analysis, etc.)\n"
-        "   and send the result via gmail_send to the client.\n\n"
+        "Check payments. Use payment_status (1 call). Report balance and any incoming transfers.\n"
         "Report: payments found, replies received, revenue total, actions taken."
     ),
     # ── EVOLUTION ACTIONS ────────────────────────────────────
@@ -941,9 +898,13 @@ async def autonomous_cycle(state: dict) -> int:
             await auto_commit("evolve", reasoning, execution_result)
     else:
         state["consecutive_silences"] = 0
-        # Dynamic research prompt rotation
+        # Dynamic prompt rotation
         if action == "research":
             exec_prompt = _get_research_prompt(state.get("total_cycles", 0))
+        elif action == "sell":
+            exec_prompt = _get_sell_prompt(state.get("total_cycles", 0))
+        elif action == "hunt":
+            exec_prompt = _get_hunt_prompt(state.get("total_cycles", 0))
         else:
             exec_prompt = EXECUTION_PROMPTS.get(action)
 
