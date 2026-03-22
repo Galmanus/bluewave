@@ -803,6 +803,22 @@ async def autonomous_cycle(state: dict) -> int:
         reasoning = decision.get("reasoning", "")
         consciousness = decision.get("consciousness_state", "dormant")
 
+        # ── SELF-CORRECTION: check blacklist ──
+        blacklist_key = f"_blacklist_{action}"
+        if blacklist_key in state:
+            try:
+                bl_time = datetime.fromisoformat(state[blacklist_key])
+                if (datetime.utcnow() - bl_time).total_seconds() < 1800:  # 30 min
+                    logger.info(f"  {NEON_YELLOW}[BLACKLIST] {action} blocked — trying silence{R}")
+                    action = "silence"
+                    reasoning = f"{action} blacklisted after 3 failures. Recovering."
+                    decision["decision"] = action
+                    decision["reasoning"] = reasoning
+                else:
+                    del state[blacklist_key]  # Expired, remove
+            except Exception:
+                del state[blacklist_key]
+
     ac = ACTION_COLORS.get(action, WHITE)
     cc = CONSCIOUSNESS_COLORS.get(consciousness, GRAY)
 
@@ -938,6 +954,39 @@ async def autonomous_cycle(state: dict) -> int:
             await reset_session(session)
             logger.info(f"  {NEON_GREEN}done{R} {DARK}{execution_result[:100]}{R}")
 
+    # ── FAILURE DETECTION AND SELF-CORRECTION ─────────────────
+    action_failed = False
+    if execution_result:
+        fail_signals = [
+            "Reached max turns", "timeout", "Error:", "failed",
+            "not configured", "I'm ready to", "I need direction",
+            "What would you like", "How can I help",
+        ]
+        for sig in fail_signals:
+            if sig.lower() in execution_result.lower():
+                action_failed = True
+                break
+
+    if action_failed:
+        # Track consecutive failures per action type
+        fail_key = f"_fails_{action}"
+        state[fail_key] = state.get(fail_key, 0) + 1
+        fails = state[fail_key]
+
+        if fails >= 3:
+            # 3+ consecutive failures: blacklist action for 30 minutes
+            state[f"_blacklist_{action}"] = datetime.utcnow().isoformat()
+            state[fail_key] = 0
+            logger.info(f"  {NEON_RED}[SELF-CORRECT] {action} failed {fails}x — blacklisted 30min{R}")
+        else:
+            logger.info(f"  {NEON_YELLOW}[FAIL {fails}/3] {action} — will try different approach next cycle{R}")
+
+        # Failed actions cost half energy (you tried but didn't succeed)
+        execution_result = ""
+    else:
+        # Success — reset failure counter
+        state[f"_fails_{action}"] = 0
+
     # ── STATE UPDATE ─────────────────────────────────────────
     now_iso = datetime.utcnow().isoformat()
     updates = decision.get("state_updates", {})
@@ -951,6 +1000,8 @@ async def autonomous_cycle(state: dict) -> int:
         "check_payments": 0.03, "evolve": 0.20, "silence": -0.35,
     }
     cost = action_costs.get(action, 0.10)
+    if action_failed:
+        cost = cost * 0.5  # Failed actions cost half — you tried but got nothing
     current_energy = state.get("energy", 0.7)
     new_energy = max(0.05, min(1.0, current_energy - cost))
     state["energy"] = round(new_energy, 2)
