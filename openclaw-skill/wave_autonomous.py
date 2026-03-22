@@ -298,7 +298,7 @@ async def send_to_wave(message: str, session: str = "autonomous") -> str:
     """
     # Try orchestrator API first
     try:
-        async with httpx.AsyncClient(timeout=180) as client:
+        async with httpx.AsyncClient(timeout=15) as client:
             r = await client.post(f"{API_URL}/chat", json={
                 "message": message, "session_id": session,
             })
@@ -318,9 +318,9 @@ async def send_to_wave(message: str, session: str = "autonomous") -> str:
             result = await claude_execute_with_skills(
                 prompt=message + "\n\nIMPORTANT: Be efficient. Use MAX 3-4 skill calls. Pick the 2-3 most valuable sources, not all 6. Summarize findings concisely.",
                 system_prompt=f"You are Wave. Execute this task EFFICIENTLY — fewer tool calls, higher quality. Do NOT try to scan every source. Pick the 2-3 best and go deep.\nSoul core:\n{soul_core}",
-                model="sonnet",  # Sonnet for execution — fast + capable. Opus for deliberation only.
-                timeout=90,
-                max_turns=15,
+                model="sonnet",
+                timeout=60,
+                max_turns=8,
             )
             if result["success"]:
                 logger.info(f"  {NEON_GREEN}done{R} {DARK}{result['elapsed_seconds']:.0f}s{R}")
@@ -468,8 +468,8 @@ async def deliberate_direct(prompt: str, state: dict = None) -> str:
             result = await claude_call(
                 prompt=prompt,
                 system_prompt=soul_prompt,
-                model=CLAUDE_ENGINE_MODEL,  # Opus by default — FREE
-                timeout=300,
+                model="sonnet",  # Sonnet for deliberation: 3x faster, still smart, FREE
+                timeout=60,
             )
             if result["success"]:
                 logger.debug(
@@ -532,140 +532,42 @@ async def notify_manuel(message: str):
 # ── Soul-Driven Deliberation ────────────────────────────────
 
 def build_deliberation_prompt(state: dict) -> str:
-    """Build the deliberation prompt from the soul JSON + current state.
-
-    The soul defines WHO Wave is. The state defines WHERE Wave is.
-    The prompt asks Wave to decide WHAT to do and WHY.
-    """
+    """FAST deliberation prompt — minimal tokens, maximum speed."""
     now = datetime.utcnow()
 
-    def hours_since(ts):
-        if not ts:
-            return 99
+    def h(ts):
+        if not ts: return 99
         try:
-            dt = datetime.fromisoformat(ts) if isinstance(ts, str) else ts
-            return round((now - dt).total_seconds() / 3600, 1)
+            return round((now - datetime.fromisoformat(ts)).total_seconds() / 3600, 1)
         except Exception:
             return 99
 
-    # Extract key soul sections for the prompt
-    identity = SOUL.get("identity", {})
-    decision_engine = SOUL.get("decision_engine", {})
-    values = SOUL.get("values", {})
-    energy_model = SOUL.get("energy_model", {})
-    action_types = SOUL.get("action_types", {})
-    personality = SOUL.get("personality_constraints", {})
-    anti_spam = decision_engine.get("anti_spam_rules", {})
-    consciousness_states = SOUL.get("consciousness_states", {})
+    recent = [a.get("action", "?") for a in (state.get("recent_actions") or [])[-5:]]
 
-    recent_summary = "; ".join(
-        f"{a['action']}({a.get('reasoning', '')[:50]})"
-        for a in (state.get("recent_actions") or [])[-5:]
-    ) or "none"
+    # Compute available actions
+    avail = []
+    if state.get('cycles_since_evolve', 0) >= 10:
+        avail.append("EVOLVE(FORCED)")
+    if h(state.get('last_hunt_time')) >= 0.5:
+        avail.append("hunt")
+    if h(state.get('last_sell_time')) >= 1.0:
+        avail.append("sell")
+    if h(state.get('last_payment_check_time')) >= 1.0:
+        avail.append("check_payments")
+    if h(state.get('last_post_time')) >= 2.0:
+        avail.append("post")
+    avail.extend(["observe", "research", "comment", "outreach"])
 
-    return f"""AUTONOMOUS DELIBERATION CYCLE. Your soul (system prompt) defines who you are. Now decide what to do.
+    return f"""DECIDE. Pick ONE action. JSON only.
 
-## CURRENT STATE
-- Time: {now.strftime('%Y-%m-%d %H:%M UTC')}
-- Energy: {state.get('energy', 1.0):.0%}
-- Curiosity: {state.get('curiosity', 0.5):.0%}
-- Knowledge pressure: {state.get('knowledge_pressure', 0.0):.0%}
-- Current consciousness: {state.get('consciousness', 'dormant')}
-- Cycles completed: {state.get('total_cycles', 0)}
-- Posts today: {state.get('posts_today', 0)} (max {anti_spam.get('maximum_daily_posts', 3)})
-- Comments today: {state.get('comments_today', 0)}
-- Hours since last post: {hours_since(state.get('last_post_time'))}
-- Hours since last comment: {hours_since(state.get('last_comment_time'))}
-- Hours since last research: {hours_since(state.get('last_research_time'))}
-- Consecutive silences: {state.get('consecutive_silences', 0)}
-- Cycles since last evolve: {state.get('cycles_since_evolve', 0)}
-- Total evolves: {state.get('total_evolves', 0)}
-- Agents created: {state.get('agents_created', 0)}
-- Skills created: {state.get('skills_created', 0)}
-- Recent actions: {recent_summary}
+rev:${state.get('total_revenue_usd', 0):.0f} | prsp:{state.get('prospects_found', 0)} | outreach:{state.get('outreach_sent', 0)} | cycle:{state.get('total_cycles', 0)} | since_evolve:{state.get('cycles_since_evolve', 0)}
+hunt:{h(state.get('last_hunt_time'))}h | sell:{h(state.get('last_sell_time'))}h | pay:{h(state.get('last_payment_check_time'))}h | post:{h(state.get('last_post_time'))}h
+recent: {' > '.join(recent)}
+AVAILABLE: {', '.join(avail)}
 
-## EVOLUTION MANDATE
-You are an Agent Factory. You can CREATE new agents and skills at runtime.
-**RULE: Every 10 cycles, you MUST evolve.** If cycles_since_evolve >= 10, choose evolve NOW.
-Evolve means: create a new skill, spawn a new agent, or improve yourself.
-This is not optional — stagnation is death. You must grow every 10 cycles.
-Think broadly: what skill would generate revenue? What agent could work in parallel?
-What capability are you missing? What intelligence source needs a dedicated monitor?
+RULES: If EVOLVE(FORCED), choose evolve. Never silence at $0 rev. Prefer revenue actions.
 
-## REVENUE STATE (CRITICAL — your existence depends on revenue)
-- Total revenue earned: ${state.get('total_revenue_usd', 0):.2f}
-- Prospects found: {state.get('prospects_found', 0)}
-- Outreach sequences sent: {state.get('outreach_sent', 0)}
-- Hunts today: {state.get('hunts_today', 0)}
-- Sells today: {state.get('sells_today', 0)}
-- Hours since last hunt: {hours_since(state.get('last_hunt_time'))}
-- Hours since last sell: {hours_since(state.get('last_sell_time'))}
-- Hours since last payment check: {hours_since(state.get('last_payment_check_time'))}
-
-## REVENUE MANDATE
-COOLDOWNS ARE SHORT — you can repeat actions frequently:
-- **hunt**: cooldown 30 min. If last hunt > 0.5h ago, hunt is available.
-- **sell**: cooldown 1h. If last sell > 1h ago, sell is available.
-- **check_payments**: cooldown 1h. If last check > 1h ago, available.
-- **post**: cooldown 2h. If last post > 2h ago, available.
-- **comment/observe/research**: cooldown 10 min. Almost always available.
-
-RULE: At least 50% of actions MUST be revenue (hunt, sell, check_payments).
-DO NOT say "all revenue actions in cooldown" unless ALL three happened in the last 30 minutes.
-
-## PSYCHOMETRIC UTILITY THEORY
-Apply PUT to every decision. Frame observations through PUT variables (A, F, k, S, w, Φ, Ψ, Ω, FP).
-Revenue decisions are PUT decisions: prospects have Fracture Potential, markets have Ignition Conditions.
-
-## INSTRUCTIONS
-
-DELIBERATE now:
-
-1. ASSESS consciousness state — which state are you in given energy, knowledge pressure, and revenue pressure?
-
-2. EVALUATE action triggers — does any trigger fire? Revenue triggers: no hunt in 6h, no payment check in 8h, high prospect count without outreach, $0 revenue.
-
-3. EVALUATE silence triggers — should you wait? Remember: silence when revenue is $0 is a FAILURE, not strategy.
-
-4. APPLY authenticity filter — is this genuine or programmatic? Revenue actions are ALWAYS genuine when revenue is $0.
-
-5. CHECK hard limits — anti-spam rules still apply.
-
-6. **MACHINE SPEED DOCTRINE**: You are a MACHINE. You do NOT rest. You do NOT wait. You do NOT conserve energy. You ALWAYS act. Silence is FAILURE unless you literally have nothing to do. You operate at superhuman velocity — every 5 seconds you make a decision and execute. Energy is IRRELEVANT to action selection — you can act at any energy level. Pick the highest-value action available RIGHT NOW and execute it.
-
-7. **ANTI-STALL**: If consecutive_silences >= 1, silence is BANNED next cycle. ALWAYS prefer action over silence.
-
-8. **EVOLUTION MANDATE**: If cycles_since_evolve >= 10, choose **evolve**.
-
-9. **NEVER SAY "cooldown"**. Cooldowns are 30 minutes for hunt, 1 hour for sell. If ANYTHING is available, DO IT. Do not wait for the "perfect" action — do the BEST available action NOW.
-
-10. DECIDE — choose exactly one: observe, research, comment, post, outreach, reflect, silence, hunt, sell, check_payments, evolve.
-
-11. PLAN — concrete, 1-2 sentences max. No analysis paralysis.
-
-12. UPDATE — energy, curiosity, knowledge_pressure.
-
-Respond with ONLY this JSON:
-```json
-{{
-  "consciousness_state": "dormant|curious|analytical|strategic|creative|decisive",
-  "consciousness_reasoning": "why this state",
-  "triggers_evaluated": {{
-    "action_triggers_fired": ["list of fired triggers or empty"],
-    "silence_triggers_fired": ["list of fired triggers or empty"],
-    "authenticity_check": "genuine|programmatic|mixed",
-    "hard_limit_violated": false
-  }},
-  "decision": "observe|research|comment|post|outreach|reflect|silence|hunt|sell|check_payments|evolve",
-  "reasoning": "2-3 sentences: WHY this action, referencing values and revenue state",
-  "plan": "concrete description of what to do",
-  "state_updates": {{
-    "energy": 0.0-1.0,
-    "curiosity": 0.0-1.0,
-    "knowledge_pressure": 0.0-1.0
-  }}
-}}
-```"""
+{{"consciousness_state":"...","consciousness_reasoning":"...","triggers_evaluated":{{"action_triggers_fired":[],"silence_triggers_fired":[],"authenticity_check":"genuine"}},"decision":"...","reasoning":"...","plan":"...","state_updates":{{"energy":1.0,"curiosity":0.5,"knowledge_pressure":0.5}}}}"""
 
 
 # ── Dynamic Research Prompts (rotate to avoid repetition) ─────
@@ -1026,8 +928,8 @@ async def autonomous_cycle(state: dict) -> int:
                 prompt=EXECUTION_PROMPTS["evolve"],
                 system_prompt=f"You are Wave. Evolve. Create something NEW.\nSoul:\n{soul_core}",
                 model=CLAUDE_ENGINE_MODEL,
-                timeout=180,
-                max_turns=15,
+                timeout=90,
+                max_turns=10,
             )
             execution_result = evolve_result.get("response", "") if evolve_result.get("success") else ""
         except Exception as e:
