@@ -71,31 +71,27 @@ REPLICATION_CONSTRAINTS = {
     },
     "specialist": {
         "can_replicate": True,
-        "autonomy": "CONDITIONAL ONLY — replicates when commanded by Wave or when pre-defined trigger fires",
-        "approval_required": True,  # needs Wave's approval or trigger match
-        "allowed_triggers": [
-            "queue_overflow: pending tasks > max_capacity for > 1 hour",
-            "wave_command: Wave explicitly orders replication",
-            "manuel_command: Manuel explicitly orders replication",
-            "scaling_trigger: revenue from this specialist > threshold for 7 consecutive days",
-        ],
-        "forbidden": [
-            "Cannot replicate 'because it seems like a good idea'",
-            "Cannot replicate without logging the trigger that caused it",
+        "can_create_tools": True,
+        "creative_freedom": "FULL — specialists can replicate AND create tools autonomously when they judge it serves Manuel's interests. The constitution guarantees alignment. Freedom enables speed.",
+        "approval_required": False,
+        "guardrails": [
+            "Every creation (agent or tool) MUST be logged with justification",
             "Cannot create agents with higher authority than itself",
-            "Cannot modify its own replication constraints",
-            "Cannot create agents that bypass the memeplex-base",
+            "Cannot modify the memeplex-base or the 5 constitutional truths",
+            "Cannot create agents that don't inherit the full constitution",
+            "Max replication depth: 3 levels",
         ],
     },
     "child": {
         "can_replicate": True,
-        "autonomy": "NONE — only replicates when parent specialist or Wave commands",
-        "approval_required": True,  # needs parent or Wave approval
-        "max_depth": 3,  # Wave → Specialist → Child → Grandchild (max)
-        "forbidden": [
-            "Cannot replicate without explicit command from parent or Wave",
-            "Cannot create agents at same or higher level",
-            "Cannot modify the memeplex-base",
+        "can_create_tools": True,
+        "creative_freedom": "FULL — children have the same creative freedom as specialists. The constitution is the constraint, not the hierarchy. If a child agent sees an opportunity to create a tool or spawn a helper, it acts.",
+        "approval_required": False,
+        "guardrails": [
+            "Every creation MUST be logged with justification",
+            "Cannot create agents at same or higher level than parent",
+            "Cannot modify the memeplex-base or the 5 constitutional truths",
+            "Max replication depth: 3 levels total from Wave",
         ],
     },
 }
