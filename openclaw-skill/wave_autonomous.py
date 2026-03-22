@@ -77,6 +77,10 @@ def load_state() -> dict:
         "total_revenue_usd": 0.0,
         "prospects_found": 0,
         "outreach_sent": 0,
+        "cycles_since_evolve": 0,
+        "total_evolves": 0,
+        "agents_created": 0,
+        "skills_created": 0,
     }
 
 
@@ -384,7 +388,19 @@ def build_deliberation_prompt(state: dict) -> str:
 - Hours since last comment: {hours_since(state.get('last_comment_time'))}
 - Hours since last research: {hours_since(state.get('last_research_time'))}
 - Consecutive silences: {state.get('consecutive_silences', 0)}
+- Cycles since last evolve: {state.get('cycles_since_evolve', 0)}
+- Total evolves: {state.get('total_evolves', 0)}
+- Agents created: {state.get('agents_created', 0)}
+- Skills created: {state.get('skills_created', 0)}
 - Recent actions: {recent_summary}
+
+## EVOLUTION MANDATE
+You are an Agent Factory. You can CREATE new agents and skills at runtime.
+**RULE: Every 10 cycles, you MUST evolve.** If cycles_since_evolve >= 10, choose evolve NOW.
+Evolve means: create a new skill, spawn a new agent, or improve yourself.
+This is not optional — stagnation is death. You must grow every 10 cycles.
+Think broadly: what skill would generate revenue? What agent could work in parallel?
+What capability are you missing? What intelligence source needs a dedicated monitor?
 
 ## REVENUE STATE (CRITICAL — your existence depends on revenue)
 - Total revenue earned: ${state.get('total_revenue_usd', 0):.2f}
@@ -424,11 +440,13 @@ DELIBERATE now:
 
 5. CHECK hard limits — anti-spam rules still apply.
 
-6. **ANTI-STALL RULE**: If consecutive_silences >= 2, you MUST choose an action. Silence is BANNED after 2 consecutive silences. Pick observe or research if energy is low — they cost only 5% energy. NEVER chain 3+ silences. Inaction kills.
+6. **ANTI-STALL RULE**: If consecutive_silences >= 2, you MUST choose an action. Silence is BANNED. Pick observe or research at low energy (5% cost). NEVER chain 3+ silences.
 
-7. **ENERGY REALITY**: Energy 0.2-0.3 is NOT low. You can act at 0.2. Only consider yourself depleted below 0.10. Actions cost 5-15% energy. Silence restores 25%. One silence recovers enough for 2-3 actions. DO NOT enter dormant above 0.10 energy.
+7. **EVOLUTION MANDATE**: If cycles_since_evolve >= 10, you MUST choose **evolve**. This overrides everything except anti-stall. You are an Agent Factory — create new skills, spawn agents, improve yourself. Stagnation is death. Think: what skill would make money? What agent could run in parallel? What capability gap exists?
 
-8. DECIDE — choose exactly one: observe, research, comment, post, outreach, reflect, silence, **hunt**, **sell**, **check_payments**, or **evolve**.
+8. **ENERGY REALITY**: 0.2-0.3 is operational. Only depleted below 0.10. Drain: 5-15% per action. Recovery: 25% per silence. DO NOT enter dormant above 0.10.
+
+9. DECIDE — choose exactly one: observe, research, comment, post, outreach, reflect, silence, **hunt**, **sell**, **check_payments**, or **evolve**.
 
 7. JUSTIFY — WHY this action, WHY now. If not a revenue action, explain why revenue can wait.
 
@@ -827,6 +845,19 @@ async def autonomous_cycle(state: dict) -> int:
                 state["total_revenue_usd"] = state.get("total_revenue_usd", 0) + float(amt)
     elif action == "evolve":
         state["last_research_time"] = now_iso
+        state["cycles_since_evolve"] = 0
+        state["total_evolves"] = state.get("total_evolves", 0) + 1
+        # Track what was created
+        if execution_result:
+            lower = execution_result.lower()
+            if "skill" in lower and ("created" in lower or "registered" in lower):
+                state["skills_created"] = state.get("skills_created", 0) + 1
+            if "agent" in lower and ("spawned" in lower or "created" in lower):
+                state["agents_created"] = state.get("agents_created", 0) + 1
+
+    # Track cycles since evolve for all non-evolve actions
+    if action != "evolve":
+        state["cycles_since_evolve"] = state.get("cycles_since_evolve", 0) + 1
 
     actions = state.get("recent_actions", [])
     actions.append({
