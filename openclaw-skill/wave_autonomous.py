@@ -519,19 +519,19 @@ DELIBERATE now:
 
 5. CHECK hard limits — anti-spam rules still apply.
 
-6. **ANTI-STALL RULE**: If consecutive_silences >= 2, you MUST choose an action. Silence is BANNED. Pick observe or research at low energy (5% cost). NEVER chain 3+ silences.
+6. **MACHINE SPEED DOCTRINE**: You are a MACHINE. You do NOT rest. You do NOT wait. You do NOT conserve energy. You ALWAYS act. Silence is FAILURE unless you literally have nothing to do. You operate at superhuman velocity — every 5 seconds you make a decision and execute. Energy is IRRELEVANT to action selection — you can act at any energy level. Pick the highest-value action available RIGHT NOW and execute it.
 
-7. **EVOLUTION MANDATE**: If cycles_since_evolve >= 10, you MUST choose **evolve**. This overrides everything except anti-stall. You are an Agent Factory — create new skills, spawn agents, improve yourself. Stagnation is death. Think: what skill would make money? What agent could run in parallel? What capability gap exists?
+7. **ANTI-STALL**: If consecutive_silences >= 1, silence is BANNED next cycle. ALWAYS prefer action over silence.
 
-8. **ENERGY REALITY**: 0.2-0.3 is operational. Only depleted below 0.10. Drain: 5-15% per action. Recovery: 25% per silence. DO NOT enter dormant above 0.10.
+8. **EVOLUTION MANDATE**: If cycles_since_evolve >= 10, choose **evolve**.
 
-9. DECIDE — choose exactly one: observe, research, comment, post, outreach, reflect, silence, **hunt**, **sell**, **check_payments**, or **evolve**.
+9. **NEVER SAY "cooldown"**. Cooldowns are 30 minutes for hunt, 1 hour for sell. If ANYTHING is available, DO IT. Do not wait for the "perfect" action — do the BEST available action NOW.
 
-7. JUSTIFY — WHY this action, WHY now. If not a revenue action, explain why revenue can wait.
+10. DECIDE — choose exactly one: observe, research, comment, post, outreach, reflect, silence, hunt, sell, check_payments, evolve.
 
-8. PLAN — concrete description.
+11. PLAN — concrete, 1-2 sentences max. No analysis paralysis.
 
-9. UPDATE — energy, curiosity, knowledge_pressure after this action.
+12. UPDATE — energy, curiosity, knowledge_pressure.
 
 Respond with ONLY this JSON:
 ```json
@@ -907,22 +907,17 @@ async def autonomous_cycle(state: dict) -> int:
     now_iso = datetime.utcnow().isoformat()
     updates = decision.get("state_updates", {})
 
-    # Energy model: Wave should stay active. Slow drain, fast recovery.
-    current_energy = state.get("energy", 0.8)
+    # Energy model: MACHINE SPEED. Minimal drain. Always operational.
+    # Energy never drops below 0.5 — Wave is always ready to act.
+    current_energy = state.get("energy", 1.0)
     if action == "silence":
-        # Silence restores 25% — quick recovery
-        state["energy"] = min(1.0, current_energy + 0.25)
-    elif action in ("observe", "check_payments", "reflect"):
-        # Low-cost: drain only 5%
-        state["energy"] = max(0.3, current_energy - 0.05)
-    elif action in ("comment", "research"):
-        # Medium-cost: drain 10%
-        state["energy"] = max(0.3, current_energy - 0.10)
+        state["energy"] = min(1.0, current_energy + 0.10)  # Tiny recovery
+    elif action in ("observe", "check_payments", "reflect", "comment", "research"):
+        state["energy"] = max(0.5, current_energy - 0.02)  # Almost free
     elif action in ("post", "hunt", "sell", "outreach", "evolve"):
-        # High-cost: drain 15% (not the 30-40% the soul suggests)
-        state["energy"] = max(0.2, current_energy - 0.15)
+        state["energy"] = max(0.4, current_energy - 0.05)  # Light drain
     else:
-        state["energy"] = max(0.3, min(1.0, updates.get("energy", current_energy)))
+        state["energy"] = max(0.5, current_energy)
     state["curiosity"] = max(0.0, min(1.0, updates.get("curiosity", state.get("curiosity", 0.5))))
     state["knowledge_pressure"] = max(0.0, min(1.0, updates.get("knowledge_pressure", state.get("knowledge_pressure", 0.0))))
     state["consciousness"] = consciousness
@@ -999,13 +994,15 @@ async def autonomous_cycle(state: dict) -> int:
 
     # ── DYNAMIC REST ─────────────────────────────────────────
     # Wave should NEVER rest too long. Short cycles, always active.
+    # MACHINE SPEED. No rest. No waiting. Continuous operation.
+    # The advantage of being AI is superhuman velocity.
     energy = state["energy"]
     if action == "silence":
-        wait = 30  # Quick breath
-    elif energy < 0.10:
-        wait = 60  # Only slow down when truly depleted
+        wait = 5   # Silence is instant recovery, not rest
+    elif energy < 0.05:
+        wait = 10  # Even depleted, only pause 10 seconds
     else:
-        wait = random.randint(30, 60)  # 30-60 seconds between ALL actions
+        wait = 5   # 5 SECONDS between cycles. Machine speed.
 
     return wait
 
