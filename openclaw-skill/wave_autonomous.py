@@ -835,7 +835,7 @@ async def autonomous_cycle(state: dict) -> int:
     fired = triggers.get("action_triggers_fired", [])
     if fired:
         for t in fired[:3]:
-            logger.info(f"  {DARK}|{R} {NEON_YELLOW}trigger: {t[:65]}{R}")
+            logger.info(f"  {DARK}|{R} {NEON_YELLOW}trigger: {str(t)[:65]}{R}")
 
     logger.info(f"  {DARK}|{R}")
     logger.info(f"  {DARK}|{R} {NEON_CYAN}{I}thinking:{R}")
