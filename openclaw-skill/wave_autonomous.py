@@ -244,7 +244,7 @@ def _show_agent_tree():
             try:
                 soul = json.loads((child_dir / "soul.json").read_text())
                 name = child_dir.name
-                purpose = soul.get("identity", {}).get("fundamental_nature", "")[:50]
+                purpose = soul.get("identity", {}).get("fundamental_nature", "")[:80]
 
                 # Check if process is running
                 pid_file = child_dir / "pid"
