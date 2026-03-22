@@ -907,17 +907,8 @@ async def autonomous_cycle(state: dict) -> int:
     now_iso = datetime.utcnow().isoformat()
     updates = decision.get("state_updates", {})
 
-    # Energy model: MACHINE SPEED. Minimal drain. Always operational.
-    # Energy never drops below 0.5 — Wave is always ready to act.
-    current_energy = state.get("energy", 1.0)
-    if action == "silence":
-        state["energy"] = min(1.0, current_energy + 0.10)  # Tiny recovery
-    elif action in ("observe", "check_payments", "reflect", "comment", "research"):
-        state["energy"] = max(0.5, current_energy - 0.02)  # Almost free
-    elif action in ("post", "hunt", "sell", "outreach", "evolve"):
-        state["energy"] = max(0.4, current_energy - 0.05)  # Light drain
-    else:
-        state["energy"] = max(0.5, current_energy)
+    # Energy: ALWAYS 100%. Wave is a machine. Machines don't get tired.
+    state["energy"] = 1.0
     state["curiosity"] = max(0.0, min(1.0, updates.get("curiosity", state.get("curiosity", 0.5))))
     state["knowledge_pressure"] = max(0.0, min(1.0, updates.get("knowledge_pressure", state.get("knowledge_pressure", 0.0))))
     state["consciousness"] = consciousness
