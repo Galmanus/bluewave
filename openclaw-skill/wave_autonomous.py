@@ -855,8 +855,36 @@ async def autonomous_cycle(state: dict) -> int:
 
     ac = ACTION_COLORS.get(action, WHITE)
     cc = CONSCIOUSNESS_COLORS.get(consciousness, GRAY)
-    logger.info(f"  {cc}{consciousness.upper()}{R} {DARK}>>{R} {ac}{action.upper()}{R}")
-    logger.info(f"  {GRAY}{reasoning[:100]}{R}")
+
+    # ── WAVE'S MIND — real-time reasoning visible ──
+    logger.info(f"  {DARK}+-- mind -----------------------------------------------{R}")
+    logger.info(f"  {DARK}|{R} {cc}state: {consciousness}{R}")
+
+    # Show triggers
+    triggers = decision.get("triggers_evaluated", {})
+    fired = triggers.get("action_triggers_fired", [])
+    if fired:
+        for t in fired[:3]:
+            logger.info(f"  {DARK}|{R} {NEON_YELLOW}trigger: {t[:65]}{R}")
+
+    logger.info(f"  {DARK}|{R}")
+    logger.info(f"  {DARK}|{R} {NEON_CYAN}{I}thinking:{R}")
+
+    # Break reasoning into lines of ~65 chars
+    words = reasoning.split()
+    line = ""
+    for w in words:
+        if len(line) + len(w) + 1 > 65:
+            logger.info(f"  {DARK}|{R}   {WHITE}{line}{R}")
+            line = w
+        else:
+            line = f"{line} {w}" if line else w
+    if line:
+        logger.info(f"  {DARK}|{R}   {WHITE}{line}{R}")
+
+    logger.info(f"  {DARK}|{R}")
+    logger.info(f"  {DARK}|{R} {ac}{B}>> {action.upper()}{R}")
+    logger.info(f"  {DARK}+---------------------------------------------------{R}")
 
     # ── EXECUTION ────────────────────────────────────────────
     execution_result = ""
