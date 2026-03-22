@@ -1115,18 +1115,23 @@ def _parse_decision(raw: str) -> dict:
 # ── Main ─────────────────────────────────────────────────────
 
 async def main():
+    now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+    pid = os.getpid()
+    n_sections = len(SOUL)
     logger.info(f"""
-{NEON_CYAN}{B}
-  ┌──────────────────────────────────────────────────┐
-  │  █   █ █▀█ █ █ █▀▀                               │
-  │  █ █ █ █▀█ ▀▄▀ ██▄                               │
-  │  ▀▀ ▀▀ ▀ ▀  ▀  ▀▀▀                               │
-  │                                                    │
-  │  {NEON_GREEN}AUTONOMOUS AGENT v2.0{NEON_CYAN}                          │
-  │  {GRAY}soul: {len(SOUL)} sections // skills: 181 // opus core{NEON_CYAN}   │
-  │  {GRAY}speed: machine // energy: infinite // rest: never{NEON_CYAN}  │
-  │  {DARK}pid: {os.getpid()} // {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}{NEON_CYAN}              │
-  └──────────────────────────────────────────────────┘{R}
+{NEON_CYAN}
+    ██╗    ██╗ █████╗ ██╗   ██╗███████╗
+    ██║    ██║██╔══██╗██║   ██║██╔════╝
+    ██║ █╗ ██║███████║██║   ██║█████╗
+    ██║███╗██║██╔══██║╚██╗ ██╔╝██╔══╝
+    ╚███╔███╔╝██║  ██║ ╚████╔╝ ███████╗
+     ╚══╝╚══╝ ╚═╝  ╚═╝  ╚═══╝  ╚══════╝{R}
+{DARK}    ──────────────────────────────────────{R}
+{NEON_GREEN}    AUTONOMOUS AGENT{R} {DARK}//{R} {WHITE}MACHINE SPEED{R}
+{DARK}    soul {n_sections} sections // 181 skills // opus core
+    energy infinite // rest never // cycles 5s
+    pid {pid} // {now}{R}
+{DARK}    ──────────────────────────────────────{R}
 """)
 
     try:
