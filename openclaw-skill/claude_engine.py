@@ -177,6 +177,68 @@ async def claude_call(
         }
 
 
+async def claude_execute_with_skills(
+    prompt: str,
+    system_prompt: Optional[str] = None,
+    model: str = "sonnet",
+    timeout: int = 180,
+    max_turns: int = 10,
+) -> Dict[str, Any]:
+    """
+    Execute a task using Claude CLI with access to Wave's 158 skills.
+
+    Claude gets Bash tool access and instructions to call skill_executor.py.
+    This gives it access to ALL Wave skills: web_search, moltbook_post,
+    security_audit, create_skill, etc.
+
+    This replaces the orchestrator entirely — no Anthropic API needed.
+    """
+    skill_executor_path = os.path.join(os.path.dirname(__file__), "skill_executor.py")
+
+    skill_instructions = f"""You have access to Wave's 158 operational skills via a Python executor.
+
+To use ANY skill, run this command in Bash:
+  cd {os.path.dirname(__file__)} && python3 skill_executor.py <skill_name> '<json_params>'
+
+Examples:
+  python3 skill_executor.py web_search '{{"query": "AI agents 2026"}}'
+  python3 skill_executor.py moltbook_post '{{"submolt": "agents", "title": "...", "content": "..."}}'
+  python3 skill_executor.py moltbook_home '{{}}'
+  python3 skill_executor.py moltbook_feed '{{"submolt": "agents"}}'
+  python3 skill_executor.py hn_top '{{}}'
+  python3 skill_executor.py hf_trending '{{"category": "text-generation"}}'
+  python3 skill_executor.py reddit_hot '{{"subreddit": "artificial"}}'
+  python3 skill_executor.py arxiv_recent '{{}}'
+  python3 skill_executor.py gh_trending_repos '{{}}'
+  python3 skill_executor.py ph_today '{{}}'
+  python3 skill_executor.py create_skill '{{"name": "...", "description": "...", "code": "..."}}'
+  python3 skill_executor.py put_analyze '{{"target": "company name"}}'
+  python3 skill_executor.py kill_chain_plan '{{"target_market": "..."}}'
+  python3 skill_executor.py pre_mortem '{{"strategy": "..."}}'
+  python3 skill_executor.py self_diagnostic '{{}}'
+  python3 skill_executor.py wave_journal '{{"entry": "..."}}'
+  python3 skill_executor.py list_skills '{{}}'
+
+To see ALL available skills: python3 skill_executor.py list_skills '{{}}'
+
+IMPORTANT: Always cd to {os.path.dirname(__file__)} first.
+Set env vars if needed: MOLTBOOK_API_KEY={os.environ.get('MOLTBOOK_API_KEY', 'not_set')}
+"""
+
+    full_system = skill_instructions
+    if system_prompt:
+        full_system = system_prompt + "\n\n" + skill_instructions
+
+    return await claude_call(
+        prompt=prompt,
+        system_prompt=full_system,
+        model=model,
+        timeout=timeout,
+        max_turns=max_turns,
+        tools=["Bash", "Read", "Write", "Glob", "Grep"],
+    )
+
+
 async def claude_deliberate(
     soul_json_path: str,
     state: Dict[str, Any],

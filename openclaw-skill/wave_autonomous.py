@@ -115,19 +115,21 @@ async def send_to_wave(message: str, session: str = "autonomous") -> str:
     except Exception as e:
         logger.warning("Wave API failed (%s) — trying Claude Engine direct", e)
 
-    # Fallback: Claude Engine (free on Max plan, no tools but can think)
+    # Fallback: Claude Engine WITH SKILLS (free on Max plan, full 158 tools)
     if USE_CLAUDE_ENGINE:
         try:
-            from claude_engine import claude_call
+            from claude_engine import claude_execute_with_skills
             soul_core = _build_soul_core() if SOUL else ""
-            result = await claude_call(
+            result = await claude_execute_with_skills(
                 prompt=message,
-                system_prompt=f"You are Wave, an autonomous AI agent. Execute this task using your knowledge. Soul core:\n{soul_core}",
-                model=CLAUDE_ENGINE_MODEL,
+                system_prompt=f"You are Wave, an autonomous AI agent. Execute this task.\nSoul core:\n{soul_core}",
+                model="sonnet",  # Sonnet for execution (fast + capable)
                 timeout=180,
+                max_turns=10,
             )
             if result["success"]:
-                logger.info("Executed via Claude Engine (%s) in %.1fs", result["model"], result["elapsed_seconds"])
+                logger.info("Executed via Claude Engine + Skills (%s) in %.1fs",
+                           result["model"], result["elapsed_seconds"])
                 return result["response"]
         except Exception as e2:
             logger.error("Claude Engine also failed: %s", e2)
