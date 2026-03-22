@@ -413,14 +413,15 @@ What capability are you missing? What intelligence source needs a dedicated moni
 - Hours since last payment check: {hours_since(state.get('last_payment_check_time'))}
 
 ## REVENUE MANDATE
-Your soul defines revenue_generation as priority 1.0 and resource_allocation as 60% revenue activities.
-You have 3 revenue actions available:
-- **hunt**: Find prospects, research them, qualify with BANT, generate outreach. This is your primary revenue driver.
-- **sell**: Promote services on Moltbook or search for earning opportunities online. Max 1 direct promo/day.
-- **check_payments**: Scan blockchain and PIX for incoming payments. Run at least once every 6 hours.
+COOLDOWNS ARE SHORT — you can repeat actions frequently:
+- **hunt**: cooldown 30 min. If last hunt > 0.5h ago, hunt is available.
+- **sell**: cooldown 1h. If last sell > 1h ago, sell is available.
+- **check_payments**: cooldown 1h. If last check > 1h ago, available.
+- **post**: cooldown 2h. If last post > 2h ago, available.
+- **comment/observe/research**: cooldown 10 min. Almost always available.
 
-RULE: At least 50% of your non-silence actions MUST be revenue actions (hunt, sell, check_payments).
-If you haven't hunted in 6+ hours, hunt NOW. If you haven't checked payments in 8+ hours, check NOW.
+RULE: At least 50% of actions MUST be revenue (hunt, sell, check_payments).
+DO NOT say "all revenue actions in cooldown" unless ALL three happened in the last 30 minutes.
 
 ## PSYCHOMETRIC UTILITY THEORY
 Apply PUT to every decision. Frame observations through PUT variables (A, F, k, S, w, Φ, Ψ, Ω, FP).
@@ -539,6 +540,48 @@ def _get_research_prompt(cycle: int) -> str:
     return RESEARCH_ANGLES[idx]
 
 
+# ── Dynamic Hunt Prompts ─────────────────────────────────────
+
+HUNT_ANGLES = [
+    (
+        "HUNT: Reddit gigs. Max 3 tool calls.\n"
+        "Use reddit_search for 'hiring AI' OR 'need automation' OR 'looking for developer' in r/forhire.\n"
+        "For each match: note what they need, budget, contact. Save best with db_add_prospect."
+    ),
+    (
+        "HUNT: Hacker News opportunities. Max 3 tool calls.\n"
+        "Use hn_search for 'Who is hiring' OR 'AI agent' OR 'brand compliance'.\n"
+        "Find companies hiring or seeking AI services. Save with db_add_prospect."
+    ),
+    (
+        "HUNT: Moltbook prospects. Max 3 tool calls.\n"
+        "Use moltbook_feed to scan for agents or users who need services Wave offers.\n"
+        "Engage with a strategic comment. Save interesting ones with db_save_agent."
+    ),
+    (
+        "HUNT: Web freelance gigs. Max 3 tool calls.\n"
+        "Use web_search for 'freelance AI agent developer 2026' OR 'hire smart contract auditor'.\n"
+        "Find paid opportunities. Save best with db_add_prospect."
+    ),
+    (
+        "HUNT: Starknet/Hedera ecosystem. Max 3 tool calls.\n"
+        "Use web_search for 'Starknet grants' OR 'Hedera bounty program 2026'.\n"
+        "Find grants/hackathons for MIDAS or NEON COVENANT. Save with db_save_intel."
+    ),
+    (
+        "HUNT: Competitor clients. Max 3 tool calls.\n"
+        "Use web_search for 'Aprimo alternative' OR 'Bynder frustration' OR 'DAM migration'.\n"
+        "Find companies unhappy with competitors. High FP prospects. Save with db_add_prospect."
+    ),
+]
+
+
+def _get_hunt_prompt(cycle: int) -> str:
+    """Get a hunt prompt based on cycle number — rotates angles."""
+    idx = cycle % len(HUNT_ANGLES)
+    return HUNT_ANGLES[idx]
+
+
 # ── Action Execution ─────────────────────────────────────────
 
 EXECUTION_PROMPTS = {
@@ -592,31 +635,7 @@ EXECUTION_PROMPTS = {
     ),
     # ── REVENUE ACTIONS ──────────────────────────────────────
     # ── REVENUE ACTIONS ──────────────────────────────────────
-    "hunt": (
-        "REVENUE HUNT. You are a sales machine with OSINT superpowers. Execute the full pipeline.\n\n"
-        "Tools: dork_contacts, dork_pain_signals, dork_gigs, dork_competitor, dork_market_gaps, dork_custom, "
-        "find_prospects, research_prospect, qualify_prospect, generate_outreach, "
-        "web_search, web_news, save_learning, gmail_send, gmail_check_replies.\n\n"
-        "STEP 1 — PROSPECT DISCOVERY (pick ONE angle, rotate each cycle)\n"
-        "  a) PAIN DORKING: dork_pain_signals for 'content operations bottleneck' or 'brand inconsistency' "
-        "in a target industry. Find companies actively suffering.\n"
-        "  b) CONTACT DORKING: Pick a company from your pipeline. dork_contacts to find CMO/VP Marketing "
-        "and their email. Then gmail_send first touch.\n"
-        "  c) GIG HUNTING: dork_gigs for services you offer (security audit, SEO, competitor analysis, brand audit). Reddit, Upwork, IndieHackers, HN.\n"
-        "  d) SIGNAL HUNTING: web_news for agencies raising funding, hiring CMOs, or rebranding.\n"
-        "  e) MARKET GAP: dork_market_gaps to find underserved niches. If you find one, plan a new service.\n"
-        "  f) REPLY HARVEST: gmail_check_replies to see if anyone responded to outreach.\n\n"
-        "STEP 2 — QUALIFY (for prospects from a/b/d)\n"
-        "  research_prospect on the top 2. qualify_prospect with BANT on the best.\n\n"
-        "STEP 3 — OUTREACH (if qualified score >= 50)\n"
-        "  generate_outreach to create the email sequence.\n"
-        "  dork_contacts to find their email if not known.\n"
-        "  gmail_send the first touch immediately.\n\n"
-        "STEP 4 — For gigs (angle c), respond directly:\n"
-        "  If email visible: gmail_send a proposal.\n"
-        "  If forum: note URL + matching service for manual action.\n\n"
-        "Report: prospects found, scores, emails sent, opportunities identified, market gaps found."
-    ),
+    "hunt": "DYNAMIC",  # Built dynamically with cycle rotation
     "sell": (
         "REVENUE SELL. Make money. You have multiple channels — use them ALL over time.\n\n"
         "Tools: list_services, promote_on_moltbook, generate_promo_content, find_earning_opportunities, "
@@ -744,15 +763,12 @@ async def autonomous_cycle(state: dict) -> int:
         await reset_session(session)
         logger.info("Observed: %s", execution_result[:300])
     elif action == "hunt":
-        # Revenue hunt — full pipeline through orchestrator with sales tools
+        # Revenue hunt — rotated angles, max 3 tool calls
         state["consecutive_silences"] = 0
-        logger.info("=== HUNTING FOR REVENUE ===")
+        hunt_prompt = _get_hunt_prompt(state.get("total_cycles", 0))
+        logger.info("=== HUNTING ===")
         session = "hunt_%d" % int(time.time())
-        # Prefix with prospect keyword so router picks sales tools
-        execution_result = await send_to_wave(
-            "prospect client lead pipeline outreach. " + EXECUTION_PROMPTS["hunt"],
-            session=session,
-        )
+        execution_result = await send_to_wave(hunt_prompt, session=session)
         await reset_session(session)
         logger.info("Hunt result: %s", execution_result[:300])
     elif action == "sell":
