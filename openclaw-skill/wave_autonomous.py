@@ -90,6 +90,10 @@ def save_state(state: dict):
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 DELIBERATION_MODEL = os.environ.get("WAVE_DELIBERATION_MODEL", "claude-haiku-4-5-20251001")
 
+# Claude Engine: use CLI (free on Max plan) or API as fallback
+USE_CLAUDE_ENGINE = os.environ.get("USE_CLAUDE_ENGINE", "true").lower() == "true"
+CLAUDE_ENGINE_MODEL = os.environ.get("CLAUDE_ENGINE_MODEL", "opus")  # Opus is FREE on Max
+
 
 async def send_to_wave(message: str, session: str = "autonomous") -> str:
     """Send message to Wave orchestrator API for execution."""
@@ -220,27 +224,47 @@ _SOUL_SYSTEM_PROMPT_CORE = _build_soul_core() if SOUL else ""
 
 
 async def deliberate_direct(prompt: str, state: dict = None) -> str:
-    """Call Claude directly for deliberation (bypasses orchestrator).
+    """Call Claude for deliberation — uses CLI engine (FREE on Max) or API fallback.
 
-    Uses Haiku for speed -- deliberation needs to be fast and cheap.
+    Priority: claude -p (unlimited on Max plan, can use Opus)
+    Fallback: Anthropic API with Haiku (if CLI unavailable)
+
     The soul is loaded MODULARLY based on current state context.
-    Uses prompt caching to reduce input cost by ~90% after first call.
-
-    Modular soul loading (Fagner's insight):
-    - Core (~2000 tokens): vow, identity, values, decision engine, action types
-    - On-demand modules: PUT (when hunting/selling), energy (when low),
-      strategic goals (when revenue=0), consciousness (always for state assessment)
-    - Reduces processing from ~30,000 tokens to ~4,000-8,000 per cycle
+    On Max plan, deliberation runs on OPUS — highest quality thinking, zero cost.
     """
-    if not ANTHROPIC_API_KEY:
-        logger.error("No ANTHROPIC_API_KEY for direct deliberation")
-        return ""
-
     # Build contextual soul based on current state
     if state:
         soul_prompt = _build_contextual_soul(state)
     else:
         soul_prompt = _SOUL_SYSTEM_PROMPT_CORE
+
+    # ── Primary: Claude CLI Engine (FREE on Max plan) ──
+    if USE_CLAUDE_ENGINE:
+        try:
+            from claude_engine import claude_call
+            result = await claude_call(
+                prompt=prompt,
+                system_prompt=soul_prompt,
+                model=CLAUDE_ENGINE_MODEL,  # Opus by default — FREE
+                timeout=300,
+            )
+            if result["success"]:
+                logger.info(
+                    "Deliberation via %s (%s) in %.1fs",
+                    result["engine"], result["model"], result["elapsed_seconds"]
+                )
+                return result["response"]
+            else:
+                logger.warning("Claude engine failed: %s — falling back to API", result["response"][:100])
+        except ImportError:
+            logger.warning("claude_engine not available — falling back to API")
+        except Exception as e:
+            logger.warning("Claude engine error: %s — falling back to API", e)
+
+    # ── Fallback: Anthropic API (costs tokens) ──
+    if not ANTHROPIC_API_KEY:
+        logger.error("No ANTHROPIC_API_KEY and Claude engine unavailable")
+        return ""
 
     try:
         import anthropic
