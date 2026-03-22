@@ -246,53 +246,59 @@ async def list_agents():
 
 @app.get("/pricing")
 async def pricing():
-    """API pricing tiers for Wave access."""
+    """API pricing tiers. Premium first — the Musk doctrine."""
     return {
+        "philosophy": "Wave has no equivalent. The pricing reflects the value of something that cannot be obtained elsewhere at any price. We never discount.",
         "tiers": {
-            "free": {
+            "spectacle": {
                 "price": "$0/month",
                 "requests_per_day": 10,
                 "model": "Haiku",
-                "tools": "Limited (no OSINT, no agent factory, no MIDAS)",
+                "tools": "Limited — brand compliance, basic content, demo",
                 "api_key": "wave_demo_2026",
-                "how_to_start": "Use X-API-Key: wave_demo_2026 header",
+                "purpose": "Experience Wave. See what autonomous cognitive architecture produces. Then decide if you can afford NOT to have it.",
             },
-            "pro": {
-                "price": "$49/month",
-                "requests_per_day": 1000,
+            "operator": {
+                "price": "$149/month",
+                "requests_per_day": 500,
                 "model": "Haiku + Sonnet",
-                "tools": "Full (158 tools, PUT analysis, security audits, competitive intel)",
-                "how_to_start": "Contact m.galmanus@gmail.com",
+                "tools": "Brand compliance (8 dimensions), content generation (7 channels), basic PUT analysis, basic competitive intel",
+                "margin": "96.6%",
+                "target": "Individual operators, freelancers, small agencies",
             },
-            "enterprise": {
-                "price": "Custom",
+            "commander": {
+                "price": "$499/month",
+                "requests_per_day": 5000,
+                "model": "Haiku + Sonnet + Opus (auto-selected)",
+                "tools": "Full 158 tools — OSINT, security audits, full PUT (FP scoring, ignition detection, shadow scan), kill chain, pre-mortem, prospect qualification (BANT + PUT)",
+                "margin": "95%",
+                "target": "Agencies, growth teams, sales operations, security firms",
+            },
+            "sovereign": {
+                "price": "$2,499/month",
                 "requests_per_day": "Unlimited",
-                "model": "Haiku + Sonnet + Opus",
-                "tools": "Full + dedicated child agents + priority support",
-                "how_to_start": "Contact m.galmanus@gmail.com",
+                "model": "All models + extended thinking",
+                "tools": "Everything + Agent Factory (dedicated child agents), custom soul specifications, MIDAS integration, white-label, quarterly PUT calibration, direct Telegram channel, monthly strategy session with Manuel",
+                "margin": "92%",
+                "target": "Enterprise, funds, institutions",
+                "note": "Limited to 10 clients per quarter. Waitlist applies.",
+            },
+            "alliance": {
+                "price": "$10,000+/month",
+                "requests_per_day": "Unlimited",
+                "model": "All models + priority",
+                "tools": "Everything + dedicated instance, custom ASA adaptation, PUT calibrated on your data, source access (read-only), co-authored research, advisory services",
+                "target": "META, Anthropic, xAI, sovereign funds, large enterprises",
+                "note": "Strategic partnership, not vendor relationship. Contact Manuel directly.",
             },
         },
-        "features": {
-            "all_tiers": [
-                "10 specialist agents (brand, analytics, security, legal, financial, etc.)",
-                "Psychometric Utility Theory analysis",
-                "3-tier model routing (automatic quality optimization)",
-                "Hedera blockchain audit trail",
-            ],
-            "pro_and_above": [
-                "Security audits (HTTP headers, SSL, DNS, breach check)",
-                "Competitive intelligence with OSINT",
-                "PUT SaaS API (behavioral market intelligence)",
-                "Agent-to-agent commerce",
-                "Content strategy and brand compliance",
-            ],
-            "enterprise_only": [
-                "Opus model for complex strategic analysis",
-                "Dedicated child agents for your organization",
-                "Custom soul specifications for your use case",
-                "Priority support from the creator",
-            ],
+        "why_this_price": {
+            "no_equivalent": "The Autonomous Soul Architecture and Psychometric Utility Theory do not exist anywhere else. You cannot get this from OpenAI, Google, or any competitor.",
+            "original_research": "Two published whitepapers with axiomatic derivation, ODE systems, and Lyapunov stability proofs. This is not a wrapper around ChatGPT.",
+            "production_proven": "130+ autonomous decision cycles. 158 tools. 47 modules. Running since February 2026.",
+            "margin_justified": "API costs are <5% of price. The other 95% is the value of original IP that took decades of lived experience to create.",
         },
+        "anti_discount_policy": "We do not discount. The price is the price because the value is the value. If a tier doesn't fit your budget, use the tier below. There is no 'special deal.'",
         "contact": "m.galmanus@gmail.com",
         "documentation": "https://github.com/Galmanus/bluewave",
     }
