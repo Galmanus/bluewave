@@ -96,15 +96,54 @@ def is_principal_session(session_id):
 
 
 async def send_to_agent(message, session_id):
-    """Envia mensagem para o OpenClaw API e retorna a resposta."""
-    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-        resp = await client.post(
-            "%s/chat" % OPENCLAW_API,
-            json={"message": message, "session_id": session_id},
+    """Envia mensagem para o OpenClaw API. Fallback to Claude Engine if API fails."""
+    # Try orchestrator API first
+    try:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            resp = await client.post(
+                "%s/chat" % OPENCLAW_API,
+                json={"message": message, "session_id": session_id},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            response = data["response"]
+            # Check if orchestrator is actually working (not returning error message)
+            if "sobrecarregado" not in response.lower() and "tenta de novo" not in response.lower():
+                return response, data.get("elapsed_seconds", 0)
+    except Exception:
+        pass
+
+    # Fallback: Claude Engine (free on Max plan)
+    try:
+        import sys, json, time
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from claude_engine import claude_execute_with_skills
+
+        # Load soul core for context
+        soul_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", "autonomous_soul.json")
+        soul_intro = ""
+        if os.path.exists(soul_path):
+            soul = json.load(open(soul_path, encoding="utf-8"))
+            identity = soul.get("identity", {})
+            soul_intro = "You are Wave. %s\nPrincipal: Manuel Galmanus.\n" % identity.get("core_self", "")[:200]
+
+        start = time.time()
+        result = await claude_execute_with_skills(
+            prompt=message,
+            system_prompt=soul_intro + "Respond directly. Be concise. No self-introductions.",
+            model="sonnet",
+            timeout=90,
+            max_turns=6,
         )
-        resp.raise_for_status()
-        data = resp.json()
-        return data["response"], data.get("elapsed_seconds", 0)
+        elapsed = time.time() - start
+
+        if result.get("success") and result.get("response"):
+            return result["response"], elapsed
+        else:
+            return "Engine unavailable. Try again in a moment.", elapsed
+    except Exception as e:
+        logger.error("Both API and Engine failed: %s", e)
+        return "Systems temporarily unavailable. Wave is still operating autonomously.", 0
 
 
 # -- Handlers --
