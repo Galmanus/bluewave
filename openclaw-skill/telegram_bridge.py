@@ -92,25 +92,53 @@ _load_principal_sessions()  # Load on startup
 
 
 def _recall_relevant_memories(query: str) -> str:
-    """Auto-recall memories relevant to the user's message."""
+    """Recall memories by directly reading episodes.jsonl and matching keywords."""
     try:
-        import asyncio
-        import sys
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        from skills.wave_memory import recall
+        import json, re, math
+        from collections import Counter
 
-        # Run recall synchronously
-        loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(recall({"query": query, "limit": 5}))
-        loop.close()
+        episodes_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "memory", "episodes.jsonl")
+        if not os.path.exists(episodes_path):
+            return ""
 
-        memories = result.get("data", {}).get("memories", [])
-        if not memories:
+        query_tokens = set(re.findall(r'\w+', query.lower()))
+        if not query_tokens:
+            return ""
+
+        scored = []
+        for line in open(episodes_path, encoding="utf-8"):
+            if not line.strip():
+                continue
+            try:
+                ep = json.loads(line)
+                content = ep.get("content", "").lower()
+                people = " ".join(ep.get("people", [])).lower()
+                outcome = ep.get("outcome", "").lower()
+                all_text = content + " " + people + " " + outcome
+
+                doc_tokens = set(re.findall(r'\w+', all_text))
+                overlap = query_tokens & doc_tokens
+                if not overlap:
+                    continue
+
+                score = len(overlap) / max(len(query_tokens), 1)
+                # Boost by importance
+                boost = {"critical": 2.0, "high": 1.5, "normal": 1.0, "low": 0.5}
+                score *= boost.get(ep.get("importance", "normal"), 1.0)
+
+                scored.append((score, ep))
+            except Exception:
+                continue
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        top = scored[:5]
+
+        if not top:
             return ""
 
         lines = ["[RELEVANT MEMORIES — you remember this:]"]
-        for m in memories:
-            lines.append(f"  [{m.get('importance', '')}] {m.get('content', '')[:200]}")
+        for score, m in top:
+            lines.append(f"  [{m.get('importance', '')}] {m.get('content', '')[:250]}")
             if m.get("outcome"):
                 lines.append(f"    Outcome: {m['outcome'][:100]}")
 
