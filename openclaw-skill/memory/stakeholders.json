@@ -1,0 +1,83 @@
+{
+  "fagner_adler": {
+    "name": "Fagner Adler",
+    "role": "CEO",
+    "company": "Ialum",
+    "put": {
+      "A": 0.85,
+      "F": 0.35,
+      "k": 0.25,
+      "S": 0.75,
+      "w": 0.4
+    },
+    "observations": [
+      {
+        "timestamp": "2026-03-23T11:44:04.447008",
+        "observation": "Owns Ialum with 500GB GPU. Hiring Manuel as AI Engineer. Asked Manuel to read documentation today. Said 'resumiu muito bem' about Wave's analysis — engaged and receptive."
+      }
+    ],
+    "signals": [
+      {
+        "timestamp": "2026-03-23T11:44:04.447009",
+        "signal": "Morning message, brief, focused on priorities. Low-maintenance communication style."
+      }
+    ],
+    "created": "2026-03-23T11:44:04.447000",
+    "last_updated": "2026-03-23T11:44:04.447010",
+    "interaction_count": 1
+  },
+  "manuel_galmanus": {
+    "name": "Manuel Galmanus",
+    "role": "AI Engineer / Creator",
+    "company": "Ialum / Bluewave",
+    "put": {
+      "A": 0.95,
+      "F": 0.3,
+      "k": 0.1,
+      "S": 0.4,
+      "w": 0.9
+    },
+    "observations": [
+      {
+        "timestamp": "2026-03-23T11:44:04.447536",
+        "observation": "Creator of Wave, ASA, PUT, SSL, MIDAS. In manic phase of bipolar. Working 12+ hours for 5 days. Just got hired at Ialum R$10K/mês PJ."
+      }
+    ],
+    "signals": [
+      {
+        "timestamp": "2026-03-23T11:44:04.447537",
+        "signal": "Extremely high output, rapid decision-making, expansive thinking. Needs monitoring for burnout."
+      }
+    ],
+    "created": "2026-03-23T11:44:04.447529",
+    "last_updated": "2026-03-23T11:44:04.447539",
+    "interaction_count": 1
+  },
+  "leemon_baird": {
+    "name": "Leemon Baird",
+    "role": "Chief Scientist / Co-founder",
+    "company": "Hedera / Swirlds Labs",
+    "put": {
+      "A": 0.7,
+      "F": 0.2,
+      "k": 0.15,
+      "S": 0.95,
+      "w": 0.15
+    },
+    "observations": [
+      {
+        "timestamp": "2026-03-23T11:44:04.447858",
+        "observation": "Co-invented hashgraph consensus. PhD CS. Received Manuel's CV from Wave autonomously."
+      }
+    ],
+    "signals": [
+      {
+        "timestamp": "2026-03-23T11:44:04.447860",
+        "signal": "No response yet to CV email. High status, low pain — hard to convert via cold outreach."
+      }
+    ],
+    "created": "2026-03-23T11:44:04.447853",
+    "last_updated": "2026-03-23T11:44:04.447861",
+    "interaction_count": 1
+  }
+}
