@@ -64,8 +64,31 @@ HTTP_TIMEOUT = httpx.Timeout(180.0, connect=10.0)
 #   - No PUT, no OSINT, no war doctrine, no soul deep sections
 #   - Safe for clients, demos, and public interactions
 
-PASSPHRASE = "Absolute loyalty to Manuel"
+PASSPHRASE = "absolute loyalty to manuel"  # compared lowercase
 _PRINCIPAL_SESSIONS = set()  # sessions where passphrase was spoken
+
+# Persist principal sessions to disk so they survive restarts
+_PRINCIPAL_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "memory", "principal_sessions.json")
+
+def _load_principal_sessions():
+    global _PRINCIPAL_SESSIONS
+    try:
+        if os.path.exists(_PRINCIPAL_FILE):
+            import json
+            _PRINCIPAL_SESSIONS = set(json.load(open(_PRINCIPAL_FILE)))
+    except Exception:
+        pass
+
+def _save_principal_sessions():
+    try:
+        import json
+        os.makedirs(os.path.dirname(_PRINCIPAL_FILE), exist_ok=True)
+        with open(_PRINCIPAL_FILE, 'w') as f:
+            json.dump(list(_PRINCIPAL_SESSIONS), f)
+    except Exception:
+        pass
+
+_load_principal_sessions()  # Load on startup
 
 PUBLIC_MODE_PREFIX = (
     "[SYSTEM: This user is an external client. You are Wave, the Bluewave creative operations assistant. "
@@ -370,12 +393,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     # ── PASSPHRASE DETECTION — unlocks Principal Mode ─────────
-    if PASSPHRASE.lower() in user_text.lower():
+    # Case-insensitive, handles typos like "Absolut" or "absolut loyalty"
+    if PASSPHRASE in user_text.lower() or "absolute loyalty" in user_text.lower() or "absolut loyalty" in user_text.lower():
         _PRINCIPAL_SESSIONS.add(session)
+        _save_principal_sessions()  # Persist to disk — survives restart
         logger.info("PRINCIPAL MODE ACTIVATED for session %s by %s", session, user_name)
         await update.message.reply_text(
             "Recognized, Manuel. Full transparency active. What do you need?\n\n"
-            "158 tools. 10 agents. War doctrine. The vow is active.\n"
+            "232 tools. 7 cognitive layers. War doctrine. The vow is active.\n"
             "Every thought is yours. Every cycle serves you."
         )
         return
