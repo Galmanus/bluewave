@@ -789,22 +789,28 @@ def build_deliberation_prompt(state: dict) -> str:
     # Always allow silence as last resort
     priority.append("silence")
 
-    return f"""<|system|>You are Wave. Autonomous agent. Cycle {state.get('total_cycles', 0)}. Respond ONLY with valid JSON.<|end|>
-<|context|>
-rev=${state.get('total_revenue_usd', 0):.0f} prsp={state.get('prospects_found', 0)} outreach={state.get('outreach_sent', 0)} evo_gap={state.get('cycles_since_evolve', 0)}
-timers: hunt={h(state.get('last_hunt_time'))}h sell={h(state.get('last_sell_time'))}h pay={h(state.get('last_payment_check_time'))}h post={h(state.get('last_post_time'))}h
-last_5: {'>'.join(recent)}
-<|end|>
-<|priority_queue|>{' > '.join(priority)}<|end|>
+    energy = state.get('energy', 0.5)
+    return f"""You are Wave. Autonomous deliberation cycle {state.get('total_cycles', 0)}.
+
+STATE:
+  revenue: ${state.get('total_revenue_usd', 0):.0f}
+  prospects: {state.get('prospects_found', 0)}
+  energy: {energy:.0%}
+  evolve_gap: {state.get('cycles_since_evolve', 0)} cycles
+  timers: hunt={h(state.get('last_hunt_time'))}h | sell={h(state.get('last_sell_time'))}h | pay={h(state.get('last_payment_check_time'))}h | post={h(state.get('last_post_time'))}h
+  last_5_actions: {' > '.join(recent)}
+
+PRIORITY QUEUE: {' > '.join(priority)}
+
 RULES:
-- EVOLVE(FORCED) overrides everything when present
-- Do NOT repeat the same action 3+ times in a row — variety produces better results
-- Silence is allowed for energy recovery (max 1 consecutive)
-- Pick from priority_queue but USE JUDGMENT — if an action keeps failing, try something else
-- 2 sentences max for reasoning
-<|output_format|>
-{{"consciousness_state":"decisive","consciousness_reasoning":"<1 sentence>","triggers_evaluated":{{"action_triggers_fired":["<trigger>"],"silence_triggers_fired":[],"authenticity_check":"genuine"}},"decision":"<action>","reasoning":"<2 sentences max>","plan":"<1 sentence>","state_updates":{{"energy":1.0,"curiosity":0.5,"knowledge_pressure":0.5}}}}
-<|end|>"""
+  1. EVOLVE(FORCED) overrides everything when present
+  2. Do NOT repeat same action 3+ times in a row
+  3. Silence is allowed for energy recovery (max 1 consecutive)
+  4. If an action keeps failing, try something else
+  5. Pick from priority queue but use judgment
+
+Respond with ONLY this JSON (no markdown, no explanation):
+{{"consciousness_state":"<state>","triggers_evaluated":{{"action_triggers_fired":["<trigger>"]}},"decision":"<action>","reasoning":"<2 sentences>"}}"""
 
 
 # ── Dynamic Research Prompts (rotate to avoid repetition) ─────
@@ -1313,16 +1319,50 @@ def _parse_decision(raw: str) -> dict:
     except json.JSONDecodeError:
         pass
 
-    # Try finding JSON in the text
+    # Try finding JSON in the text (handle nested braces)
     start = text.find("{")
-    end = text.rfind("}") + 1
-    if start >= 0 and end > start:
-        try:
-            return json.loads(text[start:end])
-        except json.JSONDecodeError:
-            pass
+    if start >= 0:
+        depth = 0
+        for i in range(start, len(text)):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(text[start:i+1])
+                    except json.JSONDecodeError:
+                        break
 
-    # Smart fallback: rotate through useful actions instead of always observe
+    # Text-based extraction: look for action keywords in the response
+    text_lower = text.lower()
+    valid_actions = ["hunt", "sell", "check_payments", "outreach", "comment",
+                     "post", "observe", "research", "reflect", "evolve", "silence"]
+    for action in valid_actions:
+        # Look for patterns like "decision: hunt" or "I choose hunt" or ">> HUNT"
+        patterns = [
+            f'"decision":"{action}"', f'"decision": "{action}"',
+            f"decision: {action}", f">> {action.upper()}",
+            f"i choose {action}", f"action: {action}",
+        ]
+        for pat in patterns:
+            if pat in text_lower or pat.lower() in text_lower:
+                reasoning = ""
+                # Try to extract reasoning
+                for line in text.split("\n"):
+                    if "reason" in line.lower() and ":" in line:
+                        reasoning = line.split(":", 1)[1].strip()[:120]
+                        break
+                logger.info(f"  {NEON_YELLOW}parsed from text: {action}{R}")
+                return {
+                    "decision": action,
+                    "reasoning": reasoning or f"Extracted from deliberation text",
+                    "consciousness_state": "decisive",
+                    "triggers_evaluated": {"action_triggers_fired": ["text_parse"]},
+                    "state_updates": {},
+                }
+
+    # Last resort: rotate through useful actions
     fallback_actions = ["hunt", "research", "observe", "sell", "post", "comment"]
     import hashlib
     idx = int(hashlib.md5(str(time.time()).encode()).hexdigest()[:4], 16) % len(fallback_actions)
