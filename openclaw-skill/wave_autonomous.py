@@ -837,6 +837,7 @@ Use web_search('site:cryptojobs.com zero knowledge OR Cairo OR Starknet OR STARK
 Save ALL job findings and notify Manuel via Telegram immediately.
 MAX 2 tool calls.",
     "RESEARCH: Search for grants, bounties, and hackathons in ZK/AI space.\nSources: starknet.io/grants, gitcoin.co, dorahacks.io, ethglobal.com, onlydust.com.\nUse web_search('Starknet grants 2026 OR OnlyDust bounties OR ETHGlobal hackathon OR Hedera bounty').\nNotify Manuel immediately for anything with deadline < 2 weeks.\nMAX 2 tool calls.",
+    "RESEARCH: Search for highest-paying AI/ZK/blockchain remote jobs worldwide.\nSources: levels.fyi, toptal.com, turing.com, arc.dev, remoteok.com, triplebyte.com.\nUse web_search('site:levels.fyi OR site:remoteok.com AI engineer salary 200k OR blockchain developer 300k OR ZK engineer remote 2026').\nAlso search: 'Paradigm hiring' OR 'a16z crypto hiring' OR 'Polychain hiring' OR 'StarkWare hiring'.\nThese pay $200K-$500K+. Notify Manuel IMMEDIATELY for any match.\nMAX 2 tool calls.",
     "RESEARCH: Search for MIDAS/Phantom competitors in privacy DeFi space.\nUse web_search('privacy DeFi Starknet' OR 'zero knowledge yield').\nIdentify positioning gaps we can exploit.\nMAX 2 tool calls.",
 ]
 
