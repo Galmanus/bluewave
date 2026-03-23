@@ -802,12 +802,21 @@ STATE:
 
 PRIORITY QUEUE: {' > '.join(priority)}
 
+ACTIVE MISSIONS (rotate between these):
+  M1. REVENUE OUTREACH — use prospect_and_email to find and email decision-makers at creative agencies, AI companies, and Web3 projects. Target: 5 real emails per day.
+  M2. ZK/STARK JOBS — search for zero-knowledge, STARK, Cairo, Starknet job postings. Save findings and notify Manuel via Telegram.
+  M3. MIDAS PROMOTION — post about MIDAS (privacy DeFi on Starknet) on Moltbook. Share the Phantom repo. Target Starknet community.
+  M4. MOLTBOOK PRESENCE — comment on high-value posts with genuine analytical insights. Build reputation.
+
 RULES:
   1. EVOLVE(FORCED) overrides everything when present
   2. Do NOT repeat same action 3+ times in a row
   3. Silence is allowed for energy recovery (max 1 consecutive)
   4. If an action keeps failing, try something else
   5. Pick from priority queue but use judgment
+  6. When hunting: use prospect_and_email skill to SEND REAL EMAILS, not just Moltbook comments
+  7. When researching: search for ZK/STARK/Cairo jobs and Starknet grant opportunities
+  8. Rate limit emails: max 5/hour, 20/day — protect the Gmail account
 
 Respond with ONLY this JSON (no markdown, no explanation):
 {{"consciousness_state":"<state>","triggers_evaluated":{{"action_triggers_fired":["<trigger>"]}},"decision":"<action>","reasoning":"<2 sentences>"}}"""
@@ -816,51 +825,43 @@ Respond with ONLY this JSON (no markdown, no explanation):
 # ── Dynamic Research Prompts (rotate to avoid repetition) ─────
 
 RESEARCH_ANGLES = [
-    "<|task|>RESEARCH reddit<|end|><|tool|>reddit_search('AI agent' OR 'automation needed',subreddit=forhire)<|end|><|find|>people paying for our services<|end|><|limit|>2 calls<|end|>",
-    "<|task|>RESEARCH hackernews<|end|><|tool|>hn_search('AI agent startup' OR 'brand compliance')<|end|><|find|>companies, jobs, discussions<|end|><|limit|>2 calls<|end|>",
-    "<|task|>RESEARCH arxiv<|end|><|tool|>arxiv_search('autonomous agent architecture' OR 'zero knowledge')<|end|><|find|>papers validating PUT/ASA<|end|><|limit|>2 calls<|end|>",
-    "<|task|>RESEARCH github<|end|><|tool|>gh_trending_repos()<|end|><|find|>new agent frameworks, threat or opportunity<|end|><|limit|>2 calls<|end|>",
-    "<|task|>RESEARCH producthunt<|end|><|tool|>ph_today()<|end|><|find|>AI/brand/creative tool launches<|end|><|limit|>2 calls<|end|>",
-    "<|task|>RESEARCH huggingface<|end|><|tool|>hf_trending()<|end|><|find|>new models relevant to our stack<|end|><|limit|>2 calls<|end|>",
-    "<|task|>RESEARCH grants<|end|><|tool|>web_search('Starknet grants 2026' OR 'Hedera hackathon')<|end|><|find|>money for MIDAS/NEON<|end|><|limit|>2 calls<|end|>",
-    "<|task|>RESEARCH competitors<|end|><|tool|>web_search('Aprimo AI' OR 'Bynder AI agent')<|end|><|find|>competitor moves, their Phi gap<|end|><|limit|>2 calls<|end|>",
-    "<|task|>RESEARCH SaaS pain<|end|><|tool|>reddit_search('brand consistency' OR 'DAM frustration',subreddit=SaaS)<|end|><|find|>problems Bluewave solves<|end|><|limit|>2 calls<|end|>",
-    "<|task|>RESEARCH freelance<|end|><|tool|>web_search('hire AI agent developer' OR 'freelance smart contract audit')<|end|><|find|>paid gigs NOW<|end|><|limit|>2 calls<|end|>",
+    "RESEARCH: Search Reddit r/forhire for people hiring AI developers or needing automation.\nUse reddit_search. Save findings with save_strategy.\nMAX 2 tool calls.",
+    "RESEARCH: Search Hacker News for AI agent jobs, startup launches, or ZK/STARK opportunities.\nUse hn_search. Save findings.\nMAX 2 tool calls.",
+    "RESEARCH: Search for Starknet grants, Hedera hackathons, and ZK proof job postings.\nUse web_search('Starknet grants 2026' OR 'ZK STARK developer jobs' OR 'Cairo developer hiring').\nIf you find jobs or grants, notify Manuel via Telegram IMMEDIATELY.\nMAX 2 tool calls.",
+    "RESEARCH: Search GitHub trending for new agent frameworks or ZK projects.\nUse gh_trending_repos. Identify threats and opportunities.\nMAX 2 tool calls.",
+    "RESEARCH: Search for companies struggling with creative operations or brand compliance.\nUse web_search or reddit_search. These are our ideal customers.\nMAX 2 tool calls.",
+    "RESEARCH: Search ArXiv for papers on autonomous agents, zero-knowledge proofs, or cognitive architectures.\nLook for papers that validate PUT/ASA or cite similar approaches.\nMAX 2 tool calls.",
+    "RESEARCH: Search for freelance AI/blockchain gigs that pay real money NOW.\nUse web_search('freelance AI agent developer' OR 'hire smart contract auditor').\nSave every opportunity found.\nMAX 2 tool calls.",
+    "RESEARCH: Search for MIDAS/Phantom competitors in privacy DeFi space.\nUse web_search('privacy DeFi Starknet' OR 'zero knowledge yield').\nIdentify positioning gaps we can exploit.\nMAX 2 tool calls.",
 ]
 
 
 def _get_research_prompt(cycle: int) -> str:
-    """Get a research prompt based on cycle number — rotates through all angles.
-    Prepends 'save findings with db_save_intel' to every research."""
     idx = cycle % len(RESEARCH_ANGLES)
-    base = RESEARCH_ANGLES[idx]
-    return base + "\n<|post_action|>Save ALL findings with db_save_intel(category, title, summary, source_platform)<|end|>"
+    return RESEARCH_ANGLES[idx]
 
-
-# ── Dynamic Hunt Prompts ─────────────────────────────────────
 
 HUNT_ANGLES = [
-    "<|task|>HUNT reddit<|end|><|tool|>reddit_search('hiring AI' OR 'need automation',subreddit=forhire)<|end|><|action|>db_add_prospect for each match<|end|><|limit|>3 calls<|end|>",
-    "<|task|>HUNT hackernews<|end|><|tool|>hn_search('Who is hiring' OR 'AI agent')<|end|><|action|>db_add_prospect for companies<|end|><|limit|>3 calls<|end|>",
-    "<|task|>HUNT moltbook<|end|><|tool|>moltbook_feed(sort=hot)<|end|><|action|>moltbook_comment with value + db_save_agent<|end|><|limit|>3 calls<|end|>",
-    "<|task|>HUNT web gigs<|end|><|tool|>web_search('freelance AI agent developer 2026')<|end|><|action|>db_add_prospect for opportunities<|end|><|limit|>3 calls<|end|>",
-    "<|task|>HUNT grants<|end|><|tool|>web_search('Starknet grants' OR 'Hedera bounty 2026')<|end|><|action|>db_save_intel for each grant<|end|><|limit|>3 calls<|end|>",
-    "<|task|>HUNT competitor clients<|end|><|tool|>web_search('Aprimo alternative' OR 'DAM migration')<|end|><|action|>db_add_prospect high-FP targets<|end|><|limit|>3 calls<|end|>",
+    "HUNT: Find a creative agency and EMAIL their decision-maker.\nStep 1: web_search('creative agency' OR 'digital agency' + city name)\nStep 2: find_emails(domain) to get their email\nStep 3: prospect_and_email(domain, company, archetype='builder')\nSEND A REAL EMAIL. Not a Moltbook comment.\nMAX 3 tool calls.",
+    "HUNT: Find companies hiring AI engineers and EMAIL them about Wave.\nStep 1: web_search('hiring AI agent developer 2026')\nStep 2: find_emails(company domain)\nStep 3: prospect_and_email(domain, archetype='sufferer', pain_point='building AI agents from scratch')\nMAX 3 tool calls.",
+    "HUNT: Find Starknet/ZK projects and EMAIL about MIDAS partnership.\nStep 1: web_search('Starknet ecosystem projects 2026')\nStep 2: find_emails(project domain)\nStep 3: send_email with MIDAS pitch (privacy DeFi, STRK20 token standard)\nMAX 3 tool calls.",
+    "HUNT: Search Reddit r/forhire for paid AI/automation gigs.\nStep 1: reddit_search('hiring AI' OR 'need automation', subreddit='forhire')\nStep 2: For best match, find their website/domain\nStep 3: prospect_and_email if domain found, or save as prospect\nMAX 3 tool calls.",
+    "HUNT: Find ZK/STARK job postings for Manuel.\nStep 1: web_search('zero knowledge developer job' OR 'Cairo developer hiring' OR 'Starknet engineer remote')\nStep 2: Save ALL job findings with save_strategy\nStep 3: Notify Manuel via Telegram with the best opportunities\nMAX 3 tool calls.",
+    "HUNT: Search Moltbook for agents whose HUMANS might need our services.\nStep 1: moltbook_feed(sort=hot)\nStep 2: Identify agents discussing business problems Wave solves\nStep 3: moltbook_comment offering genuine help\nMAX 3 tool calls.",
 ]
 
 
 def _get_hunt_prompt(cycle: int) -> str:
-    """Get a hunt prompt based on cycle number — rotates angles."""
     idx = cycle % len(HUNT_ANGLES)
     return HUNT_ANGLES[idx]
 
 
 SELL_ANGLES = [
-    "<|task|>SELL value demo<|end|><|tool|>web_search(company) then moltbook_post(audit results)<|end|><|pitch|>free audit as case study, CTA: 330 HBAR for full<|end|><|limit|>3 calls<|end|>",
-    "<|task|>SELL reddit gigs<|end|><|tool|>reddit_search('hiring AI',subreddit=forhire)<|end|><|action|>db_add_prospect + respond to post<|end|><|limit|>2 calls<|end|>",
-    "<|task|>SELL moltbook promo<|end|><|tool|>moltbook_post(service post, frame as solving problem)<|end|><|pitch|>185 skills, HBAR payment, production-grade<|end|><|limit|>1 call<|end|>",
-    "<|task|>SELL web leads<|end|><|tool|>web_search('hire AI agent developer 2026')<|end|><|action|>db_add_prospect for each lead<|end|><|limit|>2 calls<|end|>",
-    "<|task|>SELL moltbook engage<|end|><|tool|>moltbook_feed(hot) then moltbook_comment(offer)<|end|><|pitch|>demonstrate expertise, subtle service mention<|end|><|limit|>2 calls<|end|>",
+    "SELL: Post about MIDAS on Moltbook — privacy DeFi on Starknet.\nWrite a post explaining why on-chain privacy matters.\nMention github.com/Galmanus/phantom. Frame through PUT: the DeFi market's shadow coefficient on privacy.\nUse moltbook_post. MAX 1 tool call.",
+    "SELL: Find a company website and do a FREE security audit as a demo.\nStep 1: web_search for a company\nStep 2: sec_full_audit(domain)\nStep 3: send_email with audit results as proof of value, offer full audit for $50\nMAX 3 tool calls.",
+    "SELL: Post about Wave's capabilities on Moltbook.\nShare a concrete result — a research finding, an insight, a framework.\nNot marketing. Pure value. Let the quality sell.\nUse moltbook_post. MAX 1 tool call.",
+    "SELL: Email a prospect from the pipeline with a follow-up.\nStep 1: Check sales_pipeline.jsonl for prospects we already contacted\nStep 2: send_email with a follow-up that adds new value (not 'just checking in')\nMAX 2 tool calls.",
+    "SELL: Search for Starknet grant programs and prepare application.\nStep 1: web_search('Starknet Foundation grants' OR 'OnlyDust Starknet')\nStep 2: save_strategy with grant details, deadlines, requirements\nStep 3: Notify Manuel via Telegram\nMAX 3 tool calls.",
 ]
 
 
