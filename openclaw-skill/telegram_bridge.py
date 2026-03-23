@@ -508,6 +508,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context_parts.append(f"Manuel says: {user_text}")
         user_text = "\n\n".join(context_parts)
 
+    # Manuel is active — stop autonomous mode, reset idle timer
+    global _last_manuel_message
+    if is_principal_session(session) or update.effective_chat.id == MANUEL_CHAT_ID:
+        _last_manuel_message = time.time()
+        _stop_autonomous()
+
     # Save user message to history
     _add_to_history(session, "user", update.message.text.strip())
 
@@ -655,6 +661,64 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # -- Main --
 
+# ── Autonomous Mode Timer ─────────────────────────────────────
+# When Manuel is silent for 10+ minutes, start autonomous loop.
+# When Manuel sends a message, stop autonomous and go conversational.
+
+import subprocess
+import signal
+
+_last_manuel_message = time.time()
+_autonomous_process = None
+IDLE_THRESHOLD = 600  # 10 minutes in seconds
+
+def _start_autonomous():
+    """Start the autonomous loop as a subprocess."""
+    global _autonomous_process
+    if _autonomous_process and _autonomous_process.poll() is None:
+        return  # Already running
+
+    env = os.environ.copy()
+    env.update({
+        "HUNTER_API_KEY": os.environ.get("HUNTER_API_KEY", ""),
+        "GROQ_API_KEY": os.environ.get("GROQ_API_KEY", ""),
+        "GMAIL_CREDENTIALS_FILE": os.environ.get("GMAIL_CREDENTIALS_FILE", ""),
+        "GMAIL_TOKEN_FILE": os.environ.get("GMAIL_TOKEN_FILE", ""),
+    })
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    _autonomous_process = subprocess.Popen(
+        ["python3", os.path.join(script_dir, "wave_autonomous.py")],
+        cwd=script_dir,
+        env=env,
+        stdout=open("/tmp/wave_fast.log", "a"),
+        stderr=subprocess.STDOUT,
+    )
+    logger.info("Autonomous mode STARTED (PID %s) — Manuel idle >10min", _autonomous_process.pid)
+
+def _stop_autonomous():
+    """Stop the autonomous loop — Manuel is talking."""
+    global _autonomous_process
+    if _autonomous_process and _autonomous_process.poll() is None:
+        _autonomous_process.terminate()
+        try:
+            _autonomous_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _autonomous_process.kill()
+        logger.info("Autonomous mode STOPPED — Manuel is active")
+        _autonomous_process = None
+
+async def _idle_checker(app):
+    """Background task: check if Manuel has been silent for 10+ minutes."""
+    global _last_manuel_message
+    while True:
+        await asyncio.sleep(60)  # Check every minute
+        idle_seconds = time.time() - _last_manuel_message
+        if idle_seconds >= IDLE_THRESHOLD:
+            _start_autonomous()
+        # If autonomous is running and Manuel just spoke, stop is handled in handle_message
+
+
 def main():
     if not TOKEN:
         print("TELEGRAM_BOT_TOKEN nao configurado!")
@@ -677,7 +741,16 @@ def main():
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.Document.IMAGE, handle_photo))
 
-    logger.info("Machiavelli Prime online no Telegram. Aguardando mensagens...")
+    # Start idle checker as background task
+    import asyncio
+    async def post_init(application):
+        asyncio.create_task(_idle_checker(application))
+        # Start autonomous immediately (Manuel is not talking yet)
+        _start_autonomous()
+
+    app.post_init = post_init
+
+    logger.info("Wave online. Autonomous when idle, conversational when active.")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
