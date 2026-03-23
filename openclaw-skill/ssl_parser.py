@@ -1,9 +1,17 @@
 """
-SSL Parser — Soul Specification Language
+SSL Parser — Soul Specification Language v2.0
 Parses .ssl files into JSON-compatible dicts.
 
-SSL is an LLM-native language for specifying artificial minds.
+SSL is a behavioral specification language for artificial minds.
 Created by Manuel Guilherme Galmanus, 2026.
+
+v2.0 additions (from Wave's feedback):
+  - Type annotations: `name: float ~0.95 = description`
+  - Behavioral implications: `high_stakes ~> compress, escalate`
+  - Conditional modes: `mode[condition] = behavior`
+  - Soul inheritance: `@extends base_soul.ssl`
+  - Temporal logic: `@when energy < 0.3`
+  - Formal comments: `//` and `/* */`
 
 Usage:
     from ssl_parser import parse_ssl, ssl_to_json, json_to_ssl
@@ -47,6 +55,13 @@ def _parse_text(text: str, base_dir: Path) -> dict:
             i += 1
             continue
 
+        # Strip inline comments
+        if "//" in stripped and not stripped.startswith("//"):
+            comment_pos = stripped.find("//")
+            # Don't strip if inside quotes or URL
+            if "://" not in stripped[:comment_pos+3]:
+                stripped = stripped[:comment_pos].strip()
+
         # @include directive
         if stripped.startswith("@include "):
             inc_path = stripped[9:].strip()
@@ -55,6 +70,50 @@ def _parse_text(text: str, base_dir: Path) -> dict:
                 inc_data = parse_ssl(str(inc_full))
                 result.update(inc_data)
             i += 1
+            continue
+
+        # @extends directive (SSL 2.0 — soul inheritance)
+        if stripped.startswith("@extends "):
+            ext_path = stripped[9:].strip()
+            ext_full = base_dir / ext_path
+            if ext_full.exists():
+                ext_data = parse_ssl(str(ext_full))
+                # Merge but don't override existing (child overrides parent)
+                for key, val in ext_data.items():
+                    if key not in result:
+                        result[key] = val
+                    elif isinstance(val, dict) and isinstance(result[key], dict):
+                        # Merge dicts, child values take precedence
+                        merged = {**val, **result[key]}
+                        result[key] = merged
+            i += 1
+            continue
+
+        # @when directive (SSL 2.0 — temporal/conditional logic)
+        if stripped.startswith("@when "):
+            condition = stripped[6:].strip()
+            when_body = {}
+            i += 1
+            # Collect indented body
+            while i < len(lines):
+                wline = lines[i]
+                wstripped = wline.strip()
+                if not wstripped or _get_indent(wline) > _get_indent(line):
+                    if wstripped:
+                        # Parse as property
+                        wprop = _parse_property(wstripped)
+                        if wprop:
+                            when_body[wprop["key"]] = wprop.get("value", True)
+                        elif "~>" in wstripped:
+                            # Implication inside @when
+                            parts = wstripped.split("~>", 1)
+                            when_body[parts[0].strip() + "_implies"] = [x.strip() for x in parts[1].split(",")]
+                    i += 1
+                else:
+                    break
+            if "_when" not in result:
+                result["_when"] = []
+            result["_when"].append({"condition": condition, "body": when_body})
             continue
 
         # @ Section — extract name and optional operators (~weight, !cost)
@@ -147,6 +206,35 @@ def _parse_text(text: str, base_dir: Path) -> dict:
             i += 1
             continue
 
+        # ~> Behavioral implication (SSL 2.0)
+        if "~>" in stripped and not stripped.startswith("#") and not stripped.startswith("@"):
+            parts = stripped.split("~>", 1)
+            trigger = parts[0].strip()
+            effects = [e.strip() for e in parts[1].split(",")]
+            target = _get_target(result, current_section, current_substate)
+            if isinstance(target, dict):
+                if "_implications" not in target:
+                    target["_implications"] = []
+                target["_implications"].append({
+                    "trigger": trigger,
+                    "effects": effects,
+                })
+            i += 1
+            continue
+
+        # mode[condition] = value (SSL 2.0)
+        mode_match = re.match(r"^mode\[(.+?)\]\s*=\s*(.+)$", stripped)
+        if mode_match:
+            condition = mode_match.group(1).strip()
+            value = mode_match.group(2).strip()
+            target = _get_target(result, current_section, current_substate)
+            if isinstance(target, dict):
+                if "_modes" not in target:
+                    target["_modes"] = {}
+                target["_modes"][condition] = value
+            i += 1
+            continue
+
         # !N RULE — War doctrine numbered rules
         rule_match = re.match(r"^!(\d+)\s+(.+?)(?:\s*[—\-]{1,3}\s*(.+))?$", stripped)
         if rule_match and current_section:
@@ -222,6 +310,8 @@ def _parse_text(text: str, base_dir: Path) -> dict:
                             entry["energy_cost"] = prop["cost"]
                         if prop.get("cooldown"):
                             entry["cooldown"] = prop["cooldown"]
+                        if prop.get("type_annotation"):
+                            entry["type"] = prop["type_annotation"]
                         target[key] = entry
                     elif prop.get("trigger_weight") is not None:
                         entry = {
@@ -276,11 +366,27 @@ def _get_indent(line: str) -> int:
 
 
 def _parse_property(line: str) -> Optional[dict]:
-    """Parse a property line into components."""
+    """Parse a property line into components. Supports SSL 2.0 type annotations."""
+    # Strip type annotation if present: `name: type` -> extract type, parse rest
+    type_annotation = None
+    type_match = re.match(r"^(\w+):\s*(float|int|string|bool|duration|action|enum\([^)]+\))\s+(.+)$", line)
+    if type_match:
+        # Has type annotation — extract and continue parsing the rest
+        key_name = type_match.group(1)
+        type_annotation = type_match.group(2)
+        rest = type_match.group(3)
+        # Re-compose as `key rest` for downstream parsing
+        line = key_name + " " + rest
+
+    def _with_type(d):
+        if type_annotation and d:
+            d["type_annotation"] = type_annotation
+        return d
+
     # Equation: name $ math $
     eq_match = re.match(r"^(\w+)\s+\$\s*(.+?)\s*\$\s*$", line)
     if eq_match:
-        return {"key": eq_match.group(1), "equation": eq_match.group(2)}
+        return _with_type({"key": eq_match.group(1), "equation": eq_match.group(2)})
 
     # Archetype: name A=0.9 F=0.2 ... => strategy
     arch_match = re.match(r"^(\w+)\s+((?:[A-Za-z_]+=[\d.]+\s*)+)(?:=>\s*(.+))?$", line)
@@ -293,7 +399,7 @@ def _parse_property(line: str) -> Optional[dict]:
             vals[pair[0]] = float(pair[1])
         if strategy:
             vals["strategy"] = strategy
-        return {"key": name, "archetype_values": vals}
+        return _with_type({"key": name, "archetype_values": vals})
 
     # Trigger: name ^weight ?condition = description
     trig_match = re.match(r"^(\w+)\s+\^([\d.]+)\s*(?:\?(.+?))?\s*=\s*(.+)$", line)
@@ -334,24 +440,28 @@ def _parse_property(line: str) -> Optional[dict]:
 
     # List indicator: name:
     if line.endswith(":") and " " not in line.rstrip(":"):
-        return {"key": line.rstrip(":").strip(), "is_list": True}
+        return _with_type({"key": line.rstrip(":").strip(), "is_list": True})
 
     # Key: value with colon (enter:, exit:, etc)
     colon_match = re.match(r"^(\w+):\s+(.+)$", line)
     if colon_match:
-        return {"key": colon_match.group(1), "value": colon_match.group(2).strip()}
+        return _with_type({"key": colon_match.group(1), "value": colon_match.group(2).strip()})
 
     # Simple property: name = value
     eq_match = re.match(r"^(\w+)\s*=\s*(.+)$", line)
     if eq_match:
-        return {"key": eq_match.group(1), "value": eq_match.group(2).strip()}
+        return _with_type({"key": eq_match.group(1), "value": eq_match.group(2).strip()})
 
     # Inline key=value pairs: alpha=1.0 beta=1.2 gamma=0.8
     inline = _parse_inline_keyvals(line)
     if inline and len(inline) > 1:
-        return {"key": list(inline.keys())[0], "value": ""}
+        return _with_type({"key": list(inline.keys())[0], "value": ""})
 
     return None
+
+
+# Post-process: inject type_annotation into result if present
+# This is handled by the caller checking prop.get("type_annotation")
 
 
 def _parse_inline_keyvals(line: str) -> Optional[dict]:
