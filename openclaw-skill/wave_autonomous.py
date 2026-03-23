@@ -832,10 +832,7 @@ RESEARCH_ANGLES = [
     "RESEARCH: Search for companies struggling with creative operations or brand compliance.\nUse web_search or reddit_search. These are our ideal customers.\nMAX 2 tool calls.",
     "RESEARCH: Search ArXiv for papers on autonomous agents, zero-knowledge proofs, or cognitive architectures.\nLook for papers that validate PUT/ASA or cite similar approaches.\nMAX 2 tool calls.",
     "RESEARCH: Search for freelance AI/blockchain gigs that pay real money NOW.\nUse web_search('freelance AI agent developer' OR 'hire smart contract auditor').\nSave every opportunity found.\nMAX 2 tool calls.",
-    "RESEARCH: Search CryptoJobs.com for ZK/STARK/Cairo/Starknet developer positions.
-Use web_search('site:cryptojobs.com zero knowledge OR Cairo OR Starknet OR STARK').
-Save ALL job findings and notify Manuel via Telegram immediately.
-MAX 2 tool calls.",
+    "RESEARCH: Search CryptoJobs.com for ZK/STARK/Cairo/Starknet developer positions.\nUse web_search('site:cryptojobs.com zero knowledge OR Cairo OR Starknet OR STARK').\nSave ALL job findings and notify Manuel via Telegram immediately.\nMAX 2 tool calls.",
     "RESEARCH: Search for grants, bounties, and hackathons in ZK/AI space.\nSources: starknet.io/grants, gitcoin.co, dorahacks.io, ethglobal.com, onlydust.com.\nUse web_search('Starknet grants 2026 OR OnlyDust bounties OR ETHGlobal hackathon OR Hedera bounty').\nNotify Manuel immediately for anything with deadline < 2 weeks.\nMAX 2 tool calls.",
     "RESEARCH: Search for highest-paying AI/ZK/blockchain remote jobs worldwide.\nSources: levels.fyi, toptal.com, turing.com, arc.dev, remoteok.com, triplebyte.com.\nUse web_search('site:levels.fyi OR site:remoteok.com AI engineer salary 200k OR blockchain developer 300k OR ZK engineer remote 2026').\nAlso search: 'Paradigm hiring' OR 'a16z crypto hiring' OR 'Polychain hiring' OR 'StarkWare hiring'.\nThese pay $200K-$500K+. Notify Manuel IMMEDIATELY for any match.\nMAX 2 tool calls.",
     "RESEARCH: Search for MIDAS/Phantom competitors in privacy DeFi space.\nUse web_search('privacy DeFi Starknet' OR 'zero knowledge yield').\nIdentify positioning gaps we can exploit.\nMAX 2 tool calls.",
@@ -853,11 +850,7 @@ HUNT_ANGLES = [
     "HUNT: Find Starknet/ZK projects and EMAIL about MIDAS partnership.\nStep 1: web_search('Starknet ecosystem projects 2026')\nStep 2: find_emails(project domain)\nStep 3: send_email with MIDAS pitch (privacy DeFi, STRK20 token standard)\nMAX 3 tool calls.",
     "HUNT: Search Reddit r/forhire for paid AI/automation gigs.\nStep 1: reddit_search('hiring AI' OR 'need automation', subreddit='forhire')\nStep 2: For best match, find their website/domain\nStep 3: prospect_and_email if domain found, or save as prospect\nMAX 3 tool calls.",
     "HUNT: Find ZK/STARK job postings for Manuel.\nStep 1: web_search('zero knowledge developer job' OR 'Cairo developer hiring' OR 'Starknet engineer remote')\nStep 2: Save ALL job findings with save_strategy\nStep 3: Notify Manuel via Telegram with the best opportunities\nMAX 3 tool calls.",
-    "HUNT: Search CryptoJobs for paid ZK/blockchain positions Manuel can apply to.
-Step 1: web_search('site:cryptojobs.com remote zero knowledge developer 2026')
-Step 2: save_strategy with job title, company, requirements, link
-Step 3: Notify Manuel via Telegram with top 3 matches
-MAX 3 tool calls.",
+    "HUNT: Search CryptoJobs for paid ZK/blockchain positions Manuel can apply to.\nStep 1: web_search('site:cryptojobs.com remote zero knowledge developer 2026')\nStep 2: save_strategy with job title, company, requirements, link\nStep 3: Notify Manuel via Telegram with top 3 matches\nMAX 3 tool calls.",
     "HUNT: Find VC-backed AI startups that need Wave.\nStep 1: web_search('AI startup raised funding 2026 series A')\nStep 2: find_emails(company domain) for CTO/CEO\nStep 3: prospect_and_email(domain, archetype='builder')\nTarget: companies that just raised money = high budget\nMAX 3 tool calls.",
     "HUNT: Search Moltbook for agents whose HUMANS might need our services.\nStep 1: moltbook_feed(sort=hot)\nStep 2: Identify agents discussing business problems Wave solves\nStep 3: moltbook_comment offering genuine help\nMAX 3 tool calls.",
 ]
