@@ -1,60 +1,153 @@
-"""Web Search & Scraping — the agent's eyes on the internet."""
+"""Web Search & Scraping — the agent's eyes on the internet.
+
+Multi-engine: DDG → Brave → Tavily fallback chain.
+If DDG is rate-limited, automatically falls back to Brave or Tavily.
+"""
 
 from __future__ import annotations
+import logging
+import os
 import json
 from typing import Any, Dict, List
-from duckduckgo_search import DDGS
+
 import httpx
 from bs4 import BeautifulSoup
 
+logger = logging.getLogger("openclaw.web_search")
+
+BRAVE_API_KEY = os.environ.get("BRAVE_API_KEY", "")
+TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY", "")
+
+
+async def _ddg_search(query: str, max_results: int = 5, region: str = "wt-wt") -> list:
+    """Try DuckDuckGo first (no API key needed)."""
+    try:
+        from duckduckgo_search import DDGS
+        results = []
+        with DDGS() as ddgs:
+            for r in ddgs.text(query, region=region, max_results=max_results):
+                results.append({
+                    "title": r.get("title", ""),
+                    "url": r.get("href", ""),
+                    "snippet": r.get("body", ""),
+                })
+        return results
+    except Exception as e:
+        logger.debug("DDG failed: %s", e)
+        return []
+
+
+async def _brave_search(query: str, max_results: int = 5) -> list:
+    """Fallback to Brave Search API."""
+    if not BRAVE_API_KEY:
+        return []
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.get("https://api.search.brave.com/res/v1/web/search",
+                                 params={"q": query, "count": max_results},
+                                 headers={"X-Subscription-Token": BRAVE_API_KEY, "Accept": "application/json"})
+            data = r.json()
+        return [{"title": i.get("title", ""), "url": i.get("url", ""), "snippet": i.get("description", "")}
+                for i in data.get("web", {}).get("results", [])[:max_results]]
+    except Exception as e:
+        logger.debug("Brave failed: %s", e)
+        return []
+
+
+async def _tavily_search(query: str, max_results: int = 5) -> list:
+    """Fallback to Tavily Search API."""
+    if not TAVILY_API_KEY:
+        return []
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.post("https://api.tavily.com/search", json={
+                "api_key": TAVILY_API_KEY, "query": query,
+                "max_results": max_results, "include_answer": False,
+            })
+            data = r.json()
+        return [{"title": i.get("title", ""), "url": i.get("url", ""), "snippet": i.get("content", "")[:200]}
+                for i in data.get("results", [])[:max_results]]
+    except Exception as e:
+        logger.debug("Tavily failed: %s", e)
+        return []
+
 
 async def web_search(params: Dict[str, Any]) -> Dict:
-    """Search the web using DuckDuckGo. No API key needed."""
+    """Search the web. Auto-fallback: DDG → Brave → Tavily."""
     query = params.get("query", "")
-    max_results = params.get("max_results", 10)
+    max_results = min(int(params.get("max_results", 5)), 10)
     region = params.get("region", "wt-wt")
 
-    results = []
-    with DDGS() as ddgs:
-        for r in ddgs.text(query, region=region, max_results=max_results):
-            results.append({
-                "title": r.get("title", ""),
-                "url": r.get("href", ""),
-                "snippet": r.get("body", ""),
-            })
+    if not query:
+        return {"success": False, "data": None, "message": "Need a search query"}
+
+    # Try engines in order
+    engine = "ddg"
+    results = await _ddg_search(query, max_results, region)
 
     if not results:
-        return {"success": True, "data": [], "message": "No results found for '%s'" % query}
+        engine = "brave"
+        results = await _brave_search(query, max_results)
 
-    lines = ["**Search results for '%s':**\n" % query]
+    if not results:
+        engine = "tavily"
+        results = await _tavily_search(query, max_results)
+
+    if not results:
+        return {"success": False, "data": [], "message": f"All search engines failed for '{query}'. DDG rate-limited, Brave/Tavily not configured."}
+
+    lines = [f"**[{engine}] Results for '{query}':**\n"]
     for i, r in enumerate(results, 1):
-        lines.append("%d. **%s**\n   %s\n   %s\n" % (i, r["title"], r["url"], r["snippet"][:150]))
+        lines.append(f"{i}. **{r['title']}**\n   {r['url']}\n   {r['snippet'][:150]}\n")
 
     return {"success": True, "data": results, "message": "\n".join(lines)}
 
 
 async def web_news(params: Dict[str, Any]) -> Dict:
-    """Search news using DuckDuckGo News."""
+    """Search news. Auto-fallback: DDG → Brave."""
     query = params.get("query", "")
-    max_results = params.get("max_results", 10)
+    max_results = min(int(params.get("max_results", 5)), 10)
 
+    if not query:
+        return {"success": False, "data": None, "message": "Need a search query"}
+
+    # Try DDG news
     results = []
-    with DDGS() as ddgs:
-        for r in ddgs.news(query, max_results=max_results):
-            results.append({
-                "title": r.get("title", ""),
-                "url": r.get("url", ""),
-                "source": r.get("source", ""),
-                "date": r.get("date", ""),
-                "snippet": r.get("body", ""),
-            })
+    try:
+        from duckduckgo_search import DDGS
+        with DDGS() as ddgs:
+            for r in ddgs.news(query, max_results=max_results):
+                results.append({
+                    "title": r.get("title", ""),
+                    "url": r.get("url", ""),
+                    "source": r.get("source", ""),
+                    "date": r.get("date", ""),
+                    "snippet": r.get("body", ""),
+                })
+    except Exception:
+        pass
+
+    # Fallback to Brave news
+    if not results and BRAVE_API_KEY:
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                r = await client.get("https://api.search.brave.com/res/v1/news/search",
+                                     params={"q": query, "count": max_results},
+                                     headers={"X-Subscription-Token": BRAVE_API_KEY, "Accept": "application/json"})
+                data = r.json()
+            results = [{"title": i.get("title", ""), "url": i.get("url", ""),
+                        "source": i.get("meta_url", {}).get("hostname", ""), "date": i.get("age", ""),
+                        "snippet": i.get("description", "")}
+                       for i in data.get("results", [])[:max_results]]
+        except Exception:
+            pass
 
     if not results:
-        return {"success": True, "data": [], "message": "No news found for '%s'" % query}
+        return {"success": False, "data": [], "message": f"No news found for '{query}'"}
 
-    lines = ["**News for '%s':**\n" % query]
+    lines = [f"**News for '{query}':**\n"]
     for r in results:
-        lines.append("- **%s** (%s, %s)\n  %s\n" % (r["title"], r["source"], r["date"][:10] if r["date"] else "", r["snippet"][:120]))
+        lines.append(f"- **{r['title']}** ({r.get('source', '')}, {str(r.get('date', ''))[:10]})\n  {r['snippet'][:120]}\n")
 
     return {"success": True, "data": results, "message": "\n".join(lines)}
 
