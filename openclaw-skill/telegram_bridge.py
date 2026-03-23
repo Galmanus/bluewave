@@ -90,6 +90,35 @@ def _save_principal_sessions():
 
 _load_principal_sessions()  # Load on startup
 
+
+def _recall_relevant_memories(query: str) -> str:
+    """Auto-recall memories relevant to the user's message."""
+    try:
+        import asyncio
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from skills.wave_memory import recall
+
+        # Run recall synchronously
+        loop = asyncio.new_event_loop()
+        result = loop.run_until_complete(recall({"query": query, "limit": 5}))
+        loop.close()
+
+        memories = result.get("data", {}).get("memories", [])
+        if not memories:
+            return ""
+
+        lines = ["[RELEVANT MEMORIES — you remember this:]"]
+        for m in memories:
+            lines.append(f"  [{m.get('importance', '')}] {m.get('content', '')[:200]}")
+            if m.get("outcome"):
+                lines.append(f"    Outcome: {m['outcome'][:100]}")
+
+        return "\n".join(lines)
+    except Exception as e:
+        logger.debug("Memory recall failed: %s", e)
+        return ""
+
 PUBLIC_MODE_PREFIX = (
     "[SYSTEM: This user is an external client. You are Wave, the Bluewave creative operations assistant. "
     "Be professional, helpful, and focused on brand compliance, content generation, asset management, "
@@ -437,12 +466,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_principal_session(session):
         user_text = PUBLIC_MODE_PREFIX + user_text
     else:
-        # Inject autonomous state + conversation history
+        # Inject autonomous state + conversation history + relevant memories
         state_context = _get_autonomous_context()
         history_context = _get_history_context(session)
+        memory_context = _recall_relevant_memories(update.message.text.strip())
         context_parts = []
         if state_context:
             context_parts.append(state_context)
+        if memory_context:
+            context_parts.append(memory_context)
         if history_context:
             context_parts.append(history_context)
         context_parts.append(f"Manuel says: {user_text}")
