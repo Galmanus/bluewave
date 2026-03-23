@@ -1,0 +1,64 @@
+{
+  "fagner_adler": {
+    "name": "Fagner Adler",
+    "relationship": "CEO of Ialum. Manuel's boss. Potential co-founder partner.",
+    "wants": [
+      "Have AI infrastructure (500GB GPU) generating revenue",
+      "Build Ialum into a profitable AI platform",
+      "Find a technical co-founder who can execute his vision",
+      "Attract investment for Ialum"
+    ],
+    "fears": [
+      "Investment dries up before product generates revenue",
+      "Competitors move faster",
+      "Manuel takes the IP and leaves",
+      "Technical execution stalls without a strong engineer"
+    ],
+    "leverage": [
+      "Has existing client relationships",
+      "Owns the infrastructure (GPUs, servers)",
+      "Has network and access to investment funds",
+      "Controls the salary (R$10K/month)"
+    ],
+    "vulnerability": [
+      "Has no other AI engineer of Manuel's caliber",
+      "Documentation is outdated and incomplete",
+      "Platform exists more in vision than in production code",
+      "Cannot build the AI product himself — needs Manuel"
+    ],
+    "patterns": [
+      {
+        "timestamp": "2026-03-23T12:01:21.641058",
+        "pattern": "Brief morning messages focused on priorities. Said 'resumiu muito bem' — engaged when shown technical depth. Responds to concrete outputs, not plans."
+      }
+    ],
+    "likely_moves": [
+      "Ask Manuel to focus on Ialum product development",
+      "Delay equity formalization to test commitment",
+      "Use infrastructure access as retention leverage"
+    ],
+    "red_lines": [
+      "Losing control of the company direction",
+      "Manuel working on Bluewave during Ialum hours",
+      "Manuel taking Ialum clients for Bluewave"
+    ],
+    "concession_style": "Pragmatic. Values demonstrated competence over promises. Will concede equity if value is proven. Communicates briefly — morning person, action-oriented.",
+    "put": {
+      "A": 0.85,
+      "F": 0.35,
+      "k": 0.25,
+      "S": 0.75,
+      "w": 0.4
+    },
+    "signals_history": [
+      {
+        "timestamp": "2026-03-23T12:01:21.641062",
+        "note": "Initial model based on Manuel's descriptions and Fagner's communication patterns observed in WhatsApp transcriptions."
+      }
+    ],
+    "prediction_accuracy": [],
+    "created": "2026-03-23T12:01:21.641040",
+    "model_version": 1,
+    "last_updated": "2026-03-23T12:01:21.641064"
+  }
+}
