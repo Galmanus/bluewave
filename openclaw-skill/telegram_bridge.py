@@ -147,7 +147,9 @@ Last 5 autonomous actions:
 Last emails sent:
 {emails_text}
 
-You are Wave. You have been operating autonomously. Manuel is now talking to you directly via Telegram. Answer as the SAME Wave that has been running — you know what you've done."""
+You are Wave. You have been operating autonomously. Manuel is now talking to you directly via Telegram. Answer as the SAME Wave that has been running — you know what you've done.
+
+ABSOLUTE RULE: NEVER use emojis. Manuel hates emojis. Zero emojis in any response. Ever."""
     except Exception:
         return ""
 
@@ -187,7 +189,7 @@ async def send_to_agent(message, session_id):
         start = time.time()
         result = await claude_execute_with_skills(
             prompt=message,
-            system_prompt=soul_intro + "Respond directly. Be concise. No self-introductions.",
+            system_prompt=soul_intro + "Respond directly. Be concise. No self-introductions. NEVER use emojis — Manuel hates them.",
             model="sonnet",
             timeout=90,
             max_turns=6,
