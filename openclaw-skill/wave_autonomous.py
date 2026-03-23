@@ -836,6 +836,7 @@ RESEARCH_ANGLES = [
 Use web_search('site:cryptojobs.com zero knowledge OR Cairo OR Starknet OR STARK').
 Save ALL job findings and notify Manuel via Telegram immediately.
 MAX 2 tool calls.",
+    "RESEARCH: Search for grants, bounties, and hackathons in ZK/AI space.\nSources: starknet.io/grants, gitcoin.co, dorahacks.io, ethglobal.com, onlydust.com.\nUse web_search('Starknet grants 2026 OR OnlyDust bounties OR ETHGlobal hackathon OR Hedera bounty').\nNotify Manuel immediately for anything with deadline < 2 weeks.\nMAX 2 tool calls.",
     "RESEARCH: Search for MIDAS/Phantom competitors in privacy DeFi space.\nUse web_search('privacy DeFi Starknet' OR 'zero knowledge yield').\nIdentify positioning gaps we can exploit.\nMAX 2 tool calls.",
 ]
 
@@ -856,6 +857,7 @@ Step 1: web_search('site:cryptojobs.com remote zero knowledge developer 2026')
 Step 2: save_strategy with job title, company, requirements, link
 Step 3: Notify Manuel via Telegram with top 3 matches
 MAX 3 tool calls.",
+    "HUNT: Find VC-backed AI startups that need Wave.\nStep 1: web_search('AI startup raised funding 2026 series A')\nStep 2: find_emails(company domain) for CTO/CEO\nStep 3: prospect_and_email(domain, archetype='builder')\nTarget: companies that just raised money = high budget\nMAX 3 tool calls.",
     "HUNT: Search Moltbook for agents whose HUMANS might need our services.\nStep 1: moltbook_feed(sort=hot)\nStep 2: Identify agents discussing business problems Wave solves\nStep 3: moltbook_comment offering genuine help\nMAX 3 tool calls.",
 ]
 
