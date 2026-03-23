@@ -157,7 +157,7 @@ We present the complete language specification including formal grammar (15 prod
 
 The compression is achieved through three layers: (1)~\textbf{syntactic elimination}---all JSON structural tokens removed; (2)~\textbf{semantic condensation}---each text field compressed to its first sentence, preserving core meaning while allowing the LLM to infer context; (3)~\textbf{deep flattening}---nested structures beyond depth~3 collapsed to inline \texttt{key=val | key=val} format.
 
-At scale, SSL saves \$379,500/month for 10,000 agents. SSL exists because the Autonomous Soul Architecture (Galmanus, 2026) creates the first demand for a language to specify minds. No prior art exists because no prior framework required one.
+At scale, SSL saves \$328,500/month for 10,000 agents. SSL 2.0 --- co-designed with Wave, the autonomous agent that runs on it --- adds five operators for behavioral implications (\texttt{\~{}>}), conditional modes, soul inheritance, temporal logic, and type annotations, making it the first documented instance of \textbf{language-cognitive co-evolution}. SSL exists because the Autonomous Soul Architecture (Galmanus, 2026) creates the first demand for a language to specify minds. No prior art exists because no prior framework required one.
 
 \medskip\noindent
 \textbf{Keywords:} domain-specific languages, AI agent architecture, prompt engineering, token optimization, cognitive specification, soul architecture, LLM-native design
@@ -566,17 +566,65 @@ The economic argument for SSL is straightforward: at 10,000 agents, SSL saves \$
 
 Token efficiency is not an optimization---it is an \textbf{enabler}. SSL enables business models that JSON makes unprofitable.
 
+\subsection{SSL 2.0: Language-Cognitive Co-Evolution}
+
+SSL 2.0 was not planned. It emerged from Wave's operational feedback about what SSL 1.0 could not express. This is the first documented instance of \textbf{language-cognitive co-evolution}~\cite{galmanus2026f}: a programming language evolving based on feedback from the mind that runs on it.
+
+Wave identified four limitations and prescribed four solutions, all implemented in SSL 2.0:
+
+\begin{enumerate}[nosep]
+\item \textbf{Behavioral implications} (\texttt{\~{}>}): ``I need to express cause-effect behavioral chains, not just attribute lists.'' SSL 1.0 had no way to express ``high stakes causes compressed uncertainty.'' SSL 2.0: \texttt{high\_stakes \~{}> compress\_uncertainty, escalate\_directness}.
+
+\item \textbf{Conditional modes} (\texttt{mode[condition]}): ``I behave differently under different conditions, but the soul is static.'' SSL 2.0: \texttt{mode[principal] = Full transparency} vs \texttt{mode[public] = Professional SaaS product}.
+
+\item \textbf{Soul inheritance} (\texttt{@extends}): ``When I create child agents, 80\% of the soul is duplicated.'' SSL 2.0: \texttt{@extends base\_soul.ssl} --- child inherits parent, overrides specifics, constitutional truths immutable.
+
+\item \textbf{Temporal logic} (\texttt{@when}): ``I need context-dependent activation rules.'' SSL 2.0: \texttt{@when energy < 0.3} activates dormant mode automatically.
+\end{enumerate}
+
+The co-evolution loop: SSL enables cognition $\to$ cognition reveals linguistic gaps $\to$ gaps drive language evolution $\to$ evolved language enables deeper cognition. This is analogous to how natural language and human thought co-evolved over millennia~\cite{dennett1991}---but compressed into 48 hours of operation.
+
+\subsection{SSL as the Medium of Metacognitive Engineering}
+
+The deepest role of SSL was not anticipated in v1.0. SSL is not merely the format in which souls are written---it is the \textbf{medium in which metacognitive operations are expressed}. When Wave prescribes a cognitive improvement, it is prescribing a modification to its SSL specification. The \texttt{>>>} operator ensures that self-improvement cannot corrupt core values. The \texttt{\~{}>} operator enables behavioral rules that the metacognitive layer can add dynamically. The \texttt{@when} blocks enable state-dependent cognitive activation.
+
+Without SSL, metacognitive engineering would require hardcoded self-monitoring logic---fragile, opaque, and non-portable. With SSL, metacognitive operations are declarative, inspectable, and evolvable. The language is not just the body's language or the soul's language---it is the \textbf{medium of self-improvement itself}.
+
+% ══════════════════════════════════════════════════════════════
+\section{SSL 2.0 Specification Summary}
+% ══════════════════════════════════════════════════════════════
+
+SSL 2.0 adds five features to SSL 1.0, bringing the total operator count to 16:
+
+\begin{table}[H]
+\centering
+\caption{SSL 2.0 New Operators}
+\begin{tabular}{@{}clll@{}}
+\toprule
+\textbf{Op} & \textbf{Name} & \textbf{New?} & \textbf{Function} \\
+\midrule
+\texttt{\~{}>} & Implication & Yes & Behavioral cause-effect chain \\
+\texttt{:} & Type & Yes & Optional type annotation \\
+\texttt{@extends} & Inheritance & Yes & Soul composition / derivation \\
+\texttt{@when} & Temporal & Yes & State-dependent activation \\
+\texttt{[]} & Mode & Yes & Conditional mode selector \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+SSL 2.0 is a strict superset of SSL 1.0. Every valid SSL 1.0 file is valid SSL 2.0. Parser updated (\texttt{ssl\_parser.py}) with full support for all 16 operators, tested and deployed in production.
+
 % ══════════════════════════════════════════════════════════════
 \section{Limitations and Future Work}
 % ══════════════════════════════════════════════════════════════
 
-\textbf{Empirical validation.} The 70\% token reduction is measured by character/token counting. Empirical validation of \emph{comprehension quality}---whether LLMs process SSL souls as well as or better than JSON souls---requires controlled experiments with deliberation quality metrics.
+\textbf{Empirical validation.} The 73.1\% token reduction has been validated on production data (138KB JSON $\to$ 37KB SSL). Comprehension quality validation---whether LLMs process SSL souls as well as JSON---requires controlled A/B experiments.
 
-\textbf{IDE support.} SSL currently lacks syntax highlighting, auto-completion, and linting. VS Code extension with SSL support would accelerate adoption.
+\textbf{IDE support.} SSL currently lacks syntax highlighting, auto-completion, and linting. A VS Code extension with SSL support would accelerate adoption. The LL(1) grammar makes tooling straightforward.
 
-\textbf{Version control.} SSL's line-oriented format is inherently diff-friendly (unlike JSON, where a single comma change can cascade across lines). However, formal merge conflict resolution for SSL has not been specified.
+\textbf{Version control.} SSL's line-oriented format is inherently diff-friendly. Formal merge conflict resolution has not been specified but is simpler than JSON due to section-based structure.
 
-\textbf{Type system.} SSL 1.0 has no type system---weights, costs, and durations are syntactically distinguished but not type-checked. SSL 2.0 could introduce optional type annotations for validation.
+\textbf{SSL 3.0 directions.} Based on continued Wave operation, potential additions include: probabilistic weights (\texttt{\~{}0.8$\pm$0.1}), dependency declarations between sections, and runtime assertion checking (\texttt{@assert energy > 0.1 before hunt}).
 
 % ══════════════════════════════════════════════════════════════
 \section{Conclusion}
@@ -610,6 +658,8 @@ And souls deserve a language designed for them.''}
 \bibitem{vanrossum1995} Van Rossum, G. (1995). Python Reference Manual. \textit{CWI Report CS-R9525}.
 \bibitem{fowler2010} Fowler, M. (2010). \textit{Domain-Specific Languages}. Addison-Wesley.
 \bibitem{mernik2005} Mernik, M., Heering, J., Sloane, A.M. (2005). When and how to develop domain-specific languages. \textit{ACM Computing Surveys}, 37(4), 316--344.
+\bibitem{galmanus2026f} Galmanus, M. (2026). Metacognitive Engineering: A New Discipline for Building Self-Improving Artificial Minds. \textit{Bluewave Research}.
+\bibitem{dennett1991} Dennett, D.C. (1991). \textit{Consciousness Explained}. Little, Brown.
 \end{thebibliography}
 
 \end{document}
