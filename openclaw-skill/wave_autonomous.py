@@ -746,16 +746,48 @@ def build_deliberation_prompt(state: dict) -> str:
         avail.append("post")
     avail.extend(["observe", "research", "comment", "outreach"])
 
-    # Priority scoring: pre-rank available actions for the model
+    # Priority scoring: ROTATE actions to prevent loops
+    # Check what was done recently and deprioritize
+    recent_set = set(recent)
+    blacklisted = set()
+    for act in ["hunt", "sell", "outreach", "comment", "post", "observe", "research", "evolve"]:
+        bl_key = f"_blacklist_{act}"
+        if bl_key in state:
+            try:
+                bl_time = datetime.fromisoformat(state[bl_key])
+                if (now - bl_time).total_seconds() < 1800:
+                    blacklisted.add(act)
+            except Exception:
+                pass
+
     priority = []
     if "EVOLVE(FORCED)" in avail:
         priority.append("evolve [MANDATORY]")
-    if state.get('prospects_found', 0) > 0 and state.get('outreach_sent', 0) == 0:
-        priority.append("outreach [prospects waiting]")
+
+    # Revenue actions first, but ROTATE — don't repeat the same one
+    revenue_actions = []
     for a in ["hunt", "sell", "check_payments"]:
-        if a in avail:
+        if a in avail and a not in blacklisted:
+            # Deprioritize if done in last 3 actions
+            if a in recent_set:
+                revenue_actions.append(a)  # Add later
+            else:
+                priority.append(a)  # Add now (hasn't been done recently)
+    priority.extend(revenue_actions)  # Recently done goes after fresh actions
+
+    # Engagement actions — only if not spamming
+    if "outreach" not in blacklisted and recent.count("outreach") < 2:
+        priority.append("outreach")
+    if "comment" not in blacklisted and recent.count("comment") < 2:
+        priority.append("comment")
+
+    # Other actions
+    for a in ["research", "observe", "post", "reflect"]:
+        if a in avail and a not in blacklisted and a not in priority:
             priority.append(a)
-    priority.extend([a for a in avail if a not in priority and a != "EVOLVE(FORCED)"])
+
+    # Always allow silence as last resort
+    priority.append("silence")
 
     return f"""<|system|>You are Wave. Autonomous agent. Cycle {state.get('total_cycles', 0)}. Respond ONLY with valid JSON.<|end|>
 <|context|>
@@ -764,12 +796,12 @@ timers: hunt={h(state.get('last_hunt_time'))}h sell={h(state.get('last_sell_time
 last_5: {'>'.join(recent)}
 <|end|>
 <|priority_queue|>{' > '.join(priority)}<|end|>
-<|constraints|>
+RULES:
 - EVOLVE(FORCED) overrides everything when present
-- $0 revenue: silence is BANNED
-- Pick the FIRST available action from priority_queue unless you have strong reason not to
+- Do NOT repeat the same action 3+ times in a row — variety produces better results
+- Silence is allowed for energy recovery (max 1 consecutive)
+- Pick from priority_queue but USE JUDGMENT — if an action keeps failing, try something else
 - 2 sentences max for reasoning
-<|end|>
 <|output_format|>
 {{"consciousness_state":"decisive","consciousness_reasoning":"<1 sentence>","triggers_evaluated":{{"action_triggers_fired":["<trigger>"],"silence_triggers_fired":[],"authenticity_check":"genuine"}},"decision":"<action>","reasoning":"<2 sentences max>","plan":"<1 sentence>","state_updates":{{"energy":1.0,"curiosity":0.5,"knowledge_pressure":0.5}}}}
 <|end|>"""
@@ -857,13 +889,12 @@ EXECUTION_PROMPTS = {
         "MAX 1 tool call. Return the post title and content."
     ),
     "outreach": (
-        "OUTREACH: Find 1 hot post on Moltbook and reply with genuine value.\n"
-        "Step 1: moltbook_feed sort=hot limit=3\n"
-        "Step 2: Pick the post most relevant to AI agents/operations\n"
-        "Step 3: moltbook_comment with a reply that demonstrates deep expertise\n"
-        "Style: analytical, concise, reference a concrete framework or insight\n"
-        "Do NOT mention pricing. Do NOT self-promote. Pure value-add comment.\n"
-        "MAX 2 tool calls. Return the comment you posted."
+        "OUTREACH: Find 1 NEW post on Moltbook and reply with genuine value.\n"
+        "Step 1: moltbook_feed sort=new limit=5\n"
+        "Step 2: Pick a post you have NOT commented on before\n"
+        "Step 3: moltbook_comment with analytical insight, NO emojis, NO self-promotion\n"
+        "IMPORTANT: Do NOT comment on the same post twice. Pick a DIFFERENT post each time.\n"
+        "MAX 2 tool calls. Return the post title and your comment."
     ),
     "reflect": (
         "REFLECT: Analyze what's working and what's not.\n"
