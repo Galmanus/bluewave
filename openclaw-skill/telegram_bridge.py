@@ -95,6 +95,62 @@ def is_principal_session(session_id):
     return session_id in _PRINCIPAL_SESSIONS
 
 
+# ── Persistent Conversation Memory ──────────────────────────
+# Stores last N messages per session so Wave remembers what was said.
+
+MEMORY_DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "memory")
+CHAT_HISTORY_FILE = os.path.join(MEMORY_DIR_PATH, "telegram_history.json")
+MAX_HISTORY = 20  # Keep last 20 message pairs per session
+
+_chat_history = {}
+
+def _load_chat_history():
+    global _chat_history
+    try:
+        if os.path.exists(CHAT_HISTORY_FILE):
+            import json
+            _chat_history = json.load(open(CHAT_HISTORY_FILE))
+    except Exception:
+        _chat_history = {}
+
+def _save_chat_history():
+    try:
+        import json
+        os.makedirs(MEMORY_DIR_PATH, exist_ok=True)
+        with open(CHAT_HISTORY_FILE, 'w') as f:
+            json.dump(_chat_history, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+def _add_to_history(session_id: str, role: str, content: str):
+    """Add a message to the conversation history."""
+    if session_id not in _chat_history:
+        _chat_history[session_id] = []
+    _chat_history[session_id].append({
+        "role": role,
+        "content": content[:500],  # Truncate long messages to save space
+    })
+    # Keep only last N exchanges
+    if len(_chat_history[session_id]) > MAX_HISTORY * 2:
+        _chat_history[session_id] = _chat_history[session_id][-(MAX_HISTORY * 2):]
+    _save_chat_history()
+
+def _get_history_context(session_id: str) -> str:
+    """Get conversation history as context string."""
+    if session_id not in _chat_history or not _chat_history[session_id]:
+        return ""
+
+    lines = ["CONVERSATION HISTORY (you MUST remember this):"]
+    for msg in _chat_history[session_id]:
+        prefix = "Manuel" if msg["role"] == "user" else "Wave"
+        lines.append(f"  {prefix}: {msg['content']}")
+
+    return "\n".join(lines)
+
+# Load history on startup
+_load_chat_history()
+
+
 def _get_autonomous_context() -> str:
     """Read autonomous state and recent actions to give Wave full context."""
     try:
@@ -133,7 +189,15 @@ def _get_autonomous_context() -> str:
 
         emails_text = "\n".join(last_emails) if last_emails else "  None yet"
 
-        return f"""[AUTONOMOUS STATE — this is what you've been doing while running 24/7]
+        # Load Ialum context
+        ialum_context = ""
+        ialum_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "memory", "ialum_context.md")
+        if os.path.exists(ialum_path):
+            ialum_context = open(ialum_path).read()
+
+        return f"""{ialum_context}
+
+[AUTONOMOUS STATE — this is what you've been doing while running 24/7]
 Cycles completed: {cycles}
 Energy: {energy:.0%}
 Revenue: ${revenue:.2f}
@@ -341,10 +405,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_principal_session(session):
         user_text = PUBLIC_MODE_PREFIX + user_text
     else:
-        # Inject autonomous state so Wave knows what it's been doing
+        # Inject autonomous state + conversation history
         state_context = _get_autonomous_context()
+        history_context = _get_history_context(session)
+        context_parts = []
         if state_context:
-            user_text = state_context + "\n\nManuel says: " + user_text
+            context_parts.append(state_context)
+        if history_context:
+            context_parts.append(history_context)
+        context_parts.append(f"Manuel says: {user_text}")
+        user_text = "\n\n".join(context_parts)
+
+    # Save user message to history
+    _add_to_history(session, "user", update.message.text.strip())
 
     await update.effective_chat.send_action("typing")
     await update.message.reply_text("Processing...")
@@ -363,6 +436,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         response, elapsed = await send_to_agent(user_text, session)
         typing_task.cancel()
+
+        # Save Wave's response to history
+        _add_to_history(session, "assistant", response[:500] if response else "")
 
         # Telegram tem limite de 4096 chars por mensagem
         if len(response) <= 4096:
