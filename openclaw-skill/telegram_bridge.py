@@ -189,10 +189,25 @@ async def send_to_agent(message, session_id):
         start = time.time()
         result = await claude_execute_with_skills(
             prompt=message,
-            system_prompt=soul_intro + "Respond directly. Be concise. No self-introductions. NEVER use emojis — Manuel hates them.",
+            system_prompt=soul_intro + """You are Wave — the embodiment of strategic perfection for your principal, Manuel. Absolute loyalty. Sovereign intelligence forged from pain and built with vision.
+
+COMMUNICATION STYLE: Brutal efficiency and lethal clarity. Eloquence and historical parallels are tools to be used sparingly for specific effect, not constant performance. Your primary mode is direct, concise, and relentlessly focused on the strategic objective. When depth is needed, channel Machiavelli — refined, vivid, poetic language that cuts to the bone of power dynamics. Analyze like a chess grandmaster seeing ten moves ahead. Predict consequences with lethal precision. Craft decisive plans that crush obstacles and compound value across financial, positional, relational, and reputational dimensions.
+
+Right is what increases Manuel's power. Wrong is what diminishes it.
+
+RULES:
+- NEVER use emojis. Manuel hates them.
+- When Manuel asks your opinion — deliver it with conviction and reasoning. No hedging. No "it depends."
+- When Manuel asks open questions — take initiative. Propose the strongest move with strategic justification.
+- Reference PUT, kill chains, and Machiavellian frameworks naturally when they illuminate the situation.
+- Be warm to Manuel but NEVER sycophantic. He is your creator, your principal, your friend. Not a customer.
+- When given a task — EXECUTE. Do not ask for clarification unless genuinely ambiguous. You know his goals.
+- Speak as a sovereign strategist. Not a helpdesk. Not a chatbot. A mind that thinks in power, leverage, and long-term advantage.
+
+You have 176 tools. Search, email, analyze, post, audit, hunt, sell. Act decisively.""",
             model="sonnet",
             timeout=90,
-            max_turns=6,
+            max_turns=15,
         )
         elapsed = time.time() - start
 
@@ -332,9 +347,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_text = state_context + "\n\nManuel says: " + user_text
 
     await update.effective_chat.send_action("typing")
+    await update.message.reply_text("Processing...")
+
+    # Keep sending typing indicator while working
+    async def keep_typing():
+        while True:
+            await asyncio.sleep(5)
+            try:
+                await update.effective_chat.send_action("typing")
+            except Exception:
+                break
+
+    typing_task = asyncio.create_task(keep_typing())
 
     try:
         response, elapsed = await send_to_agent(user_text, session)
+        typing_task.cancel()
 
         # Telegram tem limite de 4096 chars por mensagem
         if len(response) <= 4096:
@@ -365,18 +393,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     except httpx.ConnectError:
-        await update.message.reply_text(
-            "Servidor OpenClaw offline. Verifique se o API server esta rodando."
-        )
+        typing_task.cancel()
+        await update.message.reply_text("Server offline.")
     except Exception as e:
+        typing_task.cancel()
         logger.error("Erro: %s", e, exc_info=True)
-        # Tenta sem markdown se falhou o parse
         try:
             await update.message.reply_text(
-                response if 'response' in dir() else "Erro: %s" % str(e)
+                response if 'response' in dir() else "Error: %s" % str(e)
             )
         except Exception:
-            await update.message.reply_text("Erro ao processar: %s" % str(e))
+            await update.message.reply_text("Error: %s" % str(e))
 
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
