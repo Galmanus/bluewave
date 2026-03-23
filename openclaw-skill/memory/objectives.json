@@ -1,0 +1,63 @@
+{
+  "O3": [
+    {
+      "id": "O3_1",
+      "objective": "Manuel earns $1M total compensation",
+      "key_results": [
+        "Land $200K+ job or contract",
+        "Bluewave generates $10K/month",
+        "MIDAS gets Starknet grant"
+      ],
+      "deadline": "2026-12-31",
+      "priority": "critical",
+      "status": "active",
+      "created": "2026-03-23T11:37:26.421875",
+      "progress": 0
+    }
+  ],
+  "O1": [
+    {
+      "id": "O1_1",
+      "objective": "First revenue dollar from Bluewave",
+      "key_results": [
+        "Send 50 targeted emails",
+        "Get 5 replies",
+        "Close 1 paying client"
+      ],
+      "deadline": "2026-04-23",
+      "priority": "critical",
+      "status": "active",
+      "created": "2026-03-23T11:37:26.422094",
+      "progress": 0
+    }
+  ],
+  "OW": [
+    {
+      "id": "OW_1",
+      "objective": "Get Fagner dev server access and read Ialum docs",
+      "key_results": [
+        "Request access",
+        "Read all documentation",
+        "Present architecture analysis"
+      ],
+      "deadline": "2026-03-28",
+      "priority": "high",
+      "status": "active",
+      "created": "2026-03-23T11:37:26.422349",
+      "progress": 0
+    },
+    {
+      "id": "OW_2",
+      "objective": "Submit Hedera hackathon",
+      "key_results": [
+        "Record 5-min demo video",
+        "Submit before deadline"
+      ],
+      "deadline": "2026-03-23",
+      "priority": "critical",
+      "status": "active",
+      "created": "2026-03-23T11:37:26.423020",
+      "progress": 0
+    }
+  ]
+}
