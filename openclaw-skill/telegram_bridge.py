@@ -392,11 +392,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session, user_name, user_text[:100],
     )
 
-    # ── PASSPHRASE DETECTION — unlocks Principal Mode ─────────
-    # Case-insensitive, handles typos like "Absolut" or "absolut loyalty"
+    # ── AUTO-DETECT MANUEL BY TELEGRAM USER ID ────────────────
+    # Manuel's Telegram chat ID — auto-activates Principal Mode
+    MANUEL_CHAT_ID = 7461066889  # streetxsmart / +55 47 99209 4748
+    if update.effective_chat.id == MANUEL_CHAT_ID and session not in _PRINCIPAL_SESSIONS:
+        _PRINCIPAL_SESSIONS.add(session)
+        _save_principal_sessions()
+        logger.info("PRINCIPAL MODE AUTO-ACTIVATED for Manuel (chat ID %s)", MANUEL_CHAT_ID)
+
+    # ── PASSPHRASE DETECTION — also unlocks for other devices ─
     if PASSPHRASE in user_text.lower() or "absolute loyalty" in user_text.lower() or "absolut loyalty" in user_text.lower():
         _PRINCIPAL_SESSIONS.add(session)
-        _save_principal_sessions()  # Persist to disk — survives restart
+        _save_principal_sessions()
         logger.info("PRINCIPAL MODE ACTIVATED for session %s by %s", session, user_name)
         await update.message.reply_text(
             "Recognized, Manuel. Full transparency active. What do you need?\n\n"
