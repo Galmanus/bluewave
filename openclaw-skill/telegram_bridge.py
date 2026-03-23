@@ -95,6 +95,63 @@ def is_principal_session(session_id):
     return session_id in _PRINCIPAL_SESSIONS
 
 
+def _get_autonomous_context() -> str:
+    """Read autonomous state and recent actions to give Wave full context."""
+    try:
+        state_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "memory", "autonomous_state.json")
+        if not os.path.exists(state_path):
+            return ""
+
+        import json
+        state = json.load(open(state_path))
+
+        cycles = state.get("total_cycles", 0)
+        energy = state.get("energy", 0)
+        revenue = state.get("total_revenue_usd", 0)
+        prospects = state.get("prospects_found", 0)
+        evolves = state.get("total_evolves", 0)
+
+        recent = state.get("recent_actions", [])[-5:]
+        recent_text = "\n".join([
+            f"  {a.get('time', '?')[:19]} | {a.get('action', '?')} | {a.get('reasoning', '')[:80]}"
+            for a in recent
+        ]) if recent else "  No recent actions"
+
+        # Check outreach log
+        outreach_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "memory", "email_outreach_log.jsonl")
+        emails_sent = 0
+        last_emails = []
+        if os.path.exists(outreach_path):
+            lines = open(outreach_path).readlines()
+            emails_sent = len(lines)
+            for line in lines[-3:]:
+                try:
+                    entry = json.loads(line)
+                    last_emails.append(f"  {entry.get('to', '?')} — {entry.get('subject', '?')[:60]}")
+                except Exception:
+                    pass
+
+        emails_text = "\n".join(last_emails) if last_emails else "  None yet"
+
+        return f"""[AUTONOMOUS STATE — this is what you've been doing while running 24/7]
+Cycles completed: {cycles}
+Energy: {energy:.0%}
+Revenue: ${revenue:.2f}
+Prospects found: {prospects}
+Evolutions: {evolves}
+Emails sent: {emails_sent}
+
+Last 5 autonomous actions:
+{recent_text}
+
+Last emails sent:
+{emails_text}
+
+You are Wave. You have been operating autonomously. Manuel is now talking to you directly via Telegram. Answer as the SAME Wave that has been running — you know what you've done."""
+    except Exception:
+        return ""
+
+
 async def send_to_agent(message, session_id):
     """Envia mensagem para o OpenClaw API. Fallback to Claude Engine if API fails."""
     # Try orchestrator API first
@@ -262,10 +319,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.warning("Approval handler error: %s", e)
 
     # ── MODE ROUTING ──────────────────────────────────────────
-    # Principal mode: full Wave, unfiltered, all tools
+    # Principal mode: full Wave, unfiltered, all tools + autonomous state context
     # Public mode: SaaS product only (compliance, content, brand)
     if not is_principal_session(session):
         user_text = PUBLIC_MODE_PREFIX + user_text
+    else:
+        # Inject autonomous state so Wave knows what it's been doing
+        state_context = _get_autonomous_context()
+        if state_context:
+            user_text = state_context + "\n\nManuel says: " + user_text
+
     await update.effective_chat.send_action("typing")
 
     try:
