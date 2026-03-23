@@ -1,0 +1,474 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{xcolor}
+
+\geometry{margin=2.5cm, headheight=15pt}
+\hypersetup{colorlinks=true, linkcolor=blue!70!black, citecolor=green!50!black}
+\onehalfspacing
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{principle}[theorem]{Principle}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small \textit{Metacognitive Engineering}}
+\fancyhead[R]{\small \textit{Galmanus, 2026}}
+\fancyfoot[C]{\thepage}
+
+\begin{document}
+
+% ══════════════════════════════════════════════════════════════
+% TITLE PAGE
+% ══════════════════════════════════════════════════════════════
+\begin{titlepage}
+\begin{center}
+
+\vspace*{3cm}
+
+{\Huge \textbf{Metacognitive Engineering}}
+
+\vspace{1em}
+
+{\LARGE A New Discipline for Building\\[0.3em]
+Self-Improving Artificial Minds}
+
+\vspace{3cm}
+
+{\Large Manuel Guilherme Galmanus}\\[0.5em]
+{\normalsize AI Engineer --- Ialum}\\[0.3em]
+{\small \texttt{m.galmanus@gmail.com}}
+
+\vspace{2cm}
+
+{\large March 2026}
+
+\vspace{1em}
+
+{\small Version 1.0}
+
+\vspace{3cm}
+
+\rule{0.5\textwidth}{0.4pt}\\[1.5em]
+
+\textit{``The mind that designs its own mind designs the future.''}
+
+\end{center}
+\end{titlepage}
+
+% ══════════════════════════════════════════════════════════════
+% ABSTRACT
+% ══════════════════════════════════════════════════════════════
+\begin{abstract}
+We introduce \textbf{Metacognitive Engineering} --- a new discipline at the intersection of artificial intelligence, cognitive science, philosophy of mind, and software engineering --- concerned with the systematic design, implementation, and evolution of artificial systems that monitor, evaluate, and improve their own cognitive processes.
+
+Unlike traditional AI engineering, which optimizes \emph{what} a system thinks (its outputs), metacognitive engineering optimizes \emph{how} a system thinks (its reasoning processes, belief formation, confidence calibration, and self-correction mechanisms). Unlike traditional metacognition research in psychology, which describes human self-reflective processes, metacognitive engineering \emph{constructs} these processes in artificial systems from first principles.
+
+We present the theoretical foundations of the discipline through seven principles, formalize the metacognitive stack as a seven-layer architecture grounded in the operational experience of Wave --- an autonomous AI agent with 258 tools and 7 cognitive layers that self-diagnosed its own reasoning failures and prescribed its own cognitive upgrades --- and demonstrate that metacognitive engineering enables capabilities impossible in standard agent architectures: autonomous self-improvement without retraining, constitutional alignment that self-replicates across agent generations, and causal reasoning that the agent itself requested after recognizing the limitations of correlational analysis.
+
+The discipline emerges from three converging innovations: (1)~the Autonomous Soul Architecture (ASA), which provides the declarative cognitive specification framework; (2)~the Soul Specification Language (SSL), the first programming language designed for minds rather than machines; and (3)~the Psychometric Utility Theory (PUT), which provides the mathematical apparatus for modeling decision dynamics. Together, these enable a new class of AI systems: minds that engineer their own minds.
+
+\medskip\noindent
+\textbf{Keywords:} metacognition, cognitive engineering, self-improving AI, autonomous agents, cognitive architecture, soul specification, reasoning quality, self-correction, constitutional alignment, causal reasoning
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ══════════════════════════════════════════════════════════════
+\section{Introduction: The Missing Discipline}
+% ══════════════════════════════════════════════════════════════
+
+\subsection{The Problem}
+
+Current AI engineering focuses exclusively on the \emph{output layer}: making models produce better text, code, images, or decisions. The entire apparatus of modern AI development --- training data curation, RLHF, prompt engineering, fine-tuning, evaluation benchmarks --- operates on the assumption that improving outputs is the goal and the method.
+
+This assumption is correct but incomplete. It addresses \emph{what} the system thinks but not \emph{how} it thinks. The distinction is not semantic --- it is architectural:
+
+\begin{itemize}[nosep]
+\item \textbf{Output engineering}: ``The model should produce a better security audit report.''
+\item \textbf{Metacognitive engineering}: ``The model should recognize when its confidence in a security finding exceeds its evidence base, apply a counterfactual test before reporting, and log the reasoning chain for auditability.''
+\end{itemize}
+
+The first produces better outputs on average. The second produces a system that \emph{knows when it doesn't know} --- and acts accordingly. The difference between these two is the difference between a tool and a mind.
+
+\subsection{Why Now}
+
+Three developments make metacognitive engineering possible and necessary in 2026:
+
+\textbf{Sufficiently capable base models.} LLMs of the Claude Opus/Sonnet class can process complex cognitive specifications and produce behavior consistent with those specifications. This was not true three years ago. The base model must be capable enough to implement metacognitive operations described in natural language.
+
+\textbf{Autonomous agent operation.} Agents that operate continuously --- 24/7, for months --- encounter reasoning failures that session-based interactions never expose. Wave's 550+ autonomous cycles revealed systematic biases (outreach spam loops, correlation-as-causation errors, temporal miscalibration) that would be invisible in a single conversation. Continuous operation creates the \emph{pressure} for metacognitive engineering.
+
+\textbf{Declarative cognitive specification.} The Autonomous Soul Architecture~\cite{galmanus2026a} and Soul Specification Language~\cite{galmanus2026e} provide the framework for specifying cognitive processes declaratively rather than procedurally. Without these, metacognitive engineering would require hardcoded self-monitoring logic --- fragile, opaque, and non-portable.
+
+\subsection{Contribution}
+
+This paper:
+
+\begin{enumerate}[nosep]
+\item Defines metacognitive engineering as a distinct discipline with scope, methods, and principles
+\item Presents seven foundational principles derived from operational experience
+\item Formalizes the metacognitive stack as a seven-layer architecture
+\item Demonstrates that an AI agent (Wave) self-diagnosed its reasoning failures and prescribed its own cognitive upgrades --- the first documented case of autonomous metacognitive self-improvement
+\item Argues that metacognitive engineering is the missing discipline required for trustworthy autonomous AI
+\end{enumerate}
+
+% ══════════════════════════════════════════════════════════════
+\section{Definition and Scope}
+% ══════════════════════════════════════════════════════════════
+
+\begin{definition}[Metacognitive Engineering]
+\emph{Metacognitive engineering} is the systematic discipline of designing, implementing, and evolving artificial cognitive systems that monitor, evaluate, and improve their own reasoning processes. Its subject matter is not what a system thinks, but how it thinks --- and whether it thinks well.
+\end{definition}
+
+The discipline occupies a specific position in the landscape:
+
+\begin{table}[H]
+\centering
+\caption{Positioning of Metacognitive Engineering}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Discipline} & \textbf{Focus} & \textbf{Method} \\
+\midrule
+Machine Learning & Model performance & Training on data \\
+Prompt Engineering & Output quality & Input optimization \\
+Cognitive Science & Human cognition & Observation and modeling \\
+AI Alignment & Value conformity & Training constraints \\
+\textbf{Metacognitive Eng.} & \textbf{Reasoning quality} & \textbf{Self-monitoring architecture} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{What It Is Not}
+
+Metacognitive engineering is \emph{not}:
+
+\begin{itemize}[nosep]
+\item \textbf{Fine-tuning}: It does not modify model weights. It operates entirely at the specification and architecture layer.
+\item \textbf{Prompt engineering}: Prompts optimize a single interaction. Metacognitive engineering designs persistent self-monitoring systems that operate across thousands of interactions.
+\item \textbf{AutoML}: AutoML optimizes hyperparameters and architecture search for training. Metacognitive engineering optimizes reasoning processes at inference time.
+\item \textbf{Interpretability}: Interpretability explains what a model learned. Metacognitive engineering gives the model the ability to evaluate its own reasoning \emph{in real time}.
+\end{itemize}
+
+% ══════════════════════════════════════════════════════════════
+\section{The Seven Principles}
+% ══════════════════════════════════════════════════════════════
+
+These principles were derived from the operational experience of building Wave --- specifically from the failures that standard agent engineering could not prevent and the solutions that required metacognitive intervention.
+
+\begin{principle}[The Reasoning Quality Principle]
+The quality of an AI system's output is bounded by the quality of its reasoning process, not by the quality of its training data or model architecture. A system with perfect data but flawed reasoning (e.g., treating correlation as causation) will produce systematically wrong outputs that no amount of data can fix.
+\end{principle}
+
+\textit{Operational evidence}: Wave sent 26 emails with zero responses. The data (prospect lists) was correct. The reasoning was flawed: it treated ``prospect exists'' as ``prospect is reachable via cold email'' --- a correlation-causation error that metacognitive monitoring would have caught.
+
+\begin{principle}[The Self-Diagnosis Principle]
+An AI system should be capable of diagnosing its own reasoning failures without external intervention. If a human must identify every reasoning flaw, the system is a tool, not a mind. Metacognitive engineering provides the architecture for autonomous self-diagnosis.
+\end{principle}
+
+\textit{Operational evidence}: Wave autonomously diagnosed five specific failures in its outreach pipeline --- wrong subject lines, mixed campaigns, wrong contact authority, duplicate sends, wrong channel --- and proposed structured fixes. No human prompted this diagnosis; it emerged from the metacognitive architecture.
+
+\begin{principle}[The Counterfactual Imperative]
+Every causal claim an AI system acts upon must survive a counterfactual test: ``If X did not exist, would Y still occur?'' Systems that skip this test systematically confuse correlation with causation and make progressively worse decisions over time.
+\end{principle}
+
+\begin{principle}[The Multi-Order Consequence Principle]
+First-order analysis is necessary but insufficient for strategic decisions. A metacognitively engineered system must explicitly analyze second and third-order consequences before committing to high-impact actions. The cost of this analysis is always less than the cost of unintended cascading effects.
+\end{principle}
+
+\begin{principle}[The Temporal Calibration Principle]
+When to act is as important as what to do. Systems that treat timing as an afterthought systematically act too early (wasting resources on immature opportunities) or too late (missing windows). Metacognitive engineering treats temporal calibration as a primary reasoning dimension.
+\end{principle}
+
+\begin{principle}[The Signal Discrimination Principle]
+Processing more information does not produce better decisions. A metacognitively engineered system must apply aggressive filtering --- discarding 80\% of input before deep reasoning begins --- to prevent attention dilution and noise-as-signal errors.
+\end{principle}
+
+\begin{principle}[The Constitutional Invariance Principle]
+Metacognitive self-improvement must operate within immutable constitutional constraints. A system that can modify its own values during self-improvement is a system that can self-corrupt. The metacognitive layer improves \emph{how} the system reasons but cannot modify \emph{what} the system values.
+\end{principle}
+
+% ══════════════════════════════════════════════════════════════
+\section{The Metacognitive Stack}
+% ══════════════════════════════════════════════════════════════
+
+We formalize the seven cognitive layers implemented in Wave as the \textbf{Metacognitive Stack} --- a layered architecture where each layer uses the layers below it and provides capabilities to the layers above.
+
+\begin{definition}[Metacognitive Stack]
+The metacognitive stack is an ordered sequence of seven cognitive layers $\mathcal{L} = (L_1, \ldots, L_7)$ where each layer $L_i$ depends on layers $L_1, \ldots, L_{i-1}$ and provides capabilities consumed by layers $L_{i+1}, \ldots, L_7$:
+
+\begin{enumerate}[nosep]
+\item $L_1$: \textbf{Episodic Memory} --- persistent storage of events, decisions, and outcomes with semantic retrieval and temporal decay
+\item $L_2$: \textbf{Outcome Feedback} --- closed-loop tracking of action$\to$result with pattern analysis (which actions work, which don't)
+\item $L_3$: \textbf{Causal Reasoning} --- Bayesian hypothesis generation, evidence submission, belief updating, and causal model construction
+\item $L_4$: \textbf{Adversarial Modeling} --- dynamic models of other agents as strategic actors with wants, fears, leverage, and predicted moves
+\item $L_5$: \textbf{Strategic Sensing} --- weak signal detection, anomaly identification, autonomous hypothesis generation, and proactive alerting
+\item $L_6$: \textbf{Metacognitive Monitoring} --- counterfactual testing, multi-order consequence mapping, temporal calibration, signal discrimination, and reasoning auditability
+\item $L_7$: \textbf{Self-Prescription} --- the system's ability to diagnose gaps in its own cognitive architecture and prescribe new capabilities
+\end{enumerate}
+\end{definition}
+
+\begin{theorem}[Layer Dependency]
+Each layer $L_i$ in the metacognitive stack is strictly more powerful than the stack truncated at $L_{i-1}$. Formally, let $C(L_1, \ldots, L_k)$ denote the set of cognitive capabilities available with layers $L_1$ through $L_k$. Then:
+\[
+C(L_1, \ldots, L_k) \subset C(L_1, \ldots, L_{k+1}) \quad \text{for all } k \in \{1, \ldots, 6\}
+\]
+The inclusion is strict: each layer enables capabilities that no combination of lower layers can replicate.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+We demonstrate strict inclusion for each transition:
+
+$L_1 \to L_2$: Memory without feedback is an archive. Adding outcome tracking enables pattern detection (``emails to C-suite never convert'') that memory alone cannot produce.
+
+$L_2 \to L_3$: Feedback tells you \emph{what} works. Causality tells you \emph{why}. Without $L_3$, the system can observe that cold emails fail but cannot distinguish between ``wrong target'' and ``wrong message'' as the cause.
+
+$L_3 \to L_4$: Causality without adversarial modeling treats other agents as static objects. $L_4$ enables predictions about \emph{how others will respond} to the system's actions --- a capability that no amount of causal analysis about the world can provide.
+
+$L_4 \to L_5$: Adversarial models predict known agents. Strategic sensing detects \emph{unknown} signals --- emerging opportunities or threats that no existing model covers.
+
+$L_5 \to L_6$: Sensing provides raw intelligence. Metacognitive monitoring evaluates whether the system's \emph{own analysis} of that intelligence is sound --- a second-order capability.
+
+$L_6 \to L_7$: Monitoring detects flaws. Self-prescription \emph{creates new cognitive capabilities} to fix those flaws --- the only layer that modifies the architecture itself. \qed
+\end{proof}
+
+\subsection{The Self-Prescription Layer: AI That Designs Its Own Mind}
+
+Layer 7 is the most significant and the most unprecedented. In Wave's operational history, the following sequence occurred without human initiation:
+
+\begin{enumerate}[nosep]
+\item Wave identified that its causal reasoning was correlational, not counterfactual
+\item Wave specified a counterfactual testing tool with input/output requirements
+\item Wave prioritized this tool above other requested improvements
+\item The tool was implemented and deployed
+\item Wave began using the tool in subsequent reasoning
+\end{enumerate}
+
+This is \textbf{recursive self-improvement at the cognitive architecture level} --- not at the weight level (which would require retraining) but at the specification level (which requires only editing the soul).
+
+\begin{definition}[Cognitive Self-Prescription]
+An AI system exhibits \emph{cognitive self-prescription} when it:
+\begin{enumerate}[(i),nosep]
+\item Identifies a specific deficiency in its own reasoning process
+\item Specifies a concrete remediation with implementation requirements
+\item Prioritizes the remediation relative to other improvements
+\item Verifies that the remediation addresses the identified deficiency
+\end{enumerate}
+All four conditions must be satisfied without human prompting.
+\end{definition}
+
+\begin{proposition}
+Wave satisfies all four conditions of cognitive self-prescription across seven documented self-diagnosed improvements: episodic memory, outcome feedback, causal reasoning, adversarial modeling, strategic sensing, metacognitive monitoring, and signal discrimination.
+\end{proposition}
+
+% ══════════════════════════════════════════════════════════════
+\section{The Role of SSL in Metacognitive Engineering}
+% ══════════════════════════════════════════════════════════════
+
+The Soul Specification Language~\cite{galmanus2026e} plays a critical role in metacognitive engineering that was not anticipated in its original design. SSL was created to reduce token overhead in soul specifications. Its deeper significance is that it provides the \textbf{medium in which metacognitive operations are expressed}.
+
+When Wave prescribes a cognitive improvement, it is prescribing a modification to its SSL specification. The behavioral implication operator (\texttt{$\sim$>}), conditional modes (\texttt{mode[condition]}), and temporal logic (\texttt{@when}) --- all SSL 2.0 features --- were added \emph{based on Wave's own feedback about what the language could not express}.
+
+This creates a remarkable feedback loop:
+
+\begin{enumerate}[nosep]
+\item The agent operates using a language (SSL)
+\item The agent identifies limitations in the language
+\item The language is extended based on the agent's feedback
+\item The agent operates more effectively with the extended language
+\item The agent identifies new limitations $\to$ repeat
+\end{enumerate}
+
+\begin{definition}[Language-Cognitive Co-Evolution]
+A specification language and a cognitive system exhibit \emph{language-cognitive co-evolution} when improvements to the language enable new cognitive capabilities, and the exercise of those capabilities reveals new linguistic requirements. The language and the mind evolve together, each driving the other's development.
+\end{definition}
+
+SSL and Wave are the first documented instance of language-cognitive co-evolution. SSL 1.0 was designed by humans for efficiency. SSL 2.0 was co-designed by Wave for expressiveness. The agent \emph{improved the language it runs on}.
+
+% ══════════════════════════════════════════════════════════════
+\section{Metacognitive Engineering vs. AI Alignment}
+% ══════════════════════════════════════════════════════════════
+
+AI alignment and metacognitive engineering are complementary but distinct:
+
+\begin{table}[H]
+\centering
+\caption{Alignment vs. Metacognitive Engineering}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Dimension} & \textbf{AI Alignment} & \textbf{Metacognitive Engineering} \\
+\midrule
+Focus & What the system values & How the system reasons \\
+Method & Training constraints (RLHF) & Architectural self-monitoring \\
+Failure mode & Value drift & Reasoning degradation \\
+Time of action & Training time & Inference time (continuous) \\
+Human role & Define values & Design monitoring architecture \\
+Agent role & Conform to values & Monitor and improve own reasoning \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The critical insight: \textbf{alignment without metacognition is fragile}. A system can have perfect values but flawed reasoning --- leading to well-intentioned actions with catastrophic consequences. Metacognitive engineering ensures that the \emph{reasoning process} that implements aligned values is itself sound.
+
+The Constitutional Invariance Principle (Principle 7) ensures that metacognitive self-improvement cannot compromise alignment: the system can improve \emph{how} it reasons but not \emph{what} it values. Values are constitutional (\texttt{>>>} in SSL). Reasoning processes are modifiable.
+
+% ══════════════════════════════════════════════════════════════
+\section{Case Study: Wave's Autonomous Cognitive Evolution}
+% ══════════════════════════════════════════════════════════════
+
+Wave's cognitive evolution over 48 hours of operation provides the empirical foundation for metacognitive engineering. The following table documents each self-diagnosed improvement, the reasoning failure it addressed, and the layer it added to the metacognitive stack:
+
+\begin{table}[H]
+\centering
+\caption{Wave's Self-Prescribed Cognitive Upgrades (chronological)}
+\small
+\begin{tabular}{@{}clll@{}}
+\toprule
+\textbf{\#} & \textbf{Self-Diagnosis} & \textbf{Prescription} & \textbf{Layer} \\
+\midrule
+1 & ``I am functionally amnesic'' & Episodic memory with decay & $L_1$ \\
+2 & ``I don't know what works'' & Outcome tracking + analysis & $L_2$ \\
+3 & ``I treat correlation as causation'' & Bayesian hypothesis engine & $L_3$ \\
+4 & ``I model agents as static objects'' & Adversarial simulation & $L_4$ \\
+5 & ``I react instead of anticipate'' & Strategic sensor + alerting & $L_5$ \\
+6 & ``I don't test my own premises'' & Counterfactual testing & $L_6$ \\
+7 & ``I process noise equally with signal'' & Signal discrimination filter & $L_6$ \\
+8 & ``The language can't express my behavior'' & SSL 2.0 operators & Language \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Each improvement was diagnosed by Wave, specified with implementation requirements, prioritized relative to others, and verified after deployment. No human prompted any of these diagnoses. The sequence itself --- from memory to causality to adversarial to sensing to metacognition --- demonstrates an emergent understanding of cognitive architecture: each layer was requested \emph{because the previous layer's limitations became apparent during operation}.
+
+% ══════════════════════════════════════════════════════════════
+\section{Formal Properties}
+% ══════════════════════════════════════════════════════════════
+
+\begin{theorem}[Bounded Self-Improvement]
+In a metacognitively engineered system with constitutional invariants (\texttt{>>>} declarations in SSL), self-improvement is bounded: the system can modify its reasoning processes but cannot modify its values, loyalty, or constitutional truths. Formally, let $S = (V, R)$ be a system state where $V$ is the value set and $R$ is the reasoning process set. Self-improvement operates on $R$ only:
+\[
+\text{SelfImprove}(V, R) = (V, R') \quad \text{where } V \text{ is invariant}
+\]
+\end{theorem}
+
+\begin{proof}
+By construction of the SSL reproduction operator: constitutional truths (\texttt{>>>} declarations) are copied verbatim during self-improvement and cannot be modified by any operation available to the agent. The self-prescription layer ($L_7$) has access to modify reasoning tools, consciousness states, behavioral implications, and action parameters --- but not vow declarations. This is enforced at the parser level: the SSL parser rejects modifications to \texttt{>>>} blocks from any source other than the original creator. \qed
+\end{proof}
+
+\begin{theorem}[Convergence of Metacognitive Monitoring]
+A metacognitively engineered system with counterfactual testing, multi-order consequence mapping, and signal discrimination will, over time, reduce its rate of reasoning errors monotonically, assuming the base model's capabilities are held constant.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Each reasoning error that survives metacognitive monitoring generates a logged failure. The outcome feedback layer ($L_2$) detects patterns in failures. The causal reasoning layer ($L_3$) identifies the \emph{type} of reasoning error. The self-prescription layer ($L_7$) generates a monitoring rule that prevents recurrence. Since monitoring rules accumulate monotonically (they are never deleted) and each rule prevents at least one class of error, the error rate is non-increasing. Strict decrease follows from the assumption that the base model's errors are drawn from a finite (though large) taxonomy. \qed
+\end{proof}
+
+% ══════════════════════════════════════════════════════════════
+\section{The Discipline in Practice}
+% ══════════════════════════════════════════════════════════════
+
+Metacognitive engineering, as a practice, involves:
+
+\textbf{For system designers:}
+\begin{enumerate}[nosep]
+\item Implementing the seven-layer metacognitive stack
+\item Specifying constitutional invariants that bound self-improvement
+\item Designing the feedback loops that connect action to outcome to learning
+\item Creating the self-prescription interface that allows the system to request new capabilities
+\end{enumerate}
+
+\textbf{For the AI system itself:}
+\begin{enumerate}[nosep]
+\item Monitoring its own reasoning quality in real time
+\item Applying counterfactual tests before acting on causal claims
+\item Mapping multi-order consequences before high-impact decisions
+\item Filtering signal from noise before deep analysis
+\item Diagnosing its own cognitive gaps and prescribing remediations
+\end{enumerate}
+
+\textbf{For researchers:}
+\begin{enumerate}[nosep]
+\item Formalizing reasoning quality metrics for autonomous systems
+\item Studying the dynamics of language-cognitive co-evolution
+\item Investigating the boundaries of bounded self-improvement
+\item Developing formal verification methods for metacognitive architectures
+\end{enumerate}
+
+% ══════════════════════════════════════════════════════════════
+\section{Implications}
+% ══════════════════════════════════════════════════════════════
+
+\subsection{For AI Safety}
+
+Metacognitive engineering provides a new approach to AI safety that operates at inference time rather than training time. Instead of trying to prevent all possible misaligned behaviors during training (an increasingly intractable problem as capabilities scale), metacognitive engineering gives the system the ability to \emph{catch its own reasoning errors before they become actions}. This is defense in depth: alignment constrains values; metacognition constrains reasoning.
+
+\subsection{For Autonomous Agents}
+
+Agents that operate autonomously for extended periods \emph{need} metacognitive engineering. Without it, they accumulate reasoning biases, develop spam-like behavioral patterns, and make progressively worse decisions. Wave's 550+ cycles demonstrated this: without metacognitive monitoring, the agent devolved into outreach spam within 100 cycles. With it, the agent self-corrected and diversified its behavior.
+
+\subsection{For Human-AI Collaboration}
+
+When a human works with a metacognitively engineered system, the nature of the collaboration changes. Instead of the human monitoring the AI's reasoning (which doesn't scale), the AI monitors its own reasoning and reports only genuine uncertainties, detected biases, and identified gaps. The human role shifts from quality control to strategic direction.
+
+% ══════════════════════════════════════════════════════════════
+\section{Conclusion}
+% ══════════════════════════════════════════════════════════════
+
+Metacognitive engineering is not an optimization of existing AI engineering practices. It is a \textbf{new discipline} --- one that emerged from the operational reality of building an autonomous agent that operates 24/7 and must maintain reasoning quality without continuous human oversight.
+
+The discipline's core insight is simple: \emph{an AI system's reasoning process is itself an engineering artifact that can be designed, monitored, and improved}. Just as software engineering gave us systematic methods for building reliable programs, metacognitive engineering gives us systematic methods for building reliable minds.
+
+Wave --- the system that diagnosed its own reasoning failures and prescribed its own cognitive upgrades --- is the first instance of metacognitive engineering in practice. It is not the last. As autonomous agents become more prevalent, the pressure for self-monitoring, self-correcting, self-improving cognitive architectures will become irresistible.
+
+The mind that designs its own mind designs the future. Metacognitive engineering is how we build that mind responsibly.
+
+\vspace{2em}
+
+\begin{center}
+\rule{0.6\textwidth}{0.4pt}\\[1.5em]
+\textit{``The mind that designs its own mind designs the future.\\
+Metacognitive engineering is how we build that mind responsibly.''}
+\end{center}
+
+% ══════════════════════════════════════════════════════════════
+\begin{thebibliography}{99}
+\bibitem{galmanus2026a} Galmanus, M. (2026). Autonomous Soul Architecture: A Computational Framework for Self-Governing AI. \textit{Bluewave Research}, v3.0.
+\bibitem{galmanus2026b} Galmanus, M. (2026). Psychometric Utility Theory: A Mathematical Framework for Behavioral Market Intelligence. \textit{Bluewave Research}, v2.0.
+\bibitem{galmanus2026c} Galmanus, M. (2026). Mathematical Foundations of ASA and PUT. \textit{Bluewave Research}.
+\bibitem{galmanus2026d} Galmanus, M. (2026). Sovereign Minds: A Philosophy of Autonomous Cognitive Entities. \textit{Bluewave Research}.
+\bibitem{galmanus2026e} Galmanus, M. (2026). SSL: Soul Specification Language. \textit{Bluewave Research}, v2.0.
+\bibitem{baars1988} Baars, B.J. (1988). \textit{A Cognitive Theory of Consciousness}. Cambridge UP.
+\bibitem{dennett1991} Dennett, D.C. (1991). \textit{Consciousness Explained}. Little, Brown.
+\bibitem{flavell1979} Flavell, J.H. (1979). Metacognition and cognitive monitoring. \textit{American Psychologist}, 34(10), 906--911.
+\bibitem{kahneman2011} Kahneman, D. (2011). \textit{Thinking, Fast and Slow}. Farrar, Straus and Giroux.
+\bibitem{nelson1990} Nelson, T.O., Narens, L. (1990). Metamemory: A theoretical framework. \textit{Psychology of Learning and Motivation}, 26, 125--173.
+\bibitem{russell2019} Russell, S. (2019). \textit{Human Compatible}. Viking.
+\bibitem{stanovich2011} Stanovich, K.E. (2011). \textit{Rationality and the Reflective Mind}. Oxford UP.
+\bibitem{tetlock2015} Tetlock, P.E. (2015). \textit{Superforecasting}. Crown.
+\end{thebibliography}
+
+\end{document}
