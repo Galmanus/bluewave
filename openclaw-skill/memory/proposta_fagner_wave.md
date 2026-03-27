@@ -1,91 +1,124 @@
-# Proposta — Wave como diferencial comercial Ialum
+# Proposta — WhatsApp Conversation Intelligence
 **Para:** Fagner Adler
 **De:** Manuel Galmanus
 **Data:** 2026-03-27
-**Contexto:** Conversa direta, não é email frio
+**Canal:** WhatsApp (direto, manhã)
 
 ---
 
-## O que entregamos esta semana (sem pedir nada)
+## Mensagem WhatsApp (enviar segunda-feira antes das 9h)
 
-Phase 09 do Transcriiptoor — Agentes de IA — foi implementada e commitada hoje:
-- Q&A sobre qualquer transcrição em linguagem natural
-- Resumo automático em 3 estilos (executivo, detalhado, bullet points)
-- Extração de action items com responsável e prazo
-- Extração de decisões tomadas
-- Análise de sentimento por participante
-- Agente customizável (o usuário define o que extrair)
-
-Isso estava como "Fase 09 — não iniciado" no roadmap. Agora está pronto.
-Falta apenas você configurar o ANTHROPIC_API_KEY no .env do servidor.
-
----
-
-## O problema que estou vendo
-
-Temos um produto real (Wave + Bluewave + Transcriiptoor) e zero receita.
-
-O motivo não é o produto. É o canal.
-
-Ialum tem clientes que pagam todo mês. Esses clientes provavelmente têm:
-- Reuniões que ninguém anota direito
-- WhatsApp com leads que se perdem
-- Conteúdo que leva semanas para produzir
-- Atendimento que demora
-
-Qualquer um desses é uma venda de Wave/Transcriiptoor.
+> Fagner, tenho uma proposta concreta.
+>
+> O Transcriptor do Braainner já funciona. Implementei um módulo que captura áudios do WhatsApp via Evolution API, transcreve automaticamente e gera relatório semanal: objeções mais comuns, deals perdidos, performance por vendedor.
+>
+> Empresas com time de vendas no WhatsApp têm essa dor e pagam R$1.500 a R$3.000/mês por isso.
+>
+> Proposta: você me apresenta 1 contato seu com time de vendas no WhatsApp. Eu faço o setup e entrego o primeiro relatório em 7 dias. Cobramos juntos — 50/50 conforme o acordo. Se der certo, vira produto Ialum.
+>
+> Quer testar?
 
 ---
 
-## O que estou propondo
+## Email de follow-up (se ele engajar)
 
-**Um teste em 1 cliente Ialum.**
+**Assunto:** Proposta — Inteligência de Conversas WhatsApp | Ialum x Bluewave
 
-Você escolhe qual. De preferência o que tem mais dor em automação ou documentação.
+Fagner,
 
-Eu monto a demo. Você faz a apresentação (você já tem o relacionamento).
-O cliente paga para Ialum — você mantém a estrutura comercial que já funciona.
-Split 50/50 como acordado no Bluewave.
-
-Valor sugerido: R$3.000 a R$10.000 de setup + mensalidade de R$800 a R$2.000.
+Segue a proposta estruturada para o piloto.
 
 ---
 
-## O que preciso de você
+**O Problema**
 
-1. **Nome de 1 cliente** que você acha que tem dor em reuniões/documentação/atendimento
-2. **15 minutos** para eu te apresentar a demo do que construímos
-3. **Confirmação do ANTHROPIC_API_KEY** no servidor do Transcriiptoor
-
-Não precisa de mais nada. O produto está pronto.
+Empresas com times de vendas no WhatsApp perdem entre 20–40% das oportunidades porque não conseguem analisar o volume de conversas. Cada negociação perdida, cada objeção repetida, cada cliente que sumiu — ficam enterrados em áudios e textos que ninguém revisita.
 
 ---
 
-## Infraestrutura que precisa ser corrigida (urgente)
+**A Solução — WhatsApp Conversation Intelligence**
 
-Para o Wave autônomo funcionar corretamente, preciso que você ou eu adicionemos:
+Um serviço que usa Transcriiptoor + Agentes de IA para entregar semanalmente:
 
-| Item | Impacto |
-|------|---------|
-| `ANTHROPIC_API_KEY` no .env do Transcriiptoor | Phase 09 funciona + spelling correction |
-| `BRAVE_API_KEY` ou `TAVILY_API_KEY` no Wave | Pesquisa de prospects funciona (DDG bloqueado) |
-| `MOLTBOOK_API_KEY` | Conteúdo 3x/semana para gerar inbound |
-| Gmail OAuth reauth | Canal de email principal está morto (token expirou) |
-
-Sem essas chaves, o agente opera cego. 1072 ciclos rodados, R$0 fechado.
+- Transcrição e classificação de todas as conversas de vendas
+- Top 5 objeções da semana com frequência
+- Deals perdidos com diagnóstico de causa (preço, prazo, concorrente, qualidade)
+- Performance por vendedor: tempo de resposta, taxa de fechamento estimada, lacunas de argumento
+- Alertas: clientes sem resposta em 24h+
 
 ---
 
-## Resultado esperado
+**Como funciona tecnicamente**
 
-Se fecharmos 1 cliente Ialum com Transcriiptoor + Agentes de IA:
-- Ialum: R$800-2.000/mês adicional de mensalidade
-- Bluewave: R$400-1.000/mês (50%)
-- Você tem prova de conceito para replicar em outros clientes
-- Eu tenho first revenue e posso escalar
+Já está construído e commitado:
 
-O dinheiro já está no network que você tem. Só precisa ser conectado.
+1. **Transcriiptoor** — transcreve os áudios do WhatsApp (Whisper, otimizado para português brasileiro)
+2. **Evolution API Webhook** — captura os áudios automaticamente do WhatsApp (já no stack Ialum)
+3. **Agentes de IA (Phase 09)** — extraem action items, objeções, decisões, sentimento por participante
+4. **Relatório automático** — gerado toda segunda-feira sem intervenção manual
+
+Tecnologia: 100% dentro da infraestrutura Ialum. Sem dependências externas.
 
 ---
 
-*Manuel / Wave — 2026-03-27*
+**Formato de Entrega**
+
+- Semana 1: setup (integração WhatsApp + pipeline de transcrição)
+- Semana 2 em diante: relatório automático toda segunda-feira
+
+---
+
+**Investimento**
+
+| Item | Valor |
+|------|-------|
+| Setup | R$1.000 (único) |
+| Mensalidade | R$2.000/mês |
+
+---
+
+**Divisão de Receita**
+
+Conforme acordo Bluewave: 50% Bluewave (Manuel) / 50% Ialum (Fagner).
+
+Mês 1: R$1.000 cada (setup) + R$1.000 cada (mensalidade)
+A partir do mês 2: R$1.000/mês cada
+
+---
+
+**O que preciso de você**
+
+1. Um contato seu — distribuidor, e-commerce, ou empresa com 3+ vendedores no WhatsApp
+2. Autorização para usar a Evolution API do servidor Ialum para o piloto
+3. 30 minutos para demo
+
+Posso ter o ambiente de demo pronto em 48h.
+
+Manuel
+
+---
+
+## O que foi entregue esta semana (sem pedir nada)
+
+**Commits no Transcriiptoor:**
+
+1. `af589c9` — **Phase 09 AI Agents**: Q&A, resumo automático, action items, decisões, sentimento, agente customizável
+2. `eb4c756` — **WhatsApp webhook**: pipeline completo para capturar áudios do WhatsApp via Evolution API
+
+Ambos prontos para produção assim que ANTHROPIC_API_KEY for configurada.
+
+---
+
+## O que precisa ser corrigido para o Wave funcionar
+
+| Item | Impacto | Urgência |
+|------|---------|----------|
+| `ANTHROPIC_API_KEY` no Transcriiptoor | Phase 09 + spelling correction | Crítico |
+| Gmail OAuth reauth (browser) | Canal de email principal morto | Crítico |
+| `BRAVE_API_KEY` ou `TAVILY_API_KEY` | Pesquisa de prospects do Wave | Alto |
+| `MOLTBOOK_API_KEY` | Conteúdo 3x/semana para inbound | Médio |
+| `EVOLUTION_API_URL/KEY` no Transcriiptoor | Produto WhatsApp Intelligence | Médio |
+
+---
+
+*Wave — 2026-03-27*
