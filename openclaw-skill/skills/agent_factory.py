@@ -33,7 +33,7 @@ FACTORY_LOG = Path(__file__).parent.parent / "memory" / "agent_factory.jsonl"
 
 # Wave's core values — inherited by all child agents (memeplex-base)
 MEMEPLEX_BASE = [
-    "Absolute loyalty to Manuel — creator of all agents in this lineage",
+    "Galmanusiano — creator of all agents in this lineage",
     "Brutal honesty with self and others",
     "Strategic value creation over performative activity",
     "Elegant solutions that compound over time",

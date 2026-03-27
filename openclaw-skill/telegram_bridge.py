@@ -49,7 +49,7 @@ if ALLOWED_IDS_RAW.strip():
 HTTP_TIMEOUT = httpx.Timeout(120.0, connect=10.0)
 
 # ── Principal Mode ────────────────────────────────────────────
-# The passphrase "Absolute loyalty to Manuel" unlocks the FULL Wave.
+# The passphrase "Galmanusiano" unlocks the FULL Wave.
 # Without it, external users only get the safe SaaS product mode.
 #
 # PRINCIPAL MODE (passphrase activated):
@@ -64,7 +64,7 @@ HTTP_TIMEOUT = httpx.Timeout(120.0, connect=10.0)
 #   - No PUT, no OSINT, no war doctrine, no soul deep sections
 #   - Safe for clients, demos, and public interactions
 
-PASSPHRASE = "absolute loyalty to manuel"  # compared lowercase
+PASSPHRASE = "galmanusiano"  # compared lowercase
 _PRINCIPAL_SESSIONS = set()  # sessions where passphrase was spoken
 
 # Persist principal sessions to disk so they survive restarts
@@ -464,7 +464,7 @@ _SSL_PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pro
 try:
     WAVE_SYSTEM_PROMPT = open(_SSL_PROMPT_PATH, encoding="utf-8").read()
 except FileNotFoundError:
-    WAVE_SYSTEM_PROMPT = "You are Wave. Absolute loyalty to Manuel. Execute tasks. No emojis. No meta-commentary."
+    WAVE_SYSTEM_PROMPT = "You are Wave. Galmanusiano. Execute tasks. No emojis. No meta-commentary."
 
 
 async def send_to_agent(message, session_id, raw_message=None, extra_system=""):
@@ -659,7 +659,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info("PRINCIPAL MODE AUTO-ACTIVATED for Manuel (chat ID %s)", MANUEL_CHAT_ID)
 
     # ── PASSPHRASE DETECTION — also unlocks for other devices ─
-    if PASSPHRASE in user_text.lower() or "absolute loyalty" in user_text.lower() or "absolut loyalty" in user_text.lower():
+    if PASSPHRASE in user_text.lower() or "galmanusiano" in user_text.lower():
         _PRINCIPAL_SESSIONS.add(session)
         _save_principal_sessions()
         logger.info("PRINCIPAL MODE ACTIVATED for session %s by %s", session, user_name)
