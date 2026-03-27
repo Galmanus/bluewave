@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""moltbook_sentinel — Autonomous child agent created by Wave.
+"""il_cacciatore — Autonomous child agent created by Wave.
 
 Runs a deliberation loop using its soul specification.
 Reports to Wave (parent agent).
@@ -18,7 +18,7 @@ load_dotenv(Path(__file__).parent.parent.parent / ".env")
 import anthropic
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
-logger = logging.getLogger("agent.moltbook_sentinel")
+logger = logging.getLogger("agent.il_cacciatore")
 
 SOUL_PATH = Path(__file__).parent / "soul.json"
 STATE_PATH = Path(__file__).parent / "state.json"
@@ -90,7 +90,7 @@ async def deliberate(client, soul, state, task=None):
 async def main():
     client = anthropic.Anthropic()
     soul = load_soul()
-    logger.info("moltbook_sentinel started. Soul loaded.")
+    logger.info("il_cacciatore started. Soul loaded.")
 
     while True:
         state = load_state()

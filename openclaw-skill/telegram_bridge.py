@@ -349,7 +349,8 @@ def _get_history_context(session_id: str, current_query: str = "") -> str:
     lines.append(f"RECENT ({len(recent)} of {len(all_msgs)} total):")
     for msg in recent:
         prefix = "M" if msg["role"] == "user" else "W"
-        lines.append(f"  {prefix}: {msg['content'][:400]}")
+        limit = 500 if msg["role"] == "user" else 5000
+        lines.append(f"  {prefix}: {msg['content'][:limit]}")
 
     return "\n".join(lines)
 
@@ -524,7 +525,7 @@ async def send_to_agent(message, session_id, raw_message=None, extra_system=""):
                 system_prompt=system,
                 model="sonnet",
                 timeout=180,
-                max_turns=15,
+                max_turns=30,
             )
 
         if result.get("success") and result.get("response"):
