@@ -2,11 +2,11 @@
   "O3": [
     {
       "id": "O3_1",
-      "objective": "Manuel earns $1M total compensation",
+      "objective": "Manuel earns R$100k/month total",
       "key_results": [
-        "Land $200K+ job or contract",
-        "Bluewave generates $10K/month",
-        "MIDAS gets Starknet grant"
+        "Bluewave closes 1 Ialum client (R$5k-15k)",
+        "Manuel positioned as indispensable AI lead at Ialum",
+        "Wave generates first R$ via Fagner warm network"
       ],
       "deadline": "2026-12-31",
       "priority": "critical",
@@ -18,45 +18,61 @@
   "O1": [
     {
       "id": "O1_1",
-      "objective": "First revenue dollar from Bluewave",
+      "objective": "First revenue from Bluewave — R$1+",
       "key_results": [
-        "Send 50 targeted emails",
-        "Get 5 replies",
-        "Close 1 paying client"
+        "Identify 1 Ialum client who needs AI agent automation",
+        "Get Fagner to make warm intro or co-sell",
+        "Close R$3k-10k deal for agent deployment"
       ],
-      "deadline": "2026-04-23",
+      "deadline": "2026-04-10",
       "priority": "critical",
       "status": "active",
-      "created": "2026-03-23T11:37:26.422094",
+      "notes": "COLD EMAIL IS DEAD. 50 sent, 0 replies. Previous targeting = Elon/Sam/Dario/Zuck = waste. NEW RULE: warm network only. Ialum clients only. Fagner intro required.",
+      "created": "2026-03-27T08:00:00",
       "progress": 0
     }
   ],
   "OW": [
     {
       "id": "OW_1",
-      "objective": "Get Fagner dev server access and read Ialum docs",
+      "objective": "Get Fagner to co-sell Wave to 1 Ialum client",
       "key_results": [
-        "Request access",
-        "Read all documentation",
-        "Present architecture analysis"
+        "Draft specific proposal for Fagner — which client, what pain, what we deliver",
+        "Get Fagner buy-in on taking it to client",
+        "Close client at R$3k-10k minimum"
       ],
-      "deadline": "2026-03-28",
-      "priority": "high",
+      "deadline": "2026-04-05",
+      "priority": "critical",
       "status": "active",
-      "created": "2026-03-23T11:37:26.422349",
+      "created": "2026-03-27T08:00:00",
       "progress": 0
     },
     {
       "id": "OW_2",
-      "objective": "Submit Hedera hackathon",
+      "objective": "Complete Transcriiptoor Phase 09 — AI Agents",
       "key_results": [
-        "Record 5-min demo video",
-        "Submit before deadline"
+        "Implement AI agent layer on Transcriiptoor",
+        "Wire ANTHROPIC_API_KEY for spelling correction",
+        "Demo to Fagner as proof of value"
       ],
-      "deadline": "2026-03-23",
-      "priority": "critical",
+      "deadline": "2026-04-10",
+      "priority": "high",
       "status": "active",
-      "created": "2026-03-23T11:37:26.423020",
+      "created": "2026-03-27T08:00:00",
+      "progress": 0
+    },
+    {
+      "id": "OW_3",
+      "objective": "Fix autonomous agent infrastructure",
+      "key_results": [
+        "Configure BRAVE_API_KEY or Tavily for web search",
+        "Set MOLTBOOK_API_KEY for content posts",
+        "Kill delusional outreach (no more cold email to billionaires)"
+      ],
+      "deadline": "2026-03-30",
+      "priority": "high",
+      "status": "active",
+      "created": "2026-03-27T08:00:00",
       "progress": 0
     }
   ]
