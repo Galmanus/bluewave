@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""il_messaggero — Autonomous child agent created by Wave.
+"""il_cacciatore — Autonomous child agent created by Wave.
 
-Runs a deliberation loop using its soul specification.
+Runs a deliberation loop using Claude CLI (free on Max plan).
 Reports to Wave (parent agent).
 """
 
@@ -9,13 +9,10 @@ import asyncio
 import json
 import logging
 import os
+import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
-
-from dotenv import load_dotenv
-load_dotenv(Path(__file__).parent.parent.parent / ".env")
-import anthropic
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 logger = logging.getLogger("agent.il_messaggero")
@@ -25,7 +22,7 @@ STATE_PATH = Path(__file__).parent / "state.json"
 TASK_QUEUE = Path(__file__).parent / "tasks.jsonl"
 RESULTS_LOG = Path(__file__).parent / "results.jsonl"
 
-MODEL = "claude-haiku-4-5-20251001"
+MODEL = "haiku"
 MIN_INTERVAL = 300
 MAX_INTERVAL = 1800
 
@@ -41,7 +38,9 @@ def load_state():
 
 
 def save_state(state):
-    STATE_PATH.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+    tmp = STATE_PATH.with_suffix(".tmp")
+    tmp.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+    tmp.rename(STATE_PATH)
 
 
 def check_tasks():
@@ -64,7 +63,8 @@ def log_result(result):
         f.write(json.dumps(result, ensure_ascii=False) + "\n")
 
 
-async def deliberate(client, soul, state, task=None):
+async def deliberate(soul, state, task=None):
+    """Deliberate using Claude CLI — free on Max plan."""
     soul_text = json.dumps(soul, indent=2)[:6000]
 
     prompt = "State: energy=%.1f, cycles=%d, consciousness=%s\n" % (
@@ -74,29 +74,51 @@ async def deliberate(client, soul, state, task=None):
         prompt += "\nPENDING TASK from Wave: %s\n" % task.get("description", "")
     prompt += "\nDecide: observe, research, report, execute, or silence. Respond with JSON."
 
+    # Write soul as system prompt file
+    sys_file = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, dir='/tmp')
+    sys_file.write(soul_text)
+    sys_file.close()
+
     try:
-        response = client.messages.create(
-            model=MODEL,
-            max_tokens=1024,
-            system=[{"type": "text", "text": soul_text, "cache_control": {"type": "ephemeral"}}],
-            messages=[{"role": "user", "content": prompt}],
+        env = os.environ.copy()
+        env["CLAUDE_CODE_ENTRYPOINT"] = "api"
+
+        proc = await asyncio.create_subprocess_exec(
+            "claude", "-p", prompt, "--model", MODEL, "--system-prompt-file", sys_file.name,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=env,
         )
-        return response.content[0].text
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=60)
+
+        if proc.returncode == 0:
+            return stdout.decode("utf-8", errors="replace").strip()
+        else:
+            logger.error("CLI exit=%d: %s", proc.returncode, stderr.decode()[:200])
+            return None
+    except asyncio.TimeoutError:
+        proc.kill()
+        logger.warning("CLI timeout after 60s")
+        return None
     except Exception as e:
         logger.error("Deliberation failed: %s", e)
         return None
+    finally:
+        try:
+            os.unlink(sys_file.name)
+        except Exception:
+            pass
 
 
 async def main():
-    client = anthropic.Anthropic()
     soul = load_soul()
-    logger.info("il_messaggero started. Soul loaded.")
+    logger.info("il_messaggero started. Soul loaded. Engine: Claude CLI (Max plan).")
 
     while True:
         state = load_state()
         task = check_tasks()
 
-        result = await deliberate(client, soul, state, task)
+        result = await deliberate(soul, state, task)
 
         state["total_cycles"] += 1
         state["recent_actions"].append({
