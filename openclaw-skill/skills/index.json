@@ -1,0 +1,7 @@
+{
+  "revenue_sniper": {
+    "name": "revenue_sniper",
+    "description": "Identifies immediate revenue opportunities by cross-referencing trending demand signals (Reddit, HN, ProductHunt, Google Trends) with supply gaps. Outputs scored opportunities with competition analysis, pain-point ranking, and a concrete 72-hour action plan to first revenue. Use for: finding underserved niches, validating micro-SaaS ideas, spotting arbitrage between desperate demand and missing supply.",
+    "file": "revenue_sniper.py"
+  }
+}
