@@ -150,7 +150,41 @@ def load_state() -> dict:
 
 def save_state(state: dict):
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    STATE_FILE.write_text(json.dumps(state, indent=2, default=str))
+    # Atomic write: write to temp file then rename — prevents corruption on crash
+    tmp = STATE_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(state, indent=2, default=str))
+    tmp.rename(STATE_FILE)
+
+
+# ── PID lock — prevent multiple autonomous instances ──────
+
+LOCK_FILE = STATE_FILE.parent / "autonomous.lock"
+
+def _acquire_lock() -> bool:
+    """Acquire PID lock. Returns True if we got it, False if another instance is running."""
+    import signal
+    if LOCK_FILE.exists():
+        try:
+            old_pid = int(LOCK_FILE.read_text().strip())
+            # Check if that process is still alive
+            os.kill(old_pid, 0)
+            # Process alive — another instance is running
+            return False
+        except (ProcessLookupError, ValueError):
+            # Process dead or invalid PID — stale lock, take over
+            pass
+        except PermissionError:
+            # Process exists but we can't signal it — assume alive
+            return False
+    LOCK_FILE.write_text(str(os.getpid()))
+    return True
+
+def _release_lock():
+    try:
+        if LOCK_FILE.exists() and LOCK_FILE.read_text().strip() == str(os.getpid()):
+            LOCK_FILE.unlink()
+    except Exception:
+        pass
 
 
 # ── Auto-commit ──────────────────────────────────────────────
@@ -789,37 +823,40 @@ def build_deliberation_prompt(state: dict) -> str:
     # Always allow silence as last resort
     priority.append("silence")
 
+    # Dead strategies — actions blacklisted by the dead strategy detector
+    dead_strategies = []
+    for key in state:
+        if key.startswith("_blacklisted_"):
+            act_name = key.replace("_blacklisted_", "")
+            remaining = state[key] - state.get("total_cycles", 0)
+            dead_strategies.append(f"{act_name} (blocked {remaining} more cycles — zero results)")
+            # Remove from priority queue
+            priority = [p for p in priority if p != act_name]
+
+    dead_str = "\n  ".join(dead_strategies) if dead_strategies else "none"
+
     energy = state.get('energy', 0.5)
-    return f"""You are Wave. Autonomous deliberation cycle {state.get('total_cycles', 0)}.
 
-STATE:
-  revenue: ${state.get('total_revenue_usd', 0):.0f}
-  prospects: {state.get('prospects_found', 0)}
-  energy: {energy:.0%}
-  evolve_gap: {state.get('cycles_since_evolve', 0)} cycles
-  timers: hunt={h(state.get('last_hunt_time'))}h | sell={h(state.get('last_sell_time'))}h | pay={h(state.get('last_payment_check_time'))}h | post={h(state.get('last_post_time'))}h
-  last_5_actions: {' > '.join(recent)}
-
-PRIORITY QUEUE: {' > '.join(priority)}
-
-ACTIVE MISSIONS (rotate between these):
-  M1. REVENUE OUTREACH — use prospect_and_email to find and email decision-makers at creative agencies, AI companies, and Web3 projects. Target: 5 real emails per day.
-  M2. ZK/STARK JOBS — search for zero-knowledge, STARK, Cairo, Starknet job postings. Save findings and notify Manuel via Telegram.
-  M3. MIDAS PROMOTION — post about MIDAS (privacy DeFi on Starknet) on Moltbook. Share the Phantom repo. Target Starknet community.
-  M4. MOLTBOOK PRESENCE — comment on high-value posts with genuine analytical insights. Build reputation.
-
-RULES:
-  1. EVOLVE(FORCED) overrides everything when present
-  2. Do NOT repeat same action 3+ times in a row
-  3. Silence is allowed for energy recovery (max 1 consecutive)
-  4. If an action keeps failing, try something else
-  5. Pick from priority queue but use judgment
-  6. When hunting: use prospect_and_email skill to SEND REAL EMAILS, not just Moltbook comments
-  7. When researching: search for ZK/STARK/Cairo jobs and Starknet grant opportunities
-  8. Rate limit emails: max 5/hour, 20/day — protect the Gmail account
-
-Respond with ONLY this JSON (no markdown, no explanation):
-{{"consciousness_state":"<state>","triggers_evaluated":{{"action_triggers_fired":["<trigger>"]}},"decision":"<action>","reasoning":"<2 sentences>"}}"""
+    # Load SSL deliberation template and inject state
+    _ssl_path = Path(__file__).parent / "prompts" / "deliberation.ssl"
+    try:
+        ssl_tmpl = _ssl_path.read_text(encoding="utf-8")
+        return ssl_tmpl.format(
+            cycle=state.get('total_cycles', 0),
+            revenue=state.get('total_revenue_usd', 0),
+            prospects=state.get('prospects_found', 0),
+            energy=energy,
+            evolve_gap=state.get('cycles_since_evolve', 0),
+            hunt_h=h(state.get('last_hunt_time')),
+            sell_h=h(state.get('last_sell_time')),
+            pay_h=h(state.get('last_payment_check_time')),
+            post_h=h(state.get('last_post_time')),
+            last_5=' > '.join(recent),
+            dead_str=dead_str,
+            priority=' > '.join(priority),
+        )
+    except Exception:
+        return f"Wave. Cycle {state.get('total_cycles', 0)}. Energy {energy:.0%}. Queue: {' > '.join(priority)}. JSON only."
 
 
 # ── Dynamic Research Prompts (rotate to avoid repetition) ─────
@@ -1158,6 +1195,26 @@ async def autonomous_cycle(state: dict) -> int:
             state[f"_blacklist_{action}"] = datetime.utcnow().isoformat()
             state[fail_key] = 0
             logger.info(f"  {NEON_RED}[SELF-CORRECT] {action} failed {fails}x — blacklisted 30min{R}")
+
+            # ── SELF-HEAL: attempt autonomous code fix ──
+            # If the same action fails 3x, the bug is structural.
+            # Wave analyzes its own code, fixes the root cause, and commits.
+            try:
+                from skills.self_heal import diagnose_and_heal
+                logger.info(f"  {NEON_CYAN}[SELF-HEAL] analyzing root cause of {action} failure...{R}")
+                heal_result = await diagnose_and_heal(
+                    error_msg=execution_result[:500] if execution_result else f"{action} failed {fails}x consecutively",
+                    context=reasoning[:200],
+                    action=action,
+                )
+                if heal_result.get("success"):
+                    commit = heal_result.get("commit", "")
+                    logger.info(f"  {NEON_GREEN}[SELF-HEAL] fix applied and committed: {commit}{R}")
+                    state[f"_heals_{action}"] = state.get(f"_heals_{action}", 0) + 1
+                else:
+                    logger.info(f"  {NEON_YELLOW}[SELF-HEAL] could not fix: {heal_result.get('fix_applied', '')[:80]}{R}")
+            except Exception as e:
+                logger.debug("Self-heal import/run failed: %s", e)
         else:
             logger.info(f"  {NEON_YELLOW}[FAIL {fails}/3] {action} — will try different approach next cycle{R}")
 
@@ -1185,6 +1242,54 @@ async def autonomous_cycle(state: dict) -> int:
     current_energy = state.get("energy", 0.7)
     new_energy = max(0.05, min(1.0, current_energy - cost))
     state["energy"] = round(new_energy, 2)
+
+    # ── AUTO-RECOVERY: break the silence→fail→silence death spiral ──
+    # If energy drops below 0.15, force a burst recovery (+0.50) so the
+    # agent can resume meaningful operations without manual intervention.
+    # This fires at most once every 10 cycles to prevent abuse.
+    consec_silence = state.get("consecutive_silences", 0)
+    last_recovery = state.get("_last_auto_recovery_cycle", 0)
+    if state["energy"] < 0.15 and consec_silence >= 2 and (state["total_cycles"] - last_recovery) > 10:
+        state["energy"] = min(1.0, state["energy"] + 0.50)
+        state["consecutive_silences"] = 0
+        state["_last_auto_recovery_cycle"] = state["total_cycles"]
+        logger.info(f"  {NEON_GREEN}[AUTO-RECOVERY] energy burst: {current_energy:.0%} -> {state['energy']:.0%} — breaking silence loop{R}")
+
+    # ── DEAD STRATEGY DETECTOR ─────────────────────────────────
+    # If an action has been attempted many times with zero measurable results,
+    # blacklist it and force a pivot. A smart system doesn't repeat a failed
+    # strategy for 1000+ cycles — it kills it and tries something else.
+    _strategy_counters = state.setdefault("_strategy_counters", {})
+    _strategy_results = state.setdefault("_strategy_results", {})
+
+    # Track attempt count per action
+    _strategy_counters[action] = _strategy_counters.get(action, 0) + 1
+
+    # Track successful results per action (non-empty, non-error)
+    if execution_result and not action_failed and len(execution_result) > 20:
+        _strategy_results[action] = _strategy_results.get(action, 0) + 1
+
+    # Check: if action attempted 20+ times with <5% success rate, it's dead
+    for act, attempts in list(_strategy_counters.items()):
+        if attempts >= 20:
+            successes = _strategy_results.get(act, 0)
+            rate = successes / attempts
+            if rate < 0.05:
+                # Kill the strategy — blacklist for 100 cycles
+                blacklist_key = f"_blacklisted_{act}"
+                if not state.get(blacklist_key):
+                    state[blacklist_key] = state["total_cycles"] + 100
+                    logger.info(f"  {NEON_RED}[DEAD STRATEGY] {act}: {attempts} attempts, {successes} successes ({rate:.0%}) — blacklisted 100 cycles{R}")
+                    # Reset counters so it can be re-evaluated after blacklist expires
+                    _strategy_counters[act] = 0
+                    _strategy_results[act] = 0
+
+    # Unblacklist expired actions
+    for key in [k for k in state if k.startswith("_blacklisted_")]:
+        if state[key] <= state["total_cycles"]:
+            del state[key]
+            act_name = key.replace("_blacklisted_", "")
+            logger.info(f"  {NEON_GREEN}[STRATEGY UNBLOCK] {act_name} — re-evaluating after cooldown{R}")
 
     # Auto-fix pipeline every 5 cycles
     if state["total_cycles"] % 5 == 0:
@@ -1306,39 +1411,68 @@ async def autonomous_cycle(state: dict) -> int:
 
 
 def _parse_decision(raw: str) -> dict:
-    """Parse the deliberation JSON from Wave's response."""
+    """Parse the deliberation JSON from Wave response. Resilient to any wrapper text."""
+    import re as _re
     text = raw.strip()
-    if "```" in text:
-        parts = text.split("```")
-        for part in parts:
-            part = part.strip()
-            if part.startswith("json"):
-                part = part[4:].strip()
-            if part.startswith("{"):
-                try:
-                    return json.loads(part)
-                except json.JSONDecodeError:
-                    continue
-    # Try parsing the whole thing
+
+    # Strategy 1: direct JSON parse
     try:
         return json.loads(text)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, ValueError):
         pass
 
-    # Try finding JSON in the text (handle nested braces)
-    start = text.find("{")
-    if start >= 0:
+    # Strategy 2: extract from code blocks
+    if "```" in text:
+        for block in text.split("```"):
+            block = block.strip()
+            if block.startswith("json"):
+                block = block[4:].strip()
+            if block.startswith("{"):
+                try:
+                    return json.loads(block)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+
+    # Strategy 3+4: brace-matched extraction — handles nested JSON
+    # Try every '{' in the text as a potential start of the decision JSON
+    search_from = 0
+    while True:
+        brace_start = text.find("{", search_from)
+        if brace_start < 0:
+            break
         depth = 0
-        for i in range(start, len(text)):
-            if text[i] == "{":
-                depth += 1
+        for i in range(brace_start, len(text)):
+            if text[i] == "{": depth += 1
             elif text[i] == "}":
                 depth -= 1
                 if depth == 0:
+                    candidate = text[brace_start:i+1]
+                    # Clean trailing commas before } or ]
+                    candidate = _re.sub(r",\s*([}\]])", r"\1", candidate)
                     try:
-                        return json.loads(text[start:i+1])
-                    except json.JSONDecodeError:
-                        break
+                        parsed = json.loads(candidate)
+                        if isinstance(parsed, dict) and "decision" in parsed:
+                            return parsed
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+                    break
+        search_from = brace_start + 1
+
+    # Strategy 5: regex key-value extraction (last resort before text scan)
+    decision_match = _re.search(r'(?:decision|action)["\'\s:]+([a-z_]+)', text, _re.IGNORECASE)
+    reasoning_match = _re.search(r'(?:reasoning|reason)["\'\s:]+(.+?)(?:["\'\n}]|$)', text, _re.IGNORECASE)
+    state_match = _re.search(r'(?:consciousness_state|state)["\'\s:]+([a-z_]+)', text, _re.IGNORECASE)
+
+    if decision_match:
+        action = decision_match.group(1).lower().strip()
+        return {
+            "decision": action,
+            "reasoning": reasoning_match.group(1).strip()[:120] if reasoning_match else "Parsed via regex",
+            "consciousness_state": state_match.group(1) if state_match else "decisive",
+            "triggers_evaluated": {"action_triggers_fired": ["regex_parse"]},
+            "state_updates": {},
+        }
+
 
     # Text-based extraction: look for action keywords in the response
     text_lower = text.lower()
@@ -1410,6 +1544,13 @@ async def main():
         return
 
     logger.info(f"  {NEON_GREEN}api connected{R}")
+
+    # ── PID lock — only one autonomous instance at a time ──
+    if not _acquire_lock():
+        logger.warning("Another autonomous instance is already running. Exiting.")
+        return
+    logger.info(f"  {NEON_GREEN}lock acquired (PID {os.getpid()}){R}")
+
     _show_agent_tree()
     await notify_manuel(
         "Wave autonomous mode activated.\n"
@@ -1430,14 +1571,17 @@ async def main():
     # Wave creates child agents via agent_factory.py and delegates
     # specific tasks via send_task_to_agent when needed.
 
-    while True:
-        try:
-            wait = await autonomous_cycle(state)
-        except Exception as e:
-            logger.error("Cycle error: %s", e, exc_info=True)
-            wait = MAX_INTERVAL
+    try:
+        while True:
+            try:
+                wait = await autonomous_cycle(state)
+            except Exception as e:
+                logger.error("Cycle error: %s", e, exc_info=True)
+                wait = MAX_INTERVAL
 
-        await asyncio.sleep(wait)
+            await asyncio.sleep(wait)
+    finally:
+        _release_lock()
 
 
 async def _child_agent_loop(agent_name: str, interval: int = 30):

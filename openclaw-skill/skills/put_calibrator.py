@@ -81,8 +81,14 @@ def compute_U(A, F, k, S, w, Sigma, tau, kappa, Phi, coeffs):
 
 
 def compute_FP(R, kappa, tau, Phi, U, U_crit=0.3, eps=1e-3):
-    """Compute Fracture Potential."""
-    return ((1 - R) * (kappa + tau + Phi)) / (U_crit - U + eps)
+    """Compute Fracture Potential.
+
+    Denominator guarded: without max(), it goes negative when U > U_crit + eps,
+    making FP negative — physically meaningless and corrupts avg_FP aggregation.
+    Same guard as put_engine.py:127 and put_api.py:166.
+    """
+    denominator = max(U_crit - U + eps, eps)
+    return ((1 - R) * (kappa + tau + Phi)) / denominator
 
 
 def compute_Omega(U, U_crit=0.3, k_omega=1.0):

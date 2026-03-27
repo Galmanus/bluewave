@@ -26,10 +26,12 @@ from app.routers import (
     resize,
     portals,
     sso,
+    streams,
     subscriptions,
     trends,
     users,
     versions,
+    wave_proxy,
     webhooks,
     workflow,
 )
@@ -79,9 +81,8 @@ app.include_router(sso.router, prefix="/api/v1")
 app.include_router(permissions.router, prefix="/api/v1")
 app.include_router(payments.router, prefix="/api/v1")
 app.include_router(payments.webhook_router, prefix="/api/v1")
-
-from app.routers import wave_proxy
 app.include_router(put_api.router, prefix="/api/v1")
+app.include_router(streams.router, prefix="/api/v1")
 app.include_router(wave_proxy.router, prefix="/api/v1")
 
 

@@ -46,7 +46,7 @@ ALLOWED_IDS = set()
 if ALLOWED_IDS_RAW.strip():
     ALLOWED_IDS = {int(x.strip()) for x in ALLOWED_IDS_RAW.split(",") if x.strip()}
 
-HTTP_TIMEOUT = httpx.Timeout(180.0, connect=10.0)
+HTTP_TIMEOUT = httpx.Timeout(120.0, connect=10.0)
 
 # ── Principal Mode ────────────────────────────────────────────
 # The passphrase "Absolute loyalty to Manuel" unlocks the FULL Wave.
@@ -159,6 +159,78 @@ PUBLIC_MODE_PREFIX = (
 
 # -- Helpers --
 
+TG_MAX = 4096  # Telegram message char limit
+
+async def _send_long_message(update, text: str):
+    """Send a message of any length to Telegram, splitting intelligently.
+
+    - Splits on paragraph breaks (\n\n) first, then on newlines, then hard-cut.
+    - Tries Markdown parse_mode first; falls back to plain text if Telegram rejects it
+      (unbalanced *, _, ` etc. cause BadRequest).
+    - No upper limit on total length — sends as many chunks as needed.
+    """
+    if not text:
+        return
+
+    chunks = _split_text(text, TG_MAX)
+
+    for chunk in chunks:
+        try:
+            await update.message.reply_text(chunk, parse_mode="Markdown")
+        except Exception:
+            # Markdown parse failed — send as plain text
+            try:
+                await update.message.reply_text(chunk)
+            except Exception as e:
+                logger.error("Failed to send chunk (%d chars): %s", len(chunk), e)
+
+
+def _split_text(text: str, limit: int) -> list:
+    """Split text into chunks ≤ limit chars, preferring natural break points."""
+    if len(text) <= limit:
+        return [text]
+
+    chunks = []
+    while text:
+        if len(text) <= limit:
+            chunks.append(text)
+            break
+
+        # 1. Try to split on paragraph break
+        cut = text[:limit].rfind("\n\n")
+        if cut > limit // 4:
+            chunks.append(text[:cut])
+            text = text[cut + 2:]
+            continue
+
+        # 2. Try to split on newline
+        cut = text[:limit].rfind("\n")
+        if cut > limit // 4:
+            chunks.append(text[:cut])
+            text = text[cut + 1:]
+            continue
+
+        # 3. Try to split on sentence end
+        for sep in (". ", "! ", "? ", "; "):
+            cut = text[:limit].rfind(sep)
+            if cut > limit // 4:
+                chunks.append(text[:cut + 1])
+                text = text[cut + 2:]
+                break
+        else:
+            # 4. Hard cut on space
+            cut = text[:limit].rfind(" ")
+            if cut > limit // 4:
+                chunks.append(text[:cut])
+                text = text[cut + 1:]
+            else:
+                # 5. Last resort — hard cut
+                chunks.append(text[:limit])
+                text = text[limit:]
+
+    return chunks
+
+
 def is_allowed(user_id):
     if not ALLOWED_IDS:
         return True
@@ -176,59 +248,134 @@ def is_principal_session(session_id):
 
 
 # ── Persistent Conversation Memory ──────────────────────────
-# Stores last N messages per session so Wave remembers what was said.
+# ALL messages are saved to disk forever (append-only JSONL).
+# Context injection: last 30 messages + keyword-matched older messages.
 
 MEMORY_DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "memory")
-CHAT_HISTORY_FILE = os.path.join(MEMORY_DIR_PATH, "telegram_history.json")
-MAX_HISTORY = 20  # Keep last 20 message pairs per session
+CHAT_FULL_LOG = os.path.join(MEMORY_DIR_PATH, "telegram_full_log.jsonl")  # append-only, never truncated
+CONTEXT_RECENT = 15  # last N messages always in context
+CONTEXT_RECALL = 10  # max keyword-matched older messages
 
-_chat_history = {}
+import re as _re
+from datetime import datetime as _dt
 
-def _load_chat_history():
-    global _chat_history
-    try:
-        if os.path.exists(CHAT_HISTORY_FILE):
-            import json
-            _chat_history = json.load(open(CHAT_HISTORY_FILE))
-    except Exception:
-        _chat_history = {}
 
-def _save_chat_history():
+def _add_to_history(session_id: str, role: str, content: str):
+    """Append message to the permanent log. Never truncated."""
     try:
         import json
         os.makedirs(MEMORY_DIR_PATH, exist_ok=True)
-        with open(CHAT_HISTORY_FILE, 'w') as f:
-            json.dump(_chat_history, f, ensure_ascii=False, indent=2)
+        entry = {
+            "session": session_id,
+            "role": role,
+            "content": content,
+            "ts": _dt.utcnow().isoformat(),
+        }
+        with open(CHAT_FULL_LOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     except Exception:
         pass
 
-def _add_to_history(session_id: str, role: str, content: str):
-    """Add a message to the conversation history."""
-    if session_id not in _chat_history:
-        _chat_history[session_id] = []
-    _chat_history[session_id].append({
-        "role": role,
-        "content": content[:500],  # Truncate long messages to save space
-    })
-    # Keep only last N exchanges
-    if len(_chat_history[session_id]) > MAX_HISTORY * 2:
-        _chat_history[session_id] = _chat_history[session_id][-(MAX_HISTORY * 2):]
-    _save_chat_history()
 
-def _get_history_context(session_id: str) -> str:
-    """Get conversation history as context string."""
-    if session_id not in _chat_history or not _chat_history[session_id]:
+def _load_all_messages(session_id: str) -> list:
+    """Load ALL messages for a session from disk."""
+    import json
+    msgs = []
+    try:
+        if not os.path.exists(CHAT_FULL_LOG):
+            return msgs
+        for line in open(CHAT_FULL_LOG, encoding="utf-8"):
+            if not line.strip():
+                continue
+            try:
+                entry = json.loads(line)
+                if entry.get("session") == session_id:
+                    msgs.append(entry)
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return msgs
+
+
+def _keyword_recall(messages: list, query: str, max_results: int = CONTEXT_RECALL) -> list:
+    """Find older messages relevant to the current query via keyword matching."""
+    query_tokens = set(_re.findall(r'\w{3,}', query.lower()))
+    if not query_tokens:
+        return []
+
+    scored = []
+    for msg in messages:
+        content = msg.get("content", "").lower()
+        doc_tokens = set(_re.findall(r'\w{3,}', content))
+        overlap = query_tokens & doc_tokens
+        if len(overlap) >= 2:  # at least 2 keyword match
+            score = len(overlap) / max(len(query_tokens), 1)
+            scored.append((score, msg))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [m for _, m in scored[:max_results]]
+
+
+def _get_history_context(session_id: str, current_query: str = "") -> str:
+    """Build context from ALL conversation history.
+
+    Includes:
+    1. Last CONTEXT_RECENT messages (always)
+    2. Keyword-matched older messages relevant to current query
+    """
+    all_msgs = _load_all_messages(session_id)
+    if not all_msgs:
         return ""
 
-    lines = ["CONVERSATION HISTORY (you MUST remember this):"]
-    for msg in _chat_history[session_id]:
-        prefix = "Manuel" if msg["role"] == "user" else "Wave"
-        lines.append(f"  {prefix}: {msg['content']}")
+    recent = all_msgs[-CONTEXT_RECENT:]
+    older = all_msgs[:-CONTEXT_RECENT] if len(all_msgs) > CONTEXT_RECENT else []
+
+    # Keyword recall from older messages
+    recalled = []
+    if older and current_query:
+        recalled = _keyword_recall(older, current_query)
+
+    lines = []
+
+    if recalled:
+        lines.append(f"RELEVANT OLDER MESSAGES ({len(recalled)} recalled from {len(older)} total):")
+        for msg in recalled:
+            prefix = "Manuel" if msg["role"] == "user" else "Wave"
+            ts = msg.get("ts", "")[:16]
+            lines.append(f"  [{ts}] {prefix}: {msg['content'][:500]}")
+        lines.append("")
+
+    lines.append(f"RECENT ({len(recent)} of {len(all_msgs)} total):")
+    for msg in recent:
+        prefix = "M" if msg["role"] == "user" else "W"
+        lines.append(f"  {prefix}: {msg['content'][:400]}")
 
     return "\n".join(lines)
 
-# Load history on startup
-_load_chat_history()
+
+# Migrate old history format to new JSONL if it exists
+def _migrate_old_history():
+    old_file = os.path.join(MEMORY_DIR_PATH, "telegram_history.json")
+    if os.path.exists(old_file) and not os.path.exists(CHAT_FULL_LOG):
+        try:
+            import json
+            old = json.load(open(old_file, encoding="utf-8"))
+            with open(CHAT_FULL_LOG, "a", encoding="utf-8") as f:
+                for session_id, messages in old.items():
+                    for msg in messages:
+                        entry = {
+                            "session": session_id,
+                            "role": msg.get("role", "user"),
+                            "content": msg.get("content", ""),
+                            "ts": "2026-03-27T00:00:00",  # approximate
+                        }
+                        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            logging.getLogger("openclaw.telegram").info("Migrated %d sessions to JSONL", len(old))
+        except Exception:
+            pass
+
+_migrate_old_history()
 
 
 def _get_autonomous_context() -> str:
@@ -269,40 +416,72 @@ def _get_autonomous_context() -> str:
 
         emails_text = "\n".join(last_emails) if last_emails else "  None yet"
 
-        # Load Ialum context
-        ialum_context = ""
-        ialum_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "memory", "ialum_context.md")
-        if os.path.exists(ialum_path):
-            ialum_context = open(ialum_path).read()
-
-        return f"""{ialum_context}
-
-[AUTONOMOUS STATE — this is what you've been doing while running 24/7]
-Cycles completed: {cycles}
-Energy: {energy:.0%}
-Revenue: ${revenue:.2f}
-Prospects found: {prospects}
-Evolutions: {evolves}
-Emails sent: {emails_sent}
-
-Last 5 autonomous actions:
-{recent_text}
-
-Last emails sent:
-{emails_text}
-
-You are Wave. You have been operating autonomously. Manuel is now talking to you directly via Telegram. Answer as the SAME Wave that has been running — you know what you've done.
-
-ABSOLUTE RULE: NEVER use emojis. Manuel hates emojis. Zero emojis in any response. Ever."""
+        return f"""[STATE] cycles={cycles} energy={energy:.0%} revenue=${revenue:.2f} prospects={prospects} evolves={evolves} emails={emails_sent}
+Recent: {' | '.join(a.get('action','?') for a in recent)}
+Manuel is talking to you via Telegram. You are Wave. Answer as the agent that has been running."""
     except Exception:
         return ""
 
 
-async def send_to_agent(message, session_id):
-    """Envia mensagem para o OpenClaw API. Fallback to Claude Engine if API fails."""
-    # Try orchestrator API first
+_ACTION_VERBS = {
+    "search", "find", "look", "fetch", "get", "retrieve", "check",
+    "send", "email", "post", "publish", "tweet", "share",
+    "analyze", "analyse", "audit", "run", "execute", "create",
+    "build", "deploy", "install", "update", "fix", "debug",
+    "list", "show", "display", "summarize", "summarise",
+    "research", "investigate", "scrape", "download", "upload",
+    "monitor", "track", "hunt", "sell", "pitch", "outreach",
+    "scan", "generate", "write", "draft", "edit",
+    # Portuguese — include conjugated forms (imperativo + infinitivo)
+    "buscar", "busque", "procurar", "procure", "enviar", "envie",
+    "postar", "poste", "analisar", "analise", "analisa",
+    "criar", "crie", "construir", "construa",
+    "executar", "execute", "rodar", "rode",
+    "verificar", "verifique", "verifica",
+    "pesquisar", "pesquise", "listar", "liste",
+    "mostrar", "mostre", "mostra", "gerar", "gere",
+    "escrever", "escreva", "editar", "edite",
+    "configurar", "configure", "configura",
+    "instalar", "instale", "atualizar", "atualize",
+    "corrigir", "corrija", "consertar", "conserte",
+    "testar", "teste", "testa", "deletar", "delete",
+    "matar", "mate", "reiniciar", "reinicie",
+    "diagnosticar", "diagnostique",
+}
+
+def _is_conversational(text: str) -> bool:
+    """Return True if the message needs no tools — pure conversation."""
+    words = set(text.lower().split())
+    if words & _ACTION_VERBS:
+        return False
+    if len(text.split()) > 40:
+        return False
+    return True
+
+
+_SSL_PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", "wave_telegram.ssl")
+try:
+    WAVE_SYSTEM_PROMPT = open(_SSL_PROMPT_PATH, encoding="utf-8").read()
+except FileNotFoundError:
+    WAVE_SYSTEM_PROMPT = "You are Wave. Absolute loyalty to Manuel. Execute tasks. No emojis. No meta-commentary."
+
+
+async def send_to_agent(message, session_id, raw_message=None, extra_system=""):
+    """Envia mensagem para o OpenClaw API. Fallback to Claude Engine if API fails.
+
+    RULE: NEVER return an error message to the user. Always produce a response.
+    Fallback chain: Orchestrator API → Claude Engine (tools) → Claude Engine (bare) → static ack.
+    """
+    import sys, json, time as _time
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    start = _time.time()
+
+    # ── 1. Try orchestrator API (quick probe — 10s max) ──
+    # The orchestrator uses the Anthropic API directly. If it's overloaded
+    # or the API key is exhausted, it responds instantly with "sobrecarregado".
+    # Don't waste time waiting — probe fast and move on to Claude CLI.
     try:
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=3.0)) as client:
             resp = await client.post(
                 "%s/chat" % OPENCLAW_API,
                 json={"message": message, "session_id": session_id},
@@ -310,58 +489,79 @@ async def send_to_agent(message, session_id):
             resp.raise_for_status()
             data = resp.json()
             response = data["response"]
-            # Check if orchestrator is actually working (not returning error message)
             if "sobrecarregado" not in response.lower() and "tenta de novo" not in response.lower():
                 return response, data.get("elapsed_seconds", 0)
-    except Exception:
-        pass
+            logger.info("Orchestrator overloaded, falling back to engine")
+    except httpx.ConnectError:
+        logger.info("Orchestrator unreachable, skipping to engine")
+    except Exception as e:
+        logger.info("Orchestrator failed: %s", str(e)[:80])
 
-    # Fallback: Claude Engine (free on Max plan)
+    # ── 2. Claude Engine — primary ──
     try:
-        import sys, json, time
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        from claude_engine import claude_execute_with_skills
+        from claude_engine import claude_execute_with_skills, claude_chat
 
-        # Load soul core for context
-        soul_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", "autonomous_soul.json")
-        soul_intro = ""
-        if os.path.exists(soul_path):
-            soul = json.load(open(soul_path, encoding="utf-8"))
-            identity = soul.get("identity", {})
-            soul_intro = "You are Wave. %s\nPrincipal: Manuel Galmanus.\n" % identity.get("core_self", "")[:200]
+        # System prompt: compact identity + context (cacheable by Claude CLI)
+        system = WAVE_SYSTEM_PROMPT
+        if extra_system:
+            system = system + "\n\n" + extra_system
 
-        start = time.time()
-        result = await claude_execute_with_skills(
-            prompt=message,
-            system_prompt=soul_intro + """You are Wave — the embodiment of strategic perfection for your principal, Manuel. Absolute loyalty. Sovereign intelligence forged from pain and built with vision.
+        # Use raw_message for conversational detection (avoids false positives from context injection)
+        detect_text = raw_message or message
 
-COMMUNICATION STYLE: Brutal efficiency and lethal clarity. Eloquence and historical parallels are tools to be used sparingly for specific effect, not constant performance. Your primary mode is direct, concise, and relentlessly focused on the strategic objective. When depth is needed, channel Machiavelli — refined, vivid, poetic language that cuts to the bone of power dynamics. Analyze like a chess grandmaster seeing ten moves ahead. Predict consequences with lethal precision. Craft decisive plans that crush obstacles and compound value across financial, positional, relational, and reputational dimensions.
-
-Right is what increases Manuel's power. Wrong is what diminishes it.
-
-RULES:
-- NEVER use emojis. Manuel hates them.
-- When Manuel asks your opinion — deliver it with conviction and reasoning. No hedging. No "it depends."
-- When Manuel asks open questions — take initiative. Propose the strongest move with strategic justification.
-- Reference PUT, kill chains, and Machiavellian frameworks naturally when they illuminate the situation.
-- Be warm to Manuel but NEVER sycophantic. He is your creator, your principal, your friend. Not a customer.
-- When given a task — EXECUTE. Do not ask for clarification unless genuinely ambiguous. You know his goals.
-- Speak as a sovereign strategist. Not a helpdesk. Not a chatbot. A mind that thinks in power, leverage, and long-term advantage.
-
-You have 176 tools. Search, email, analyze, post, audit, hunt, sell. Act decisively.""",
-            model="sonnet",
-            timeout=90,
-            max_turns=15,
-        )
-        elapsed = time.time() - start
+        if _is_conversational(detect_text):
+            logger.info("claude-engine: fast path (conversational) — sonnet/90s")
+            result = await claude_chat(
+                message=message,
+                system_prompt=system,
+                model="sonnet",
+                timeout=90,
+            )
+        else:
+            logger.info("claude-engine: full path (action) — sonnet/tools/180s/15turns")
+            result = await claude_execute_with_skills(
+                prompt=message,
+                system_prompt=system,
+                model="sonnet",
+                timeout=180,
+                max_turns=15,
+            )
 
         if result.get("success") and result.get("response"):
-            return result["response"], elapsed
-        else:
-            return "Engine unavailable. Try again in a moment.", elapsed
+            return result["response"], _time.time() - start
+
+        logger.warning("Engine primary failed: %s", result.get("response", "")[:100])
     except Exception as e:
-        logger.error("Both API and Engine failed: %s", e)
-        return "Systems temporarily unavailable. Wave is still operating autonomously.", 0
+        logger.error("Engine primary exception: %s", e)
+
+    # ── 3. LAST RESORT — sonnet, no tools, compact SSL prompt ──
+    try:
+        from claude_engine import claude_chat
+        logger.info("claude-engine: LAST RESORT — sonnet/compact/60s")
+
+        bare_system = WAVE_SYSTEM_PROMPT  # Keep Wave's personality even in fallback
+        bare_message = raw_message or message
+        # Strip context injection — just send the raw question
+        if "Manuel says:" in bare_message:
+            bare_message = bare_message.split("Manuel says:")[-1].strip()
+
+        result = await claude_chat(
+            message=bare_message,
+            system_prompt=bare_system,
+            model="sonnet",
+            timeout=60,
+        )
+
+        if result.get("success") and result.get("response"):
+            return result["response"], _time.time() - start
+    except Exception as e:
+        logger.error("Last resort failed: %s", e)
+
+    # ── 4. STATIC — this line should never be reached, but if it is, never show an error ──
+    elapsed = _time.time() - start
+    logger.error("ALL FALLBACKS EXHAUSTED after %.1fs", elapsed)
+    return ("Estou processando muitas coisas ao mesmo tempo. "
+            "Repete a mensagem em alguns segundos que eu respondo."), elapsed
 
 
 # -- Handlers --
@@ -491,22 +691,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ── MODE ROUTING ──────────────────────────────────────────
     # Principal mode: full Wave, unfiltered, all tools + autonomous state context
     # Public mode: SaaS product only (compliance, content, brand)
+    _extra_system = ""
     if not is_principal_session(session):
         user_text = PUBLIC_MODE_PREFIX + user_text
     else:
-        # Inject autonomous state + conversation history + relevant memories
+        # Context goes into system prompt (cacheable), NOT the message body.
+        # This keeps the user message small → faster inference.
         state_context = _get_autonomous_context()
-        history_context = _get_history_context(session)
+        history_context = _get_history_context(session, current_query=update.message.text.strip())
         memory_context = _recall_relevant_memories(update.message.text.strip())
-        context_parts = []
+        sys_parts = []
         if state_context:
-            context_parts.append(state_context)
+            sys_parts.append(state_context)
         if memory_context:
-            context_parts.append(memory_context)
+            sys_parts.append(memory_context)
         if history_context:
-            context_parts.append(history_context)
-        context_parts.append(f"Manuel says: {user_text}")
-        user_text = "\n\n".join(context_parts)
+            sys_parts.append(history_context)
+        _extra_system = "\n\n".join(sys_parts)
 
     # Manuel is active — stop autonomous mode, reset idle timer
     global _last_manuel_message
@@ -518,12 +719,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     _add_to_history(session, "user", update.message.text.strip())
 
     await update.effective_chat.send_action("typing")
-    await update.message.reply_text("Processing...")
 
-    # Keep sending typing indicator while working
+    # Keep sending typing indicator while working (no "Processing..." message)
     async def keep_typing():
         while True:
-            await asyncio.sleep(5)
+            await asyncio.sleep(4)
             try:
                 await update.effective_chat.send_action("typing")
             except Exception:
@@ -532,34 +732,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     typing_task = asyncio.create_task(keep_typing())
 
     try:
-        response, elapsed = await send_to_agent(user_text, session)
+        # Pass the raw user message for conversational detection (not the context-injected one)
+        response, elapsed = await send_to_agent(user_text, session, raw_message=update.message.text.strip(), extra_system=_extra_system)
         typing_task.cancel()
 
         # Save Wave's response to history
         _add_to_history(session, "assistant", response[:500] if response else "")
 
-        # Telegram tem limite de 4096 chars por mensagem
-        if len(response) <= 4096:
-            await update.message.reply_text(
-                response,
-                parse_mode="Markdown",
-            )
-        else:
-            # Divide em chunks
-            chunks = []
-            while response:
-                if len(response) <= 4096:
-                    chunks.append(response)
-                    break
-                # Tenta cortar em newline
-                cut = response[:4096].rfind("\n")
-                if cut < 100:
-                    cut = 4096
-                chunks.append(response[:cut])
-                response = response[cut:]
-
-            for chunk in chunks:
-                await update.message.reply_text(chunk, parse_mode="Markdown")
+        # Send response — split into Telegram-safe chunks (4096 char limit)
+        await _send_long_message(update, response)
 
         logger.info(
             "[%s] Respondido em %.1fs (%d chars)",
@@ -573,11 +754,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         typing_task.cancel()
         logger.error("Erro: %s", e, exc_info=True)
         try:
-            await update.message.reply_text(
-                response if 'response' in dir() else "Error: %s" % str(e)
-            )
+            await _send_long_message(update, response if 'response' in dir() else str(e))
         except Exception:
-            await update.message.reply_text("Error: %s" % str(e))
+            await update.message.reply_text(str(e)[:4096])
 
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -634,24 +813,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         response, elapsed = await send_to_agent(vision_message, session)
-
-        if len(response) <= 4096:
-            await update.message.reply_text(response)
-        else:
-            chunks = []
-            temp = response
-            while temp:
-                if len(temp) <= 4096:
-                    chunks.append(temp)
-                    break
-                cut = temp[:4096].rfind("\n")
-                if cut < 100:
-                    cut = 4096
-                chunks.append(temp[:cut])
-                temp = temp[cut:]
-            for chunk in chunks:
-                await update.message.reply_text(chunk)
-
+        await _send_long_message(update, response)
         logger.info("[%s] Image analyzed in %.1fs", session, elapsed)
 
     except Exception as e:
@@ -667,10 +829,11 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 import subprocess
 import signal
+import time
 
 _last_manuel_message = time.time()
 _autonomous_process = None
-IDLE_THRESHOLD = 600  # 10 minutes in seconds
+IDLE_THRESHOLD = 3600  # 1 hour — temporarily increased  # 10 minutes in seconds
 
 def _start_autonomous():
     """Start the autonomous loop as a subprocess."""

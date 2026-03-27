@@ -304,7 +304,7 @@ async def get_stakeholder(params: Dict[str, Any]) -> Dict:
     put = sh["put"]
     Fk = put["F"] * (1 - put["k"])  # effective fear
     U = 1.0 * put["A"] * (1 - Fk) - 1.2 * Fk * (1 - put["S"]) + 0.8 * put["S"] * (1 - put["w"])
-    FP = (1 - 0.5) * (0.3 + 0.2 + 0.5) / (0.3 - U + 0.001) if U < 0.3 else 0
+    FP = (1 - 0.5) * (0.3 + 0.2 + 0.5) / max(0.3 - U + 1e-3, 1e-3)
 
     return {
         "success": True,

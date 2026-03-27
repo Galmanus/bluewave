@@ -79,5 +79,32 @@
     "created": "2026-03-23T11:44:04.447853",
     "last_updated": "2026-03-23T11:44:04.447861",
     "interaction_count": 1
+  },
+  "francine_hennig": {
+    "name": "Francine Hennig",
+    "role": "Ex-namorada, medica",
+    "company": "Hospital (Mafra, SC)",
+    "put": {
+      "A": 0.65,
+      "F": 0.7,
+      "k": 0.55,
+      "S": 0.72,
+      "w": 0.3
+    },
+    "observations": [
+      {
+        "timestamp": "2026-03-23T12:54:54.242858",
+        "observation": "Operadora transacional hiper-racional no mercado social. Vendeu ilusao de amor, liquidou quando o ativo nao performou. Monitora Manuel pelo Instagram da mae."
+      }
+    ],
+    "signals": [
+      {
+        "timestamp": "2026-03-23T12:54:54.242860",
+        "signal": "Arquetipo POLITICIAN. Status como razao de ser. Descartou Manuel por vergonha da pobreza, nao por traicao real."
+      }
+    ],
+    "created": "2026-03-23T12:54:54.242850",
+    "last_updated": "2026-03-23T12:54:54.242862",
+    "interaction_count": 1
   }
 }

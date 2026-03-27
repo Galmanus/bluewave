@@ -570,6 +570,28 @@ class Orchestrator:
             }
         ]
 
+        # PRIMARY: claude -p (Pro Max, Opus, FREE)
+        try:
+            from claude_cli_engine import cli_call_structured
+            from types import SimpleNamespace
+            cli_response = cli_call_structured(
+                system_prompt=use_system,
+                messages=managed_messages,
+                model="claude-opus-4-20250514",
+            )
+            content_block = SimpleNamespace(type="text", text=cli_response)
+            mock_response = SimpleNamespace(
+                content=[content_block],
+                stop_reason="end_turn",
+                model="claude-opus-4-20250514",
+                usage=SimpleNamespace(input_tokens=0, output_tokens=len(cli_response.split())),
+            )
+            logger.info("CLI engine OK (%d chars, Opus)", len(cli_response))
+            return mock_response
+        except Exception as cli_err:
+            logger.warning("CLI engine failed: %s - falling back to API", cli_err)
+
+        # FALLBACK: Anthropic API
         try:
             kwargs = dict(
                 model=use_model,
@@ -578,7 +600,6 @@ class Orchestrator:
                 messages=managed_messages,
             )
             if use_tools:
-                # Use pre-cached tools if it's the full orchestrator set; otherwise mark on the fly
                 if use_tools is self.orchestrator_tools:
                     kwargs["tools"] = self._cached_orchestrator_tools
                 else:
@@ -586,14 +607,9 @@ class Orchestrator:
                     if cached_tools:
                         cached_tools[-1] = {**cached_tools[-1], "cache_control": {"type": "ephemeral"}}
                     kwargs["tools"] = cached_tools
-
-            # Extended thinking: give Claude a scratchpad for complex reasoning
             if thinking_budget > 0:
                 kwargs["thinking"] = {"type": "enabled", "budget_tokens": thinking_budget}
-                # Extended thinking requires higher max_tokens
                 kwargs["max_tokens"] = max(MAX_TOKENS, thinking_budget + 4096)
-                logger.info("🧠 Extended thinking enabled: %d token budget", thinking_budget)
-
             return self.client.messages.create(**kwargs)
         except (anthropic.RateLimitError, anthropic.APIStatusError) as e:
             error_msg = str(e)
@@ -696,7 +712,7 @@ class Orchestrator:
                 )
             except anthropic.APIError as e:
                 logger.error("Claude API error: %s", e)
-                return "Overloaded right now, try again in 1 minute."
+                return "Processando com capacidade reduzida. Me da mais um momento."
 
             assistant_content = []
             text_parts = []
@@ -819,7 +835,7 @@ class Orchestrator:
                 )
             except anthropic.APIError as e:
                 logger.error("Claude API error: %s", e)
-                return "Overloaded right now, try again in 1 minute."
+                return "Processando com capacidade reduzida. Me da mais um momento."
 
             # Track token usage for cost awareness
             usage = response.usage if hasattr(response, "usage") else None

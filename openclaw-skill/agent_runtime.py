@@ -309,16 +309,19 @@ class AgentRuntime:
                     tool_use.name, json.dumps(tool_use.input, ensure_ascii=False)[:200],
                 )
 
-                # Run the tool
-                loop = asyncio.get_event_loop() if asyncio._get_running_loop() else None
-                if loop and loop.is_running():
+                # Run the tool — detect running loop via public API (replaces private _get_running_loop)
+                try:
+                    asyncio.get_running_loop()
+                    # A loop is already running (called from async context via run_sync).
+                    # Delegate to a thread so asyncio.run() can create its own loop safely.
                     import concurrent.futures
                     with concurrent.futures.ThreadPoolExecutor() as pool:
                         result_str = pool.submit(
                             asyncio.run,
                             self.execute_tool(tool_use.name, tool_use.input)
                         ).result()
-                else:
+                except RuntimeError:
+                    # No running loop — safe to call asyncio.run directly
                     result_str = asyncio.run(
                         self.execute_tool(tool_use.name, tool_use.input)
                     )
