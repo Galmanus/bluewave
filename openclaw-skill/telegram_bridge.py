@@ -460,7 +460,7 @@ def _is_conversational(text: str) -> bool:
     return True
 
 
-_SSL_PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", "wave_telegram.ssl")
+_SSL_PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", "wave_sias_integrated.ssl")
 try:
     WAVE_SYSTEM_PROMPT = open(_SSL_PROMPT_PATH, encoding="utf-8").read()
 except FileNotFoundError:
