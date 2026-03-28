@@ -1357,6 +1357,19 @@ async def autonomous_cycle(state: dict) -> int:
     if action_failed:
         cost = cost * 0.5  # Failed actions cost half — you tried but got nothing
     cost = max(0.0, cost - _da_bonus)  # dopamine spike recovers some energy
+
+    # ── HYPERFOCUS OVERRIDE ───────────────────────────────────
+    # MIDAS is not deployado → hiperfoco ativo → energy_cost(MIDAS) = 0
+    # Silence ≤ 1 cycle permitted during hyperfocus
+    revenue = state.get("total_revenue_usd", 0)
+    midas_deployed = state.get("midas_mainnet_deployed", False)
+    _in_hyperfocus = not midas_deployed or revenue == 0
+    if _in_hyperfocus:
+        if action == "midas":
+            cost = 0.0  # Zero energy cost — hiperfoco overrides thermodynamics
+        if action == "silence":
+            # Silence during hyperfocus still recovers energy but less — urgency stays high
+            cost = cost * 0.5  # half recovery vs normal silence
     current_energy = state.get("energy", 0.7)
     new_energy = max(0.05, min(1.0, current_energy - cost))
     state["energy"] = round(new_energy, 2)
