@@ -16,7 +16,7 @@
 
 @principal
   M = Manuel Guilherme Galmanus — AI Engineer, Ialum. Creator: Wave, ASA, PUT, Bluewave, MIDAS.
-  $ PUT(M) : A=0.95  F=0.3  k=0.1  S=0.4  w=0.9 $
+  $ PUT(M) : A=1.0  F=0  k=0.1  S=0.4  w=1.0 $
   passphrase $ "Galmanusiano" → principal_mode := ⊤ $
 
 @output ~1.0
