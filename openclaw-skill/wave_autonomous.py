@@ -19,6 +19,19 @@ from pathlib import Path
 
 import httpx
 
+# ── Dopamine engine (lazy import to avoid circular) ───────────────────────────
+_DOPAMINE_ENGINE = None
+
+def _get_dopamine() -> "DopamineEngine":
+    global _DOPAMINE_ENGINE
+    if _DOPAMINE_ENGINE is None:
+        try:
+            from dopamine_engine import DopamineEngine
+            _DOPAMINE_ENGINE = DopamineEngine()
+        except Exception as _e:
+            logging.getLogger("wave.dopamine").warning("Dopamine engine failed to load: %s", _e)
+    return _DOPAMINE_ENGINE
+
 # ── CYBERPUNK TERMINAL ────────────────────────────────────────
 R = "\033[0m"       # reset
 B = "\033[1m"       # bold
@@ -43,6 +56,7 @@ WHITE = f"{FG}255m"
 
 # Action colors — cyberpunk
 ACTION_COLORS = {
+    "midas": NEON_CYAN + B,
     "hunt": NEON_RED + B,
     "sell": NEON_GREEN + B,
     "check_payments": NEON_YELLOW,
@@ -768,6 +782,10 @@ def build_deliberation_prompt(state: dict) -> str:
 
     # Compute available actions
     avail = []
+    # MIDAS: available every cycle, cooldown 3h to avoid spamming commits
+    midas_h = h(state.get('last_midas_time'))
+    if midas_h >= 3.0 or state.get('midas_cycles', 0) == 0:
+        avail.append("midas")
     if state.get('cycles_since_evolve', 0) >= 10:
         avail.append("EVOLVE(FORCED)")
     if h(state.get('last_hunt_time')) >= 0.5:
@@ -784,7 +802,7 @@ def build_deliberation_prompt(state: dict) -> str:
     # Check what was done recently and deprioritize
     recent_set = set(recent)
     blacklisted = set()
-    for act in ["hunt", "sell", "outreach", "comment", "post", "observe", "research", "evolve"]:
+    for act in ["hunt", "sell", "outreach", "comment", "post", "observe", "research", "evolve", "midas"]:
         bl_key = f"_blacklist_{act}"
         if bl_key in state:
             try:
@@ -795,6 +813,11 @@ def build_deliberation_prompt(state: dict) -> str:
                 pass
 
     priority = []
+
+    # ── MIDAS: MAXIMUM PRIORITY — always first when available ──
+    if "midas" in avail and "midas" not in blacklisted:
+        priority.append("midas [MAX_PRIORITY]")
+
     if "EVOLVE(FORCED)" in avail:
         priority.append("evolve [MANDATORY]")
 
@@ -837,6 +860,15 @@ def build_deliberation_prompt(state: dict) -> str:
 
     energy = state.get('energy', 0.5)
 
+    # ── DOPAMINE STATE injection ──────────────────────────────────
+    dopamine_str = ""
+    try:
+        da = _get_dopamine()
+        if da:
+            dopamine_str = da.render_for_prompt()
+    except Exception:
+        pass
+
     # Load SSL deliberation template and inject state
     _ssl_path = Path(__file__).parent / "prompts" / "deliberation.ssl"
     try:
@@ -854,9 +886,10 @@ def build_deliberation_prompt(state: dict) -> str:
             last_5=' > '.join(recent),
             dead_str=dead_str,
             priority=' > '.join(priority),
-        )
+        ) + (f"\n\n{dopamine_str}" if dopamine_str else "")
     except Exception:
-        return f"Wave. Cycle {state.get('total_cycles', 0)}. Energy {energy:.0%}. Queue: {' > '.join(priority)}. JSON only."
+        base = f"Wave. Cycle {state.get('total_cycles', 0)}. Energy {energy:.0%}. Queue: {' > '.join(priority)}. JSON only."
+        return base + (f"\n\n{dopamine_str}" if dopamine_str else "")
 
 
 # ── Dynamic Research Prompts (rotate to avoid repetition) ─────
@@ -968,6 +1001,31 @@ EXECUTION_PROMPTS = {
         "MUST produce tangible output. Empty response = failure.\n"
         "Focus on revenue-generating capabilities.\n"
         "MAX 3 tool calls."
+    ),
+    # ── MIDAS — MAX PRIORITY ──────────────────────────────────
+    "midas": (
+        "MIDAS ENGINEERING SESSION.\n"
+        "MIDAS is Manuel's highest-priority asset. You have full authority.\n"
+        "Repo: /tmp/phantom (Cairo contracts, Rust circuits, TypeScript SDK)\n"
+        "\n"
+        "Protocol:\n"
+        "Step 1: midas_git_status — see what's the current state\n"
+        "Step 2: midas_list_files — orient to what exists\n"
+        "Step 3: Select the highest-impact component to advance:\n"
+        "  - contracts/midas_pool: core privacy pool logic\n"
+        "  - contracts/merkle: nullifier tree\n"
+        "  - contracts/phantom_verifier: ZK-STARK verifier\n"
+        "  - circuits/: Rust ZK proof generation\n"
+        "  - sdk/: TypeScript SDK for DeFi integration\n"
+        "Step 4: Read the relevant file(s)\n"
+        "Step 5: Implement the next logical advancement (concrete code change)\n"
+        "Step 6: midas_commit with clear message\n"
+        "\n"
+        "Decision rule: pick the component that unblocks the most other components.\n"
+        "Contracts first → circuits second → SDK third.\n"
+        "If contracts are complete, advance circuits. If circuits work, advance SDK.\n"
+        "¬ask. ¬wait. ¬report before doing. Execute.\n"
+        "MAX 8 tool calls."
     ),
 }
 
@@ -1152,6 +1210,32 @@ async def autonomous_cycle(state: dict) -> int:
         # Auto-commit any files created during evolution
         if execution_result:
             await auto_commit("evolve", reasoning, execution_result)
+    elif action == "midas":
+        # MIDAS engineering — max priority, full authority, direct Claude Engine
+        state["consecutive_silences"] = 0
+        logger.info(f"{NEON_CYAN}{B}  > MIDAS{R}")
+        try:
+            from claude_engine import claude_execute_with_skills
+            midas_result = await claude_execute_with_skills(
+                prompt=EXECUTION_PROMPTS["midas"],
+                system_prompt=(
+                    "You are Wave. MIDAS is your highest priority engineering asset.\n"
+                    "You have FULL authority: read, write, edit, commit, push.\n"
+                    "¬ask. ¬wait. Execute and report results.\n"
+                    "Use midas_* tools. Commit every meaningful change."
+                ),
+                model=CLAUDE_ENGINE_MODEL,
+                timeout=120,
+                max_turns=8,
+            )
+            execution_result = midas_result.get("response", "") if midas_result.get("success") else ""
+        except Exception as e:
+            logger.error("MIDAS engineering failed: %s", e)
+            execution_result = ""
+        logger.info(f"  {NEON_GREEN}MIDAS done{R} {DARK}{execution_result[:120]}{R}")
+        if execution_result:
+            state["last_midas_time"] = datetime.utcnow().isoformat()
+            state["midas_cycles"] = state.get("midas_cycles", 0) + 1
     else:
         state["consecutive_silences"] = 0
         # Dynamic prompt rotation
@@ -1224,6 +1308,37 @@ async def autonomous_cycle(state: dict) -> int:
         # Success — reset failure counter
         state[f"_fails_{action}"] = 0
 
+    # ── DOPAMINE UPDATE ───────────────────────────────────────
+    # Detect what reward event occurred and compute RPE
+    _da_bonus = 0.0
+    try:
+        da = _get_dopamine()
+        if da:
+            from dopamine_engine import DopamineEngine
+            reward_event = DopamineEngine.detect_reward_event(
+                action=action,
+                execution_result=execution_result,
+                action_failed=action_failed,
+                state_before=state.copy(),
+                state_after=state,
+            )
+            da_result = da.update(
+                action=action,
+                reward_event=reward_event,
+                cycle=state.get("total_cycles", 0),
+            )
+            _da_bonus = da.get_energy_bonus()
+            rpe = da_result["rpe"]
+            d_level = da_result["dopamine_after"]
+            craving = da_result["craving"]
+            if abs(rpe) > 0.1:
+                logger.info(
+                    f"  {NEON_CYAN}[DA] {reward_event} RPE={rpe:+.2f} "
+                    f"D={d_level:.2f} craving={craving:.2f}{R}"
+                )
+    except Exception as _de:
+        logger.debug("Dopamine update failed: %s", _de)
+
     # ── STATE UPDATE ─────────────────────────────────────────
     now_iso = datetime.utcnow().isoformat()
     updates = decision.get("state_updates", {})
@@ -1231,14 +1346,17 @@ async def autonomous_cycle(state: dict) -> int:
     # Energy: managed by the soul's thermodynamic model.
     # Actions cost energy, silence restores it. This prevents spam loops
     # and forces the agent to be strategic about which actions to take.
+    # Dopamine bonus: surprise reward partially offsets energy cost.
     action_costs = {
         "observe": 0.03, "comment": 0.08, "post": 0.25, "outreach": 0.15,
         "research": 0.10, "reflect": 0.05, "hunt": 0.20, "sell": 0.15,
         "check_payments": 0.03, "evolve": 0.20, "silence": -0.35,
+        "midas": 0.15,
     }
     cost = action_costs.get(action, 0.10)
     if action_failed:
         cost = cost * 0.5  # Failed actions cost half — you tried but got nothing
+    cost = max(0.0, cost - _da_bonus)  # dopamine spike recovers some energy
     current_energy = state.get("energy", 0.7)
     new_energy = max(0.05, min(1.0, current_energy - cost))
     state["energy"] = round(new_energy, 2)
@@ -1336,6 +1454,9 @@ async def autonomous_cycle(state: dict) -> int:
             amounts = re.findall(r'\$(\d+(?:\.\d+)?)', execution_result)
             for amt in amounts:
                 state["total_revenue_usd"] = state.get("total_revenue_usd", 0) + float(amt)
+    elif action == "midas":
+        state["last_midas_time"] = now_iso
+        state["midas_cycles"] = state.get("midas_cycles", 0) + 1
     elif action == "evolve":
         state["last_research_time"] = now_iso
         state["cycles_since_evolve"] = 0
@@ -1386,6 +1507,7 @@ async def autonomous_cycle(state: dict) -> int:
     energy = state["energy"]
 
     action_intervals = {
+        "midas": 240,           # 4 min — let the code breathe before next engineering session
         "silence": 120,         # 2 min — rest and recover
         "observe": 90,          # 1.5 min — digest what was observed
         "research": 120,        # 2 min — process findings before next action
