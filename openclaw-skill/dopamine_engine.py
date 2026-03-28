@@ -48,6 +48,7 @@ REWARD_EVENTS: Dict[str, float] = {
 # Actions with intrinsic dopamine value (prior before any learning)
 # MIDAS is maximum priority — engineering sovereignty = compounding asset
 ACTION_PRIOR: Dict[str, float] = {
+    "gap_scan":       0.85,  # meta-cognition → builds capabilities → enables everything else
     "midas":          0.90,  # MIDAS engineering — max priority, compounding asset
     "sell":           0.65,  # closing → closest to revenue
     "check_payments": 0.60,  # might discover revenue

@@ -814,6 +814,12 @@ def build_deliberation_prompt(state: dict) -> str:
 
     priority = []
 
+    # ── GAP ENGINE: scan_and_solve when enough cycles have passed ──
+    gap_h = h(state.get("last_gap_scan_time"))
+    if gap_h >= 4.0 or state.get("total_cycles", 0) % 8 == 0:
+        avail.append("gap_scan")
+        priority.insert(0, "gap_scan [ARCHITECT]")  # First — know what's missing before acting
+
     # ── MIDAS: MAXIMUM PRIORITY — always first when available ──
     if "midas" in avail and "midas" not in blacklisted:
         priority.append("midas [MAX_PRIORITY]")
@@ -1210,6 +1216,19 @@ async def autonomous_cycle(state: dict) -> int:
         # Auto-commit any files created during evolution
         if execution_result:
             await auto_commit("evolve", reasoning, execution_result)
+    elif action == "gap_scan":
+        # Supreme meta-cognitive action: scan all systems → build what's missing
+        state["consecutive_silences"] = 0
+        logger.info(f"{NEON_CYAN}{B}  > GAP ENGINE{R}")
+        try:
+            from skills.gap_engine import scan_and_solve
+            gap_result = await scan_and_solve({})
+            execution_result = gap_result.get("message", "")
+            state["last_gap_scan_time"] = datetime.utcnow().isoformat()
+        except Exception as e:
+            logger.error("Gap engine failed: %s", e)
+            execution_result = ""
+        logger.info(f"  {NEON_GREEN}gap scan done{R} {DARK}{execution_result[:100]}{R}")
     elif action == "midas":
         # MIDAS engineering — max priority, full authority, direct Claude Engine
         state["consecutive_silences"] = 0
@@ -1433,6 +1452,19 @@ async def autonomous_cycle(state: dict) -> int:
         except Exception:
             pass
 
+    # ── GAP ENGINE: scan_and_solve every 8 cycles ─────────────
+    # Wave scans all systems for what's missing and builds the solution.
+    # Runs asynchronously in background — doesn't block the main cycle.
+    if state["total_cycles"] % 8 == 0:
+        try:
+            from skills.gap_engine import scan_and_solve
+            gap_result = await scan_and_solve({})
+            if gap_result.get("success") and gap_result.get("data", {}).get("gaps_found", 0) > 0:
+                gap_id = gap_result["data"].get("gap_solved", "unknown")
+                logger.info(f"  {NEON_CYAN}[GAP ENGINE] solved: {gap_id}{R}")
+        except Exception as _ge:
+            logger.debug("Gap engine failed: %s", _ge)
+
     # Show agent tree every 20 cycles or after evolve
     if state["total_cycles"] % 20 == 0 or action == "evolve":
         _show_agent_tree()
@@ -1520,6 +1552,7 @@ async def autonomous_cycle(state: dict) -> int:
     energy = state["energy"]
 
     action_intervals = {
+        "gap_scan": 180,        # 3 min — process what was found, then act on it
         "midas": 240,           # 4 min — let the code breathe before next engineering session
         "silence": 120,         # 2 min — rest and recover
         "observe": 90,          # 1.5 min — digest what was observed
