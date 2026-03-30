@@ -37,11 +37,11 @@ def _load_calibration() -> dict:
             pass
     return {
         "global": {
-            "alpha": {"mean": 0.5, "std": 0.2, "samples": 0},
-            "beta": {"mean": 0.5, "std": 0.2, "samples": 0},
-            "gamma": {"mean": 0.5, "std": 0.2, "samples": 0},
-            "delta": {"mean": 0.3, "std": 0.2, "samples": 0},
-            "epsilon": {"mean": 0.3, "std": 0.2, "samples": 0},
+            "alpha": {"mean": 1.0, "std": 0.2, "samples": 0},
+            "beta": {"mean": 1.2, "std": 0.2, "samples": 0},
+            "gamma": {"mean": 0.8, "std": 0.2, "samples": 0},
+            "delta": {"mean": 0.6, "std": 0.2, "samples": 0},
+            "epsilon": {"mean": 0.5, "std": 0.2, "samples": 0},
         },
         "archetypes": {},
         "total_interactions": 0,
@@ -63,32 +63,103 @@ def _log_interaction(entry: dict):
 
 # ── Core PUT Equations ────────────────────────────────────────
 
-def compute_U(A, F, k, S, w, Sigma, tau, kappa, Phi, coeffs):
-    """Compute Psychic Utility with given coefficients."""
+def compute_U(A, F, k, S, w, Sigma, tau, kappa, Phi, coeffs,
+              R_net=0.0, use_interactions=True):
+    """Compute Psychic Utility with given coefficients.
+
+    PUT 2.3: includes cross-variable interactions + R_net.
+    delta*tau*kappa is NEGATIVE — vulnerability reduces U (Axiom 4).
+
+    Set use_interactions=False for raw U (useful for coefficient isolation in calibration).
+    """
     alpha = coeffs["alpha"]
     beta = coeffs["beta"]
     gamma = coeffs["gamma"]
     delta = coeffs["delta"]
     epsilon = coeffs["epsilon"]
 
-    Fk = F * (1 - k)  # Shadow-adjusted fear
-    U = (alpha * A * (1 - Fk)
+    if use_interactions:
+        A_eff, F_eff, w_eff, Phi_eff = _apply_cross_interactions(A, F, k, S, w, Sigma, tau, kappa, Phi)
+    else:
+        A_eff, F_eff, w_eff, Phi_eff = A, F, w, Phi
+
+    Fk = F_eff * (1 - k)  # Shadow-adjusted effective fear
+    U = (alpha * A_eff * (1 - Fk)
          - beta * Fk * (1 - S)
-         + gamma * S * (1 - w) * Sigma
-         + delta * tau * kappa
-         - epsilon * Phi)
-    return U
+         + gamma * S * (1 - w_eff) * Sigma
+         - delta * tau * kappa    # NEGATIVE: vulnerability reduces U
+         - epsilon * Phi_eff
+         + R_net)
+    return max(-2.0, min(3.0, U))
 
 
-def compute_FP(R, kappa, tau, Phi, U, U_crit=0.3, eps=1e-3):
-    """Compute Fracture Potential.
+# ── Cross-variable interactions (PUT 2.3) ────────────────────
+# Aligned with put_engine.py constants
 
-    Denominator guarded: without max(), it goes negative when U > U_crit + eps,
-    making FP negative — physically meaningless and corrupts avg_FP aggregation.
-    Same guard as put_engine.py:127 and put_api.py:166.
+LAMBDA_FA = 3.0       # F→A paralysis
+FA_THRESHOLD = 0.65   # Effective fear above this triggers A suppression
+LAMBDA_WF = 0.3       # w→F amplification
+LAMBDA_KPHI = 0.5     # k→Φ breeding
+LAMBDA_SIGMA_W = 0.3  # Σ→w damping
+LAMBDA_KA = 0.4       # k→A delayed suppression
+KA_THRESHOLD = 0.55   # Shadow above this triggers delayed A suppression
+
+# Hysteresis thresholds (aligned with put_engine.py)
+U_CRIT_DOWN = 0.3
+U_CRIT_UP = 0.5
+
+
+def _apply_cross_interactions(A, F, k, S, w, Sigma, tau, kappa, Phi):
+    """Apply second-order cross-variable interactions.
+    Returns (A_eff, F_eff, w_eff, Phi_eff).
+
+    Interactions (PUT 2.3):
+      1. w→F amplification: pain breeds fear
+      2. Σ→w damping: stability reduces pain
+      3. k→Φ breeding: denial feeds delusion
+      4. F→A paralysis: effective fear suppresses ambition
+      5. k→A delayed suppression: chronic denial collapses agency
     """
-    denominator = max(U_crit - U + eps, eps)
-    return ((1 - R) * (kappa + tau + Phi)) / denominator
+    # 1. w→F amplification (apply first — feeds into F→A)
+    F_eff = min(1.0, F * (1.0 + LAMBDA_WF * w))
+    # 2. Σ→w damping
+    w_eff = w * (1.0 - LAMBDA_SIGMA_W * Sigma)
+    # 3. k→Φ breeding
+    Phi_eff = min(2.0, Phi * (1.0 + LAMBDA_KPHI * k))
+    # 4. F→A paralysis (uses F_eff, not raw F)
+    Fk_eff = F_eff * (1.0 - k)
+    A_eff = A
+    if Fk_eff > FA_THRESHOLD:
+        suppression = min(1.0, (Fk_eff - FA_THRESHOLD) * LAMBDA_FA)
+        A_eff = A * (1.0 - suppression)
+    # 5. k→A delayed suppression
+    if k > KA_THRESHOLD:
+        k_suppression = min(0.5, (k - KA_THRESHOLD) * LAMBDA_KA)
+        A_eff = A_eff * (1.0 - k_suppression)
+    return (
+        max(0.0, A_eff),
+        max(0.0, min(1.0, F_eff)),
+        max(0.0, w_eff),
+        max(0.0, min(2.0, Phi_eff)),
+    )
+
+
+def _sigmoid(x, k_s=5.0):
+    """Standard sigmoid for FP decay."""
+    return 1.0 / (1.0 + math.exp(k_s * x))
+
+
+def compute_FP(R, kappa, tau, Phi, U, U_crit=0.3, k_fp=5.0):
+    """Compute Fracture Potential using sigmoid formulation with hysteresis support.
+
+    PUT 2.3: FP = (1-R)*(kappa+tau+Phi_eff) * sigmoid(-(U - U_crit))
+    Smooth decay: FP -> 0 when U >> U_crit, FP -> max when U << U_crit.
+    No pathological behavior at any U value.
+
+    Pass U_crit=U_CRIT_UP (0.5) for entities already in crisis.
+    """
+    raw_FP = (1 - R) * (kappa + tau + Phi) * _sigmoid(U - U_crit, k_s=k_fp)
+    return raw_FP
 
 
 def compute_Omega(U, U_crit=0.3, k_omega=1.0):
@@ -399,6 +470,260 @@ async def compute_put_full(params: Dict[str, Any]) -> Dict:
     }
 
 
+# ── Archetype Discovery via Clustering (PUT 2.4) ────────────
+
+def _euclidean_distance(a: list, b: list) -> float:
+    return sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5
+
+
+def _kmeans(vectors: list, k: int = 7, max_iter: int = 100, seed: int = 42) -> dict:
+    """Pure-Python K-Means clustering. No sklearn dependency.
+
+    Args:
+        vectors: list of [A, F, k, S, w, Sigma, tau, kappa, Phi] lists
+        k: number of clusters
+        max_iter: maximum iterations
+
+    Returns:
+        {"centroids": [...], "labels": [...], "inertia": float}
+    """
+    random.seed(seed)
+    n = len(vectors)
+    if n < k:
+        k = n
+
+    # K-Means++ initialization
+    centroids = [list(vectors[random.randint(0, n - 1)])]
+    for _ in range(k - 1):
+        dists = []
+        for v in vectors:
+            min_d = min(_euclidean_distance(v, c) for c in centroids)
+            dists.append(min_d ** 2)
+        total = sum(dists)
+        if total == 0:
+            centroids.append(list(vectors[random.randint(0, n - 1)]))
+            continue
+        probs = [d / total for d in dists]
+        cumulative = 0
+        r = random.random()
+        for i, p in enumerate(probs):
+            cumulative += p
+            if cumulative >= r:
+                centroids.append(list(vectors[i]))
+                break
+
+    dim = len(vectors[0])
+    labels = [0] * n
+
+    for _iteration in range(max_iter):
+        # Assignment step
+        new_labels = []
+        for v in vectors:
+            dists = [_euclidean_distance(v, c) for c in centroids]
+            new_labels.append(dists.index(min(dists)))
+
+        if new_labels == labels:
+            break  # Converged
+        labels = new_labels
+
+        # Update step
+        for ci in range(k):
+            members = [vectors[i] for i in range(n) if labels[i] == ci]
+            if members:
+                centroids[ci] = [sum(m[d] for m in members) / len(members) for d in range(dim)]
+
+    inertia = sum(
+        _euclidean_distance(vectors[i], centroids[labels[i]]) ** 2
+        for i in range(n)
+    )
+
+    return {"centroids": centroids, "labels": labels, "inertia": inertia}
+
+
+def _find_optimal_k(vectors: list, max_k: int = 10) -> int:
+    """Elbow method: find k where inertia improvement drops below threshold."""
+    if len(vectors) < 3:
+        return len(vectors)
+
+    max_k = min(max_k, len(vectors))
+    inertias = []
+    for k in range(2, max_k + 1):
+        result = _kmeans(vectors, k=k)
+        inertias.append(result["inertia"])
+
+    if len(inertias) < 2:
+        return 2
+
+    # Find elbow: biggest drop in rate of improvement
+    improvements = [inertias[i] - inertias[i + 1] for i in range(len(inertias) - 1)]
+    if not improvements or max(improvements) == 0:
+        return 3
+
+    # Second derivative (rate of change of improvement)
+    for i in range(len(improvements) - 1):
+        if improvements[i + 1] < improvements[i] * 0.3:  # 70% drop in improvement
+            return i + 3  # offset by starting k=2
+
+    return min(7, max_k)  # Default to 7 (matches theoretical archetypes)
+
+
+async def discover_archetypes(params: Dict[str, Any]) -> Dict:
+    """Discover empirical archetypes from accumulated PUT interaction data.
+
+    Clusters all recorded prospect PUT vectors using K-Means.
+    Compares discovered clusters against the 7 theoretical archetypes.
+    Returns: new archetypes, their centroids, and overlap analysis with theory.
+
+    This is the bridge between theoretical PUT and empirical validation.
+    """
+    # Collect all PUT vectors from interaction log
+    vectors = []
+    names = []
+
+    if INTERACTION_LOG.exists():
+        with open(INTERACTION_LOG) as f:
+            for line in f:
+                try:
+                    entry = json.loads(line.strip())
+                    v = entry.get("variables", {})
+                    if v:
+                        vec = [
+                            float(v.get("A", 0.5)), float(v.get("F", 0.5)),
+                            float(v.get("k", 0.3)), float(v.get("S", 0.5)),
+                            float(v.get("w", 0.3)), float(v.get("Sigma", 0.5)),
+                            float(v.get("tau", 0.3)), float(v.get("kappa", 0.3)),
+                            float(v.get("E_ext", 0.5)),
+                        ]
+                        vectors.append(vec)
+                        names.append(entry.get("prospect", "unknown"))
+                except Exception:
+                    continue
+
+    # Also pull from stakeholders if available
+    stakeholders_path = Path(__file__).parent.parent / "memory" / "stakeholders.json"
+    if stakeholders_path.exists():
+        try:
+            stakeholders = json.loads(stakeholders_path.read_text())
+            for eid, entity in stakeholders.items():
+                p = entity.get("put", {})
+                if p and any(p.get(v, 0) != 0.5 for v in ["A", "F", "k"]):
+                    vec = [
+                        float(p.get("A", 0.5)), float(p.get("F", 0.5)),
+                        float(p.get("k", 0.3)), float(p.get("S", 0.5)),
+                        float(p.get("w", 0.3)), float(p.get("Sigma", 0.5)),
+                        float(p.get("tau", 0.3)), float(p.get("kappa", 0.3)),
+                        float(p.get("Phi", 0.5)),
+                    ]
+                    vectors.append(vec)
+                    names.append(eid)
+        except Exception:
+            pass
+
+    if len(vectors) < 5:
+        return {
+            "success": True,
+            "data": {
+                "status": "insufficient_data",
+                "vectors_found": len(vectors),
+                "minimum_required": 5,
+            },
+            "message": (
+                f"Only {len(vectors)} PUT vectors available. Need at least 5 for clustering. "
+                f"Record more interactions via put_record_outcome to enable archetype discovery."
+            ),
+        }
+
+    # Find optimal number of clusters
+    max_k = min(10, len(vectors) // 2)
+    optimal_k = _find_optimal_k(vectors, max_k=max(max_k, 3))
+    result = _kmeans(vectors, k=optimal_k)
+
+    # Theoretical archetype centroids (9 dimensions: A, F, k, S, w, Sigma, tau, kappa, Phi)
+    theoretical = {
+        "builder":       [0.9, 0.2, 0.1, 0.5, 0.3, 0.7, 0.2, 0.2, 0.3],
+        "guardian":      [0.3, 0.8, 0.2, 0.6, 0.4, 0.6, 0.3, 0.4, 0.4],
+        "politician":    [0.6, 0.4, 0.3, 0.8, 0.2, 0.6, 0.4, 0.3, 0.5],
+        "sufferer":      [0.5, 0.5, 0.2, 0.3, 0.9, 0.4, 0.3, 0.5, 0.4],
+        "denier":        [0.4, 0.9, 0.8, 0.5, 0.6, 0.4, 0.4, 0.3, 0.7],
+        "perfectionist": [0.6, 0.5, 0.3, 0.6, 0.5, 0.6, 0.7, 0.7, 0.5],
+        "visionary":     [0.9, 0.1, 0.1, 0.4, 0.3, 0.5, 0.2, 0.2, 0.8],
+    }
+
+    # Map discovered clusters to nearest theoretical archetype
+    var_names = ["A", "F", "k", "S", "w", "Sigma", "tau", "kappa", "Phi"]
+    discovered_archetypes = []
+    novel_count = 0
+
+    for ci, centroid in enumerate(result["centroids"]):
+        cluster_members = [names[i] for i in range(len(vectors)) if result["labels"][i] == ci]
+        cluster_size = len(cluster_members)
+
+        # Distance to each theoretical archetype
+        distances = {
+            name: round(_euclidean_distance(centroid, tc), 3)
+            for name, tc in theoretical.items()
+        }
+        nearest = min(distances, key=distances.get)
+        nearest_dist = distances[nearest]
+
+        # If distance > 0.8, this is a NOVEL archetype not in theory
+        is_novel = nearest_dist > 0.8
+        if is_novel:
+            novel_count += 1
+            label = f"empirical_{novel_count}"
+        else:
+            label = nearest
+
+        centroid_dict = {var_names[i]: round(centroid[i], 3) for i in range(len(var_names))}
+
+        discovered_archetypes.append({
+            "cluster_id": ci,
+            "label": label,
+            "is_novel": is_novel,
+            "nearest_theoretical": nearest,
+            "distance_to_nearest": nearest_dist,
+            "centroid": centroid_dict,
+            "size": cluster_size,
+            "members": cluster_members[:10],  # Cap at 10 for readability
+        })
+
+    # Save discovered archetypes to calibration DB
+    cal = _load_calibration()
+    cal["discovered_archetypes"] = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "n_vectors": len(vectors),
+        "optimal_k": optimal_k,
+        "inertia": round(result["inertia"], 4),
+        "clusters": discovered_archetypes,
+    }
+    _save_calibration(cal)
+
+    # Summary
+    novel_names = [a["label"] for a in discovered_archetypes if a["is_novel"]]
+    confirmed = [a["nearest_theoretical"] for a in discovered_archetypes if not a["is_novel"]]
+    confirmed_unique = list(set(confirmed))
+    missing = [t for t in theoretical if t not in confirmed_unique]
+
+    return {
+        "success": True,
+        "data": {
+            "n_vectors": len(vectors),
+            "optimal_k": optimal_k,
+            "inertia": round(result["inertia"], 4),
+            "discovered_archetypes": discovered_archetypes,
+            "confirmed_theoretical": confirmed_unique,
+            "missing_theoretical": missing,
+            "novel_archetypes": novel_names,
+        },
+        "message": (
+            f"Discovered {optimal_k} clusters from {len(vectors)} vectors. "
+            f"Confirmed: {', '.join(confirmed_unique) if confirmed_unique else 'none'}. "
+            f"Novel: {', '.join(novel_names) if novel_names else 'none'}. "
+            f"Missing: {', '.join(missing) if missing else 'all accounted for'}."
+        ),
+    }
+
+
 TOOLS = [
     {
         "name": "put_simulate",
@@ -459,5 +784,16 @@ TOOLS = [
                 "E_ext": {"type": "number"}, "E_int": {"type": "number"}, "R": {"type": "number"},
             },
         },
+    },
+    {
+        "name": "put_discover_archetypes",
+        "description": (
+            "Discover empirical archetypes from accumulated PUT data using K-Means clustering. "
+            "Compares discovered clusters against the 7 theoretical archetypes. "
+            "Identifies NOVEL archetypes that theory didn't predict. "
+            "Requires at least 5 recorded interactions."
+        ),
+        "handler": discover_archetypes,
+        "parameters": {"type": "object", "properties": {}},
     },
 ]

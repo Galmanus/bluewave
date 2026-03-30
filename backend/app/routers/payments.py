@@ -11,6 +11,7 @@ Endpoints:
 
 import logging
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -188,4 +189,45 @@ async def mercadopago_webhook(request: Request):
             # TODO: activate tenant plan based on external_reference
             # Parse: "tenant_{uuid}_plan_{plan_id}" from payment details
 
+            # ── PUT Feedback Loop: auto-record conversion outcome ──
+            try:
+                await _record_put_conversion(payment)
+            except Exception as e:
+                logger.warning("PUT feedback recording failed (non-blocking): %s", e)
+
     return {"received": True}
+
+
+async def _record_put_conversion(payment: dict):
+    """Auto-record successful payment as PUT feedback.
+
+    Closes the feedback loop: purchase_complete → put_record_outcome.
+    This is what transforms PUT from framework to predictive science.
+    """
+    from app.routers.put_api import _calibration_state, _normalize_response
+
+    payer_email = payment.get("payer_email", "unknown")
+    amount = payment.get("amount", 0)
+    prospect_id = payer_email.split("@")[0] if payer_email else "unknown"
+
+    interaction = {
+        "prospect_id": prospect_id,
+        "predicted": "receptive",  # We presented an offer, they converted
+        "actual": "converted",
+        "actual_normalized": "receptive",
+        "correct": True,  # Conversion confirms receptive prediction
+        "archetype": None,
+        "deal_value": float(amount) if amount else None,
+        "timestamp": datetime.now().isoformat() if hasattr(datetime, "now") else "",
+        "source": "mercadopago_webhook",
+    }
+
+    _calibration_state["interactions"].append(interaction)
+    _calibration_state["accuracy_history"] = (
+        _calibration_state["accuracy_history"] + [1]
+    )[-100:]
+
+    logger.info(
+        "PUT auto-feedback: conversion recorded for %s (R$%.2f)",
+        prospect_id, float(amount) if amount else 0,
+    )

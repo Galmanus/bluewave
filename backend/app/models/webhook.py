@@ -17,6 +17,10 @@ class WebhookEvent(str, enum.Enum):
     ai_completed = "ai.completed"
     user_invited = "user.invited"
     user_removed = "user.removed"
+    payment_completed = "payment.completed"
+    payment_failed = "payment.failed"
+    subscription_activated = "subscription.activated"
+    subscription_cancelled = "subscription.cancelled"
 
 
 class Webhook(TenantMixin, Base):
