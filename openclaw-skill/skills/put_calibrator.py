@@ -32,7 +32,11 @@ INTERACTION_LOG = Path(__file__).parent.parent / "memory" / "put_interactions.js
 def _load_calibration() -> dict:
     if CALIBRATION_DB.exists():
         try:
-            return json.loads(CALIBRATION_DB.read_text())
+            cal = json.loads(CALIBRATION_DB.read_text())
+            # Back-fill verticals if older calibration file predates §13.2
+            if "verticals" not in cal:
+                cal["verticals"] = {}
+            return cal
         except Exception:
             pass
     return {
@@ -44,6 +48,7 @@ def _load_calibration() -> dict:
             "epsilon": {"mean": 0.5, "std": 0.2, "samples": 0},
         },
         "archetypes": {},
+        "verticals": {},
         "total_interactions": 0,
         "accuracy_history": [],
     }
@@ -107,6 +112,63 @@ KA_THRESHOLD = 0.55   # Shadow above this triggers delayed A suppression
 # Hysteresis thresholds (aligned with put_engine.py)
 U_CRIT_DOWN = 0.3
 U_CRIT_UP = 0.5
+
+# ── Vertical-Specific Coefficient Priors (PUT v2.3 §13.2) ────
+# Decision dynamics differ by industry vertical.
+# E-commerce: impulsive, low loss aversion → high alpha, low beta
+# B2B SaaS: deliberate, high loss aversion → low alpha, high beta
+# std=0.15 everywhere — tighter than global (0.2) because priors are theory-informed
+
+VERTICAL_PRIORS: dict = {
+    "ecommerce": {
+        # Fast decisions, low loss aversion, high impulse
+        "alpha": {"mean": 1.3, "std": 0.15, "samples": 0},
+        "beta":  {"mean": 0.8, "std": 0.15, "samples": 0},
+        "gamma": {"mean": 0.7, "std": 0.15, "samples": 0},
+        "delta": {"mean": 0.5, "std": 0.15, "samples": 0},
+        "epsilon": {"mean": 0.4, "std": 0.15, "samples": 0},
+    },
+    "b2b_saas": {
+        # Long cycles, committee decisions, high loss aversion
+        "alpha": {"mean": 0.8, "std": 0.15, "samples": 0},
+        "beta":  {"mean": 1.5, "std": 0.15, "samples": 0},
+        "gamma": {"mean": 0.9, "std": 0.15, "samples": 0},
+        "delta": {"mean": 0.7, "std": 0.15, "samples": 0},
+        "epsilon": {"mean": 0.6, "std": 0.15, "samples": 0},
+    },
+    "services": {
+        # Relationship-driven, balanced dynamics
+        "alpha": {"mean": 1.0, "std": 0.15, "samples": 0},
+        "beta":  {"mean": 1.1, "std": 0.15, "samples": 0},
+        "gamma": {"mean": 0.8, "std": 0.15, "samples": 0},
+        "delta": {"mean": 0.6, "std": 0.15, "samples": 0},
+        "epsilon": {"mean": 0.5, "std": 0.15, "samples": 0},
+    },
+    "marketplace": {
+        # Platform dynamics: moderate impulse, trust-sensitive
+        "alpha": {"mean": 1.1, "std": 0.15, "samples": 0},
+        "beta":  {"mean": 1.0, "std": 0.15, "samples": 0},
+        "gamma": {"mean": 0.7, "std": 0.15, "samples": 0},
+        "delta": {"mean": 0.5, "std": 0.15, "samples": 0},
+        "epsilon": {"mean": 0.4, "std": 0.15, "samples": 0},
+    },
+    "enterprise": {
+        # Risk-averse, procurement-driven, high loss aversion
+        "alpha": {"mean": 0.7, "std": 0.15, "samples": 0},
+        "beta":  {"mean": 1.6, "std": 0.15, "samples": 0},
+        "gamma": {"mean": 1.0, "std": 0.15, "samples": 0},
+        "delta": {"mean": 0.8, "std": 0.15, "samples": 0},
+        "epsilon": {"mean": 0.7, "std": 0.15, "samples": 0},
+    },
+    "startup": {
+        # High ambition, faster decisions, lower fear threshold
+        "alpha": {"mean": 1.4, "std": 0.15, "samples": 0},
+        "beta":  {"mean": 0.9, "std": 0.15, "samples": 0},
+        "gamma": {"mean": 0.6, "std": 0.15, "samples": 0},
+        "delta": {"mean": 0.5, "std": 0.15, "samples": 0},
+        "epsilon": {"mean": 0.5, "std": 0.15, "samples": 0},
+    },
+}
 
 
 def _apply_cross_interactions(A, F, k, S, w, Sigma, tau, kappa, Phi):
@@ -174,9 +236,25 @@ def compute_Phi(E_ext, E_int):
 
 # ── Monte Carlo Simulation ────────────────────────────────────
 
-def _sample_coefficients(cal: dict, archetype: str = None, n: int = 50) -> List[dict]:
-    """Generate N coefficient sets by sampling from current distributions."""
-    source = cal.get("archetypes", {}).get(archetype, cal.get("global", {}))
+def _sample_coefficients(cal: dict, archetype: str = None, n: int = 50,
+                          vertical: str = None) -> List[dict]:
+    """Generate N coefficient sets by sampling from current distributions.
+
+    Fallback chain (most specific → most general):
+      vertical (if calibrated) → vertical prior → archetype → global
+    """
+    # 1. Try calibrated vertical data
+    if vertical and vertical in cal.get("verticals", {}):
+        source = cal["verticals"][vertical]
+    # 2. Fall back to vertical prior (uncalibrated but theory-informed)
+    elif vertical and vertical in VERTICAL_PRIORS:
+        source = VERTICAL_PRIORS[vertical]
+    # 3. Fall back to archetype
+    elif archetype and archetype in cal.get("archetypes", {}):
+        source = cal["archetypes"][archetype]
+    # 4. Global
+    else:
+        source = cal.get("global", {})
 
     samples = []
     for _ in range(n):
@@ -184,7 +262,7 @@ def _sample_coefficients(cal: dict, archetype: str = None, n: int = 50) -> List[
         for coeff in ["alpha", "beta", "gamma", "delta", "epsilon"]:
             dist = source.get(coeff, {"mean": 0.5, "std": 0.2})
             val = random.gauss(dist["mean"], dist["std"])
-            sample[coeff] = max(0.01, min(1.0, val))  # Clamp to [0.01, 1.0]
+            sample[coeff] = max(0.01, min(2.0, val))  # Clamp [0.01, 2.0] (beta can exceed 1)
         samples.append(sample)
     return samples
 
@@ -210,10 +288,11 @@ async def simulate_prospect(params: Dict[str, Any]) -> Dict:
     archetype = params.get("archetype", None)
     prospect_name = params.get("name", "unknown")
 
+    vertical = params.get("vertical", None)
     Phi = compute_Phi(E_ext, E_int)
 
     cal = _load_calibration()
-    samples = _sample_coefficients(cal, archetype, n=100)
+    samples = _sample_coefficients(cal, archetype, n=100, vertical=vertical)
 
     results = []
     for coeffs in samples:
@@ -298,6 +377,7 @@ async def record_outcome(params: Dict[str, Any]) -> Dict:
     predicted_response = params.get("predicted", "neutral")
     actual_response = params.get("actual", "neutral")  # receptive|desperate|urgent|resistant|neutral
     archetype = params.get("archetype", None)
+    vertical = params.get("vertical", None)
 
     # PUT variables used in the prediction
     variables = params.get("variables", {})
@@ -319,7 +399,7 @@ async def record_outcome(params: Dict[str, Any]) -> Dict:
     cal = _load_calibration()
 
     # Find which coefficient sets predicted correctly
-    samples = _sample_coefficients(cal, archetype, n=200)
+    samples = _sample_coefficients(cal, archetype, n=200, vertical=vertical)
     correct_coeffs = []
 
     for coeffs in samples:
@@ -342,31 +422,38 @@ async def record_outcome(params: Dict[str, Any]) -> Dict:
         if sim_response == actual_response:
             correct_coeffs.append(coeffs)
 
-    # Bayesian update: narrow distributions toward coefficients that predicted correctly
-    target = cal.get("archetypes", {}).get(archetype, cal.get("global", {}))
-
-    if correct_coeffs:
+    def _bayesian_update_target(target: dict, correct_coeffs: list) -> dict:
+        """Update a coefficient distribution dict in-place using correct coefficient samples."""
         for coeff in ["alpha", "beta", "gamma", "delta", "epsilon"]:
             values = [c[coeff] for c in correct_coeffs]
             new_mean = sum(values) / len(values)
             new_std = max(0.05, (sum((v - new_mean) ** 2 for v in values) / len(values)) ** 0.5)
-
             old = target.get(coeff, {"mean": 0.5, "std": 0.2, "samples": 0})
-            n = old.get("samples", 0)
-
-            # Weighted average: more samples = more trust in existing
-            weight = min(n / (n + len(correct_coeffs)), 0.9)
+            n_samples = old.get("samples", 0)
+            weight = min(n_samples / (n_samples + len(correct_coeffs)), 0.9)
             target[coeff] = {
                 "mean": round(weight * old["mean"] + (1 - weight) * new_mean, 4),
                 "std": round(weight * old["std"] + (1 - weight) * new_std, 4),
-                "samples": n + 1,
+                "samples": n_samples + 1,
             }
+        return target
 
-    # Save to archetype if specified
-    if archetype:
-        cal.setdefault("archetypes", {})[archetype] = target
-    else:
-        cal["global"] = target
+    if correct_coeffs:
+        # Update global
+        cal["global"] = _bayesian_update_target(cal.get("global", {}), correct_coeffs)
+
+        # Update archetype if specified
+        if archetype:
+            arch_target = cal.setdefault("archetypes", {}).get(archetype, {})
+            cal["archetypes"][archetype] = _bayesian_update_target(arch_target, correct_coeffs)
+
+        # Update vertical if specified — starts from prior if not yet calibrated
+        if vertical:
+            vert_target = cal.setdefault("verticals", {}).get(
+                vertical,
+                {k: dict(v) for k, v in VERTICAL_PRIORS.get(vertical, {}).items()}
+            )
+            cal["verticals"][vertical] = _bayesian_update_target(vert_target, correct_coeffs)
 
     cal["total_interactions"] = cal.get("total_interactions", 0) + 1
     cal["accuracy_history"] = (cal.get("accuracy_history", []) + [1 if correct else 0])[-100:]
@@ -380,6 +467,7 @@ async def record_outcome(params: Dict[str, Any]) -> Dict:
         "actual": actual_response,
         "correct": correct,
         "archetype": archetype,
+        "vertical": vertical,
         "variables": variables,
         "correct_coefficients_found": len(correct_coeffs),
     })
@@ -416,6 +504,7 @@ async def calibration_status(params: Dict[str, Any]) -> Dict:
         "data": {
             "global_coefficients": cal.get("global", {}),
             "archetypes": list(cal.get("archetypes", {}).keys()),
+            "verticals": list(cal.get("verticals", {}).keys()),
             "total_interactions": cal.get("total_interactions", 0),
             "accuracy": round(accuracy, 2),
             "history_size": len(acc),
@@ -423,9 +512,196 @@ async def calibration_status(params: Dict[str, Any]) -> Dict:
         },
         "message": (
             f"PUT Calibration: {cal.get('total_interactions', 0)} interactions, "
-            f"{accuracy:.0%} accuracy, {len(cal.get('archetypes', {}))} archetypes. "
+            f"{accuracy:.0%} accuracy, {len(cal.get('archetypes', {}))} archetypes, "
+            f"{len(cal.get('verticals', {}))} verticals calibrated. "
             f"Status: {'converged' if len(acc) >= 50 and accuracy > 0.7 else 'calibrating'}"
         ),
+    }
+
+
+async def vertical_calibration_status(params: Dict[str, Any]) -> Dict:
+    """Show calibration state for all verticals.
+
+    Returns current coefficient estimates per vertical, how many interactions
+    have been recorded, and whether they've diverged from the theoretical prior.
+    """
+    cal = _load_calibration()
+    calibrated = cal.get("verticals", {})
+
+    vertical_report = {}
+    for vname, prior in VERTICAL_PRIORS.items():
+        live = calibrated.get(vname)
+        if live:
+            samples = live.get("alpha", {}).get("samples", 0)
+            # Drift: mean absolute difference from prior across all coefficients
+            drift = round(
+                sum(
+                    abs(live.get(c, {}).get("mean", 0) - prior[c]["mean"])
+                    for c in ["alpha", "beta", "gamma", "delta", "epsilon"]
+                ) / 5,
+                4,
+            )
+            vertical_report[vname] = {
+                "status": "calibrating" if samples < 20 else "converged",
+                "interactions": samples,
+                "drift_from_prior": drift,
+                "coefficients": {c: live.get(c, {}) for c in ["alpha", "beta", "gamma", "delta", "epsilon"]},
+            }
+        else:
+            vertical_report[vname] = {
+                "status": "prior_only",
+                "interactions": 0,
+                "drift_from_prior": 0.0,
+                "coefficients": {c: dict(v) for c, v in prior.items()},
+            }
+
+    calibrated_count = sum(1 for v in vertical_report.values() if v["status"] != "prior_only")
+
+    return {
+        "success": True,
+        "data": {
+            "verticals": vertical_report,
+            "calibrated_verticals": calibrated_count,
+            "prior_only_verticals": len(VERTICAL_PRIORS) - calibrated_count,
+        },
+        "message": (
+            f"Verticals: {calibrated_count}/{len(VERTICAL_PRIORS)} calibrated from real data. "
+            + ", ".join(
+                f"{v}: {r['interactions']} interactions"
+                for v, r in vertical_report.items()
+                if r["interactions"] > 0
+            ) or "No vertical interactions recorded yet."
+        ),
+    }
+
+
+async def predict_conversion_time(params: Dict[str, Any]) -> Dict:
+    """Temporal prediction: WHEN will this prospect reach ignition (conversion moment)?
+
+    Uses RK4 ODE integration (put_engine.solve_put_trajectory) for accurate numerical
+    trajectory. Monte Carlo over calibrated coefficient distributions gives a ±N day
+    confidence interval around the deterministic estimate.
+
+    Answers the question: "In how many days will this prospect hit ignition threshold?"
+
+    Args (all PUT variables + optional):
+        days: simulation horizon in days (default 90)
+        archetype: prospect archetype for coefficient sampling
+        vertical: industry vertical (ecommerce|b2b_saas|services|marketplace|enterprise|startup)
+        in_crisis: whether prospect is already in crisis state (default False)
+        trigger_schedule: list of daily trigger intensities [0-1]
+        threat_schedule: list of daily threat intensities [0-1]
+
+    Returns:
+        ignition_day: best estimate (RK4 deterministic)
+        confidence_interval: [low, high] in days
+        probability_30d: probability of ignition within 30 days
+        trajectory_summary: first 5 points of the RK4 trajectory
+    """
+    try:
+        from skills.put_engine import predict_ignition_time as _pit, compute_U as _engine_cU
+    except ImportError:
+        try:
+            from put_engine import predict_ignition_time as _pit, compute_U as _engine_cU
+        except ImportError:
+            return {
+                "success": False,
+                "message": "put_engine not available — run from openclaw-skill/skills/ directory",
+            }
+
+    # Extract PUT vector
+    put = {
+        "A":      float(params.get("A", 0.5)),
+        "F":      float(params.get("F", 0.5)),
+        "k":      float(params.get("k", 0.3)),
+        "S":      float(params.get("S", 0.5)),
+        "w":      float(params.get("w", 0.3)),
+        "Sigma":  float(params.get("Sigma", 0.5)),
+        "tau":    float(params.get("tau", 0.3)),
+        "kappa":  float(params.get("kappa", 0.3)),
+        "Phi":    float(params.get("Phi", 0.5)),
+        "R_net":  float(params.get("R_net", 0.0)),
+    }
+    steps = int(params.get("days", 90))
+    archetype = params.get("archetype")
+    vertical = params.get("vertical")
+    in_crisis = bool(params.get("in_crisis", False))
+    trigger_schedule = params.get("trigger_schedule")
+    threat_schedule = params.get("threat_schedule")
+    prospect_name = params.get("name", "unknown")
+
+    entity_state = {"in_crisis": in_crisis, "A_prev": put["A"]}
+
+    # ── 1. Deterministic RK4 trajectory ──────────────────────
+    base = _pit(
+        put, steps=steps,
+        trigger_schedule=trigger_schedule,
+        threat_schedule=threat_schedule,
+        entity_state=entity_state,
+    )
+
+    # ── 2. Monte Carlo: coefficient uncertainty → U uncertainty ──
+    # Sample N coefficient sets from calibrated/prior distributions
+    cal = _load_calibration()
+    mc_samples = _sample_coefficients(cal, archetype, n=200, vertical=vertical)
+
+    u_values = [
+        _engine_cU(
+            put["A"], put["F"], put["k"], put["S"], put["w"],
+            put["Sigma"], put["tau"], put["kappa"], put["Phi"], put["R_net"],
+            alpha=c["alpha"], beta=c["beta"], gamma=c["gamma"],
+            delta=c["delta"], epsilon=c["epsilon"],
+        )
+        for c in mc_samples
+    ]
+    u_mean = sum(u_values) / len(u_values)
+    u_std = (sum((u - u_mean) ** 2 for u in u_values) / len(u_values)) ** 0.5
+
+    # Translate U uncertainty to timeline uncertainty.
+    # Empirical scaling: the endogenous ODE variables change ~0.01-0.02/day.
+    # A U offset of 0.1 shifts ignition by ~7 days (dU/dt ≈ 0.014/day baseline).
+    # => uncertainty_days ≈ u_std / 0.014
+    DAYS_PER_U_STD = 70.0
+    uncertainty_days = max(1, int(u_std * DAYS_PER_U_STD))
+
+    # ── 3. Build output ──────────────────────────────────────
+    ignition_day = base.get("days_to_ignition")
+
+    if ignition_day is not None:
+        ci_low = max(1, ignition_day - uncertainty_days)
+        ci_high = ignition_day + uncertainty_days
+        forecast = (
+            f"Prospect '{prospect_name}': ignition in ~{ignition_day} days "
+            f"[CI: {ci_low}–{ci_high}]. "
+            f"P(30d) = {base['ignition_probability_30d']:.0%}."
+        )
+    else:
+        ci_low = ci_high = None
+        forecast = (
+            f"Prospect '{prospect_name}': no ignition predicted within {steps} days. "
+            f"Min U = {base.get('min_U', '?'):.3f}. "
+            f"Increase triggers or re-assess PUT vector."
+        )
+
+    return {
+        "success": True,
+        "data": {
+            "prospect": prospect_name,
+            "ignition_day": ignition_day,
+            "confidence_interval": [ci_low, ci_high] if ci_low is not None else None,
+            "uncertainty_days": uncertainty_days,
+            "probability_30d": base.get("ignition_probability_30d"),
+            "current_U_mean": round(u_mean, 4),
+            "current_U_std": round(u_std, 4),
+            "vertical": vertical or "global",
+            "archetype": archetype or "global",
+            "min_U_in_trajectory": base.get("min_U"),
+            "crisis_steps": base.get("crisis_steps"),
+            "simulation_days": steps,
+            "trajectory_summary": base.get("trajectory_summary", [])[:5],
+            "final_state": base.get("final_state"),
+        },
+        "message": forecast,
     }
 
 
@@ -794,6 +1070,51 @@ TOOLS = [
             "Requires at least 5 recorded interactions."
         ),
         "handler": discover_archetypes,
+        "parameters": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "put_predict_conversion_time",
+        "description": (
+            "Temporal prediction: WHEN will this prospect reach ignition (conversion moment)? "
+            "Uses RK4 ODE integration for accurate numerical trajectory + Monte Carlo "
+            "coefficient uncertainty to give confidence interval in days. "
+            "Returns: ignition_day, confidence_interval [low, high], probability_30d, "
+            "trajectory summary. Answers 'in N days' not just 'will they convert'."
+        ),
+        "handler": predict_conversion_time,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Prospect name"},
+                "A": {"type": "number", "description": "Ambition 0-1"},
+                "F": {"type": "number", "description": "Fear 0-1"},
+                "k": {"type": "number", "description": "Shadow coefficient 0-1"},
+                "S": {"type": "number", "description": "Status 0-1"},
+                "w": {"type": "number", "description": "Wound weight 0-1"},
+                "Sigma": {"type": "number", "description": "Ecosystem stability 0-1"},
+                "tau": {"type": "number", "description": "Treachery 0-1"},
+                "kappa": {"type": "number", "description": "Guilt transfer 0-1"},
+                "Phi": {"type": "number", "description": "Self-delusion 0-2"},
+                "R_net": {"type": "number", "description": "Network resonance -1 to 1"},
+                "days": {"type": "integer", "description": "Simulation horizon in days (default 90)"},
+                "archetype": {"type": "string", "description": "Prospect archetype for targeted coefficients"},
+                "vertical": {"type": "string", "enum": ["ecommerce", "b2b_saas", "services", "marketplace", "enterprise", "startup"], "description": "Industry vertical for vertical-specific coefficients"},
+                "in_crisis": {"type": "boolean", "description": "Whether prospect is already in crisis state"},
+                "trigger_schedule": {"type": "array", "items": {"type": "number"}, "description": "Per-day trigger intensities [0-1]"},
+                "threat_schedule": {"type": "array", "items": {"type": "number"}, "description": "Per-day threat intensities [0-1]"},
+            },
+            "required": ["name"],
+        },
+    },
+    {
+        "name": "put_vertical_status",
+        "description": (
+            "Show calibration state for all 6 industry verticals "
+            "(ecommerce, b2b_saas, services, marketplace, enterprise, startup). "
+            "Shows current coefficient estimates, sample counts, and drift from theoretical priors. "
+            "Use to know which verticals have been calibrated from real data vs theory only."
+        ),
+        "handler": vertical_calibration_status,
         "parameters": {"type": "object", "properties": {}},
     },
 ]
