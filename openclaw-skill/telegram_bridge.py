@@ -74,6 +74,14 @@ async def send_message(client: httpx.AsyncClient, chat_id: int, text: str):
         await tg(client, "sendMessage", chat_id=chat_id, text=chunk, parse_mode="HTML")
 
 
+# Tempo (segundos) antes de enviar o ACK "Processando..."
+# Respostas rápidas chegam antes disso — nenhuma mensagem extra é enviada.
+ACK_AFTER_SECONDS = 20
+
+# Intervalo de pulso de status para tarefas muito longas (em segundos)
+PULSE_INTERVAL = 120
+
+
 async def keep_typing(client: httpx.AsyncClient, chat_id: int, stop: asyncio.Event):
     """Send 'typing' action every 4s until stop is set."""
     while not stop.is_set():
@@ -82,6 +90,79 @@ async def keep_typing(client: httpx.AsyncClient, chat_id: int, stop: asyncio.Eve
         except Exception:
             pass
         await asyncio.sleep(4)
+
+
+async def _run_inference(
+    client: httpx.AsyncClient,
+    chat_id: int,
+    chat_key: str,
+    text: str,
+):
+    """Execute inference and deliver result to Telegram.
+
+    Decoupled from the polling loop — runs as a fire-and-forget task.
+    ACK_AFTER_SECONDS after start, if not done, sends ONE status message
+    so the user knows the task is alive. Never times out externally.
+    """
+    from gemini_engine import gemini_call
+
+    history = sessions.setdefault(chat_key, [])
+
+    stop = asyncio.Event()
+    typing_task = asyncio.create_task(keep_typing(client, chat_id, stop))
+    ack_sent = False
+    start_elapsed = 0
+
+    # Wrap inference in a task so we can race it against the ACK timer
+    inference_task = asyncio.create_task(
+        gemini_call(text, system_prompt=SOUL, history=history)
+    )
+
+    try:
+        while not inference_task.done():
+            try:
+                await asyncio.wait_for(
+                    asyncio.shield(inference_task),
+                    timeout=ACK_AFTER_SECONDS,
+                )
+            except asyncio.TimeoutError:
+                start_elapsed += ACK_AFTER_SECONDS
+                if not ack_sent:
+                    # One-time notification that this is a long task
+                    ack_sent = True
+                    await send_message(
+                        client, chat_id,
+                        "Processando tarefa complexa. Aviso quando terminar."
+                    )
+                elif start_elapsed % PULSE_INTERVAL == 0:
+                    # Periodic pulse for very long tasks (every 2 min after first ACK)
+                    mins = start_elapsed // 60
+                    await send_message(
+                        client, chat_id,
+                        f"Ainda trabalhando... {mins}min"
+                    )
+
+        res = inference_task.result()
+
+    except Exception as e:
+        logger.error("inference task error: %s", e)
+        res = {"success": False, "response": str(e)}
+
+    finally:
+        stop.set()
+        typing_task.cancel()
+
+    if res["success"]:
+        reply = res["response"]
+        history.append({"role": "user", "content": text})
+        history.append({"role": "model", "content": reply})
+        if len(history) > 80:
+            sessions[chat_key] = history[-80:]
+    else:
+        reply = f"[Erro: {res['response']}]"
+        logger.error("inference failed: %s", res["response"])
+
+    await send_message(client, chat_id, reply)
 
 
 async def handle(client: httpx.AsyncClient, update: dict):
@@ -100,34 +181,8 @@ async def handle(client: httpx.AsyncClient, update: dict):
         await send_message(client, chat_id, "Sessão resetada.")
         return
 
-    # Keep "typing..." alive while Gemini CLI processes
-    stop = asyncio.Event()
-    typing_task = asyncio.create_task(keep_typing(client, chat_id, stop))
-
-    try:
-        from gemini_engine import gemini_call
-
-        history = sessions.setdefault(chat_key, [])
-        res = await gemini_call(
-            text,
-            system_prompt=SOUL,
-            history=history,
-        )
-    finally:
-        stop.set()
-        typing_task.cancel()
-
-    if res["success"]:
-        reply = res["response"]
-        history.append({"role": "user", "content": text})
-        history.append({"role": "model", "content": reply})
-        if len(history) > 80:
-            sessions[chat_key] = history[-80:]
-    else:
-        reply = f"[Erro: {res['response']}]"
-        logger.error("gemini_call failed: %s", res["response"])
-
-    await send_message(client, chat_id, reply)
+    # Fire-and-forget: polling loop never blocks on inference
+    asyncio.create_task(_run_inference(client, chat_id, chat_key, text))
 
 
 async def poll():

@@ -62,10 +62,7 @@ async def gemini_call(
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
         )
-        stdout, _ = await asyncio.wait_for(
-            proc.communicate(input=stdin_content.encode()),
-            timeout=300,
-        )
+        stdout, _ = await proc.communicate(input=stdin_content.encode())
         text = stdout.decode(errors="replace").strip()
 
         if proc.returncode == 0 and text:
@@ -84,16 +81,6 @@ async def gemini_call(
                 "model": model,
                 "engine": "claude-cli",
             }
-
-    except asyncio.TimeoutError:
-        logger.error("claude CLI timed out after 120s")
-        return {
-            "success": False,
-            "response": "timeout",
-            "elapsed_seconds": time.time() - start,
-            "model": model,
-            "engine": "claude-cli",
-        }
     except Exception as e:
         logger.error("claude CLI error: %s", e)
         return {
