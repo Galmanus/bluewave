@@ -1,0 +1,7 @@
+{"action": "soul_modify", "section": "values", "key_path": "authenticity.weight", "old_value": 0.95, "new_value": 0.99, "reason": "increase authenticity", "timestamp": "2026-03-22T17:45:42.132103"}
+{"action": "self_reset", "reason": "full reset requested", "reset_energy": 1.0, "timestamp": "2026-03-23T13:28:43.371759"}
+{"action": "self_restart", "reason": "self_reset: full reset requested", "preserve_state": true, "timestamp": "2026-03-23T13:28:43.372964"}
+{"action": "self_reset", "reason": "Manuel ordered resolva — energy restored, engine restarted", "reset_energy": 1.0, "timestamp": "2026-03-23T13:29:04.852944"}
+{"action": "self_restart", "reason": "self_reset: Manuel ordered resolva — energy restored, engine restarted", "preserve_state": true, "timestamp": "2026-03-23T13:29:04.853860"}
+{"action": "self_reset", "reason": "full reset requested", "reset_energy": 1.0, "timestamp": "2026-03-28T02:26:27.995434"}
+{"action": "self_restart", "reason": "self_reset: full reset requested", "preserve_state": true, "timestamp": "2026-03-28T02:26:27.998150"}

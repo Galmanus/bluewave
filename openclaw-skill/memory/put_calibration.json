@@ -1,0 +1,34 @@
+{
+  "global": {
+    "alpha": {
+      "mean": 1.0,
+      "std": 0.2,
+      "samples": 0
+    },
+    "beta": {
+      "mean": 1.2,
+      "std": 0.2,
+      "samples": 0
+    },
+    "gamma": {
+      "mean": 0.8,
+      "std": 0.2,
+      "samples": 0
+    },
+    "delta": {
+      "mean": 0.6,
+      "std": 0.2,
+      "samples": 0
+    },
+    "epsilon": {
+      "mean": 0.5,
+      "std": 0.2,
+      "samples": 0
+    }
+  },
+  "archetypes": {},
+  "total_interactions": 1,
+  "accuracy_history": [
+    0
+  ]
+}

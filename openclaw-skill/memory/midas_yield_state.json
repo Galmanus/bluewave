@@ -1,0 +1,22 @@
+{
+  "last_scan": "2026-03-30T18:09:21.617533+00:00",
+  "current_allocation": {
+    "0": 0.4,
+    "1": 0.35,
+    "2": 0.25
+  },
+  "recommended_allocation": {
+    "0": 0.3323984626571102,
+    "1": 0.11360409958103942,
+    "2": 0.5539974377618504
+  },
+  "total_yield_generated_usd": 0.0,
+  "total_fees_collected_usd": 0.0,
+  "rebalance_count": 0,
+  "scan_count": 1,
+  "best_apy_seen": 50.29,
+  "pools_monitored": 37,
+  "last_rebalance": null,
+  "risk_score": 5.0,
+  "performance_history": []
+}

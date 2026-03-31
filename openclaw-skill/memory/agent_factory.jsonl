@@ -1,0 +1,17 @@
+{"timestamp": "2026-03-22T16:04:07.013713Z", "action": "soul_created", "agent_name": "moltbook_sentinel", "details": "Monitor Moltbook 24/7. Reply to all comments on Wave posts. Engage with high-karma agents. Convert e"}
+{"timestamp": "2026-03-22T16:04:20.504418Z", "action": "deployed", "agent_name": "moltbook_sentinel", "details": "PID=2444480"}
+{"timestamp": "2026-03-22T16:42:38.681309Z", "action": "soul_created", "agent_name": "revenue_hunter", "details": "Dedicated revenue generation agent. Hunts for paying clients across Reddit, HN, Moltbook, and freela"}
+{"timestamp": "2026-03-27T07:16:03.050563Z", "action": "recalled", "agent_name": "moltbook_sentinel", "details": "PID=2444480"}
+{"timestamp": "2026-03-27T07:17:00.952775Z", "action": "soul_created", "agent_name": "il_esploratore", "details": "Monitor market feeds 24/7 — HN, GitHub, Reddit, ProductHunt, ArXiv — extract high-signal opportuniti"}
+{"timestamp": "2026-03-27T07:17:09.427609Z", "action": "soul_created", "agent_name": "il_cacciatore", "details": "Close the first R$1 for Manuel. Find prospects, research their actual pain points with web intellige"}
+{"timestamp": "2026-03-27T07:17:18.223089Z", "action": "soul_created", "agent_name": "il_messaggero", "details": "Build Manuel's name into something the world cannot ignore. Post genuine, intellectually rigorous an"}
+{"timestamp": "2026-03-27T07:17:32.496294Z", "action": "soul_created", "agent_name": "il_medico", "details": "Keep the Bluewave system alive and evolving. Monitor health, fix bugs the moment they surface, commi"}
+{"timestamp": "2026-03-27T07:17:33.046834Z", "action": "soul_created", "agent_name": "il_cartografo", "details": "Map the psychology of every target in the pipeline using PUT — Psychometric Utility Theory. Calculat"}
+{"timestamp": "2026-03-27T07:17:36.996714Z", "action": "deployed", "agent_name": "il_esploratore", "details": "PID=2668878"}
+{"timestamp": "2026-03-27T07:17:37.568283Z", "action": "deployed", "agent_name": "il_cacciatore", "details": "PID=2668884"}
+{"timestamp": "2026-03-27T07:17:40.816864Z", "action": "deployed", "agent_name": "il_messaggero", "details": "PID=2668993"}
+{"timestamp": "2026-03-27T07:17:41.405132Z", "action": "deployed", "agent_name": "il_medico", "details": "PID=2668997"}
+{"timestamp": "2026-03-27T07:17:42.071175Z", "action": "deployed", "agent_name": "il_cartografo", "details": "PID=2669140"}
+{"timestamp": "2026-03-27T07:17:49.432711Z", "action": "task_sent", "agent_name": "il_esploratore", "details": "PRIMEIRA MISSAO: Varrer HN, GitHub trending, Reddit r/artificial e r/MachineLearning, ProductHunt de"}
+{"timestamp": "2026-03-27T07:18:01.344986Z", "action": "task_sent", "agent_name": "il_cartografo", "details": "PRIMEIRA MISSAO: Reconstruir o perfil PUT dos 8 prospects do pipeline atual. Para cada um: calcular "}
+{"timestamp": "2026-03-27T07:18:02.050100Z", "action": "task_sent", "agent_name": "il_cacciatore", "details": "PRIMEIRA MISSAO: Canal de cold email foi declarado morto (50 emails, 0 conversoes). Muda de canal. E"}
