@@ -1,0 +1,296 @@
+{
+  "task": "Write a 25-page PhD-level whitepaper for Bluewave",
+  "output_format": "Markdown (.md file)",
+  "output_path": "docs/whitepaper.md",
+
+  "document_spec": {
+    "title_pattern": "The [Core Concept]: How [Pillar 1], [Pillar 2], and [Pillar 3] Converge to Redefine the $[TAM] [Market Name]",
+    "subtitle": "A Bluewave Technical & Strategic Whitepaper",
+    "target_length": "7,500-8,500 words (~25 formatted pages with tables, code blocks, and diagrams)",
+    "academic_level": "PhD-level interdisciplinary paper spanning three domains",
+    "tone": "Authoritative, evidence-based, precise. Not promotional — analytical. Use data and citations to build arguments, not superlatives.",
+    "citation_style": "APA-style inline citations with full References section at the end. Minimum 12 peer-reviewed or canonical academic references.",
+    "audience": "VCs, enterprise buyers, strategic partners, and internal leadership. Readers who evaluate businesses through frameworks, not feature lists."
+  },
+
+  "three_disciplines": {
+    "marketing": {
+      "weight": "35%",
+      "frameworks_to_apply": [
+        "Porter's Five Forces (buyer power, supplier switching costs)",
+        "Al Ries & Jack Trout Positioning Theory (category creation vs. feature competition)",
+        "TAM/SAM/SOM recalculation through category reframing",
+        "Channel theory (agency as distribution channel, reseller arithmetic)",
+        "Wedge strategy (narrow entry point that reframes buyer perception)",
+        "Competitive positioning matrix (before/after transformation)"
+      ],
+      "topics_to_cover": [
+        "Market size and growth trajectory with data points",
+        "Content production crisis (supply/demand gap with statistics)",
+        "Category creation playbook (DAM tool → AI Creative Operations Agent)",
+        "Competitive positioning shift with comparison table",
+        "White-label economics and the agency multiplier effect",
+        "Distribution as competitive moat (last-mile thesis)",
+        "Revenue-ordered implementation roadmap"
+      ]
+    },
+    "ai_engineering": {
+      "weight": "35%",
+      "frameworks_to_apply": [
+        "Wooldridge & Jennings agent properties (autonomy, social ability, reactivity, proactivity, learning)",
+        "OODA loop (Observe-Orient-Decide-Act) mapped to agent architecture",
+        "Protocol pattern for AI model evolution",
+        "Graceful degradation engineering",
+        "Multi-tenant AI isolation architecture",
+        "Autonomy ladder (Level 0-5 spectrum)"
+      ],
+      "topics_to_cover": [
+        "Vision pipeline: ingestion → multimodal analysis → graceful degradation",
+        "Compliance engine: guidelines → prompt construction → structured scoring (0-100)",
+        "Brand Voice learning: stateless vs. semi-stateful vs. fully stateful AI layers",
+        "AIServiceProtocol pattern with actual code snippets from the codebase",
+        "Multi-tenant data isolation (TenantMixin + session events)",
+        "AI isolation at the prompt level (contextual boundaries)",
+        "Usage metering architecture (millicent precision, token tracking)",
+        "Stub fallback mechanism for development/testing"
+      ]
+    },
+    "sales_psychology": {
+      "weight": "30%",
+      "frameworks_to_apply": [
+        "Maslow's hierarchy adapted for organizational buyers (Kenrick et al., 2010)",
+        "Jobs-To-Be-Done (Christensen et al., 2016)",
+        "Loss aversion and endowment effect (Kahneman, Tversky)",
+        "Psychological reactance theory (Brehm, 1966)",
+        "Automation trust calibration (Lee & See, 2004)",
+        "Mere exposure effect (Zajonc, 1968)",
+        "Availability heuristic (Tversky & Kahneman, 1973)",
+        "Payment psychology / pain of paying (Prelec & Loewenstein, 1998)"
+      ],
+      "topics_to_cover": [
+        "Three-layer pain taxonomy (functional → identity → existential)",
+        "Approval bottleneck as organizational neurosis",
+        "Buyer segmentation by decision psychology (agency vs. mid-market vs. enterprise)",
+        "Temporal data moat as psychological lock-in (endowment effect, not reactance)",
+        "Five-layer switching cost model with temporal staircase",
+        "Why usage-based pricing resolves the B2B payment psychology paradox",
+        "Compliance-as-revenue: dual value proposition (cost reducer + risk reducer)",
+        "ROI proof loop: self-justifying software that prevents churn",
+        "Executive report as retention mechanism (mere exposure + availability heuristic)",
+        "Trust calibration through graduated transparency (scores, not binaries)"
+      ]
+    }
+  },
+
+  "chapter_structure": [
+    {
+      "number": 1,
+      "title": "Executive Summary",
+      "word_count": "400-500",
+      "instructions": "Synthesize the entire thesis in one section. State the market size, the category shift (tool → agent), the economic impact (5-6x ARPU, 2x LTV), and the three converging forces. End with what the paper will examine. This should stand alone as a complete argument."
+    },
+    {
+      "number": 2,
+      "title": "The Market Inflection: Why Now",
+      "word_count": "600-700",
+      "instructions": "Three subsections: (1) Content Production Crisis — use specific statistics (51% search time, 33% of marketers 3 weeks/year, $300B waste, 52% miss deadlines). (2) AI Capability Threshold — explain why pre-2024 AI was assistive and why multimodal vision crossed the threshold to agency. Use Bluewave's upload pipeline as the concrete example. (3) Market Size Recalculation — reframe TAM from $5.4B (DAM) to $15B+ (Creative Ops) by including adjacent markets."
+    },
+    {
+      "number": 3,
+      "title": "The Pain Taxonomy: A Psychographic Analysis",
+      "word_count": "600-700",
+      "instructions": "Three subsections: (1) Three-layer pain model (functional/identity/existential) with concrete examples and the psychological escalation from 'we should probably get a DAM' to 'we need this fixed by Q2'. (2) Approval bottleneck as organizational neurosis — map creator/reviewer/manager anxieties and show how AI compliance scoring is a psychological intervention. (3) Buyer segmentation table with decision psychology (agency=external pressure, mid-market=internal accountability, enterprise=loss aversion)."
+    },
+    {
+      "number": 4,
+      "title": "From Tool to Agent: The Architectural Thesis",
+      "word_count": "500-600",
+      "instructions": "Three subsections: (1) Define agency using Wooldridge & Jennings' 4 properties + add 'learning' as 5th. Show how traditional DAMs satisfy none and Bluewave satisfies all. Use a comparison table. (2) Map agent loop to OODA framework with ASCII diagram. (3) Explain the Protocol pattern with actual Python code from ai_service.py. Emphasize that AI model evolution never requires route handler changes."
+    },
+    {
+      "number": 5,
+      "title": "The AI Engineering Stack: Vision, Compliance, and Voice",
+      "word_count": "700-800",
+      "instructions": "Three subsections matching the three AI layers: (1) Vision Pipeline — 3 stages (ingestion, multimodal analysis, graceful degradation). Include the actual system prompts used. (2) Compliance Engine — describe the flow from guidelines to ComplianceResult. Include the Python dataclass code. Explain graduated routing (>=90 auto-submit, 70-89 warnings, <70 block). (3) Brand Voice Learning — explain stateless vs. semi-stateful vs. fully stateful. Describe the few-shot learning mechanism. State the moat thesis: 'This is the data moat.'"
+    },
+    {
+      "number": 6,
+      "title": "The Data Moat: Temporal Lock-In",
+      "word_count": "500-600",
+      "instructions": "Three subsections: (1) Moat theory in SaaS — enumerate the 4 classic moat types. Explain why traditional DAMs have weak moats. (2) The temporal data moat — timeline table showing capability and switching cost at months 1/3/6/12/18. (3) Psychological dimension — use endowment effect and loss aversion to explain why data moats are psychologically stronger than contractual lock-in. Include the 2.25x loss aversion coefficient."
+    },
+    {
+      "number": 7,
+      "title": "Behavioral Economics of Switching Costs",
+      "word_count": "500-600",
+      "instructions": "Two subsections: (1) Five-layer switching cost model — Layer 1: data migration ($500-2K), Layer 2: workflow reconstruction ($5K-15K), Layer 3: brand intelligence loss (unquantifiable), Layer 4: team retraining ($3K-8K), Layer 5: relationship disruption (multiplicative for agencies). (2) The switching cost staircase — ASCII timeline showing accumulation from month 0 to 18+."
+    },
+    {
+      "number": 8,
+      "title": "Outcome-Based Pricing Psychology",
+      "word_count": "600-700",
+      "instructions": "Four subsections: (1) Why per-seat pricing fails for AI (value is concentrated, variable, and demonstrable). (2) Hybrid model breakdown (seats + usage + modules) with specific price points. (3) Psychology of usage-based pricing — cite Prelec & Loewenstein on pain of paying. Explain why B2B resolves the paradox differently. Reference Intercom Fin ($0.99/resolution, 393% growth). (4) Metering architecture — describe AIUsageLog fields including cost_millicents precision."
+    },
+    {
+      "number": 9,
+      "title": "The Compliance Autonomy Spectrum",
+      "word_count": "500-600",
+      "instructions": "Three subsections: (1) Autonomy ladder (Level 0-5) with clear definitions. Position competitors at L1, Bluewave current at L2-3, roadmap at L4-5. (2) Trust calibration — cite Lee & See's 3 failure modes (disuse, misuse, abuse). Explain how graduated scoring prevents all three. (3) Compliance-as-revenue — pricing arbitrage ($450+ Bynder vs. $29 Bluewave for same capability). 78% fewer brand incidents stat."
+    },
+    {
+      "number": 10,
+      "title": "Multi-Tenant AI Isolation",
+      "word_count": "400-500",
+      "instructions": "Three subsections: (1) The isolation imperative — why trust requires absolute tenant separation. (2) Row-level isolation — TenantMixin code, session event listener. (3) AI isolation at prompt level — stateless model = architectural isolation by default. Key insight: learning is in the data curation, not model weights, so it persists across model upgrades."
+    },
+    {
+      "number": 11,
+      "title": "The Agency Multiplier",
+      "word_count": "400-500",
+      "instructions": "Three subsections: (1) Reseller arithmetic — concrete numbers ($49/user + $29/portal → $1,025/month vs. $180 before = 5.7x). (2) Channel theory — Porter's buyer power analysis. Switching cost multiplicative effect (agency → clients → clients' users). (3) Portal as brand extension — transforms cost center to revenue enabler, eliminates price sensitivity."
+    },
+    {
+      "number": 12,
+      "title": "Distribution as Control",
+      "word_count": "400-500",
+      "instructions": "Three subsections: (1) Workflow completion imperative — Brief→Create→Review→Approve→Publish→Analyze, DAMs only cover middle. 4.3 tools average for last mile. (2) Distribution as second data moat (performance learning on output side, complementing brand voice on input side). (3) Auto-resize intelligence — show how 1 upload → 8 AI actions → $0.40 usage revenue. 5x per-asset monetization."
+    },
+    {
+      "number": 13,
+      "title": "The ROI Proof Loop",
+      "word_count": "400-500",
+      "instructions": "Three subsections: (1) Churn equation — introduce the third variable (increase visibility of existing value). (2) Self-justifying dashboard — 4 specific metrics with exact copy ('Bluewave saved your team an estimated $14,200 this month'). (3) Executive report as retention mechanism — solve the 'champion left the company' churn pattern. Cite Zajonc mere exposure effect and Tversky availability heuristic."
+    },
+    {
+      "number": 14,
+      "title": "Category Creation vs. Feature Competition",
+      "word_count": "400-500",
+      "instructions": "Three subsections: (1) Category creation playbook — Ries & Trout positioning theory. Comparison table (category competition vs. creation). (2) Full positioning matrix (before/after on 8 dimensions). (3) Wedge strategy — the upload-to-caption pipeline as the narrow entry point. 'The category reframe happens in the user's mind, not in the marketing copy.'"
+    },
+    {
+      "number": 15,
+      "title": "Implementation Architecture",
+      "word_count": "400-500",
+      "instructions": "Three subsections: (1) Revenue-ordered roadmap table (Phase 1-17 with feature, revenue mechanism, cumulative multiplier). Cite Lean Startup principle. (2) Phase-gate criteria (technical/revenue/adoption/documentation checkpoints). (3) The 60/40 rule — 60% infrastructure done, 40% revenue-expansion remaining. '17 weeks to full platform.'"
+    },
+    {
+      "number": 16,
+      "title": "Conclusion: The Agent Inevitability",
+      "word_count": "400-500",
+      "instructions": "Three subsections: (1) Thesis restated — three converging forces. (2) Inevitability argument — economic pressure (8.6x cost advantage vs. hiring), AI capability trajectory, competitive cascade dynamics. (3) First-mover advantage in data moats — land-grab dynamic. End with: 'The agent is inevitable. The question is whose agent it will be.'"
+    }
+  ],
+
+  "required_elements": {
+    "tables": "Minimum 10 tables throughout the document. Use tables for comparisons, timelines, frameworks, and data presentation.",
+    "code_blocks": "Minimum 3 actual code snippets from the Bluewave codebase (AIServiceProtocol, ComplianceResult dataclass, TenantMixin, _create_ai_service factory). Use Python syntax highlighting.",
+    "ascii_diagrams": "Minimum 2 ASCII art diagrams (OODA agent loop, switching cost staircase, or autonomy ladder).",
+    "statistics": "Every market claim must have a specific number and source attribution (e.g., '51% of employees — Wakefield Research, 2024').",
+    "pricing_math": "Include concrete revenue calculations with actual Bluewave price points.",
+    "references_section": "Full academic references in APA format. Minimum 12 citations from: Kahneman, Tversky, Porter, Christensen, Wooldridge & Jennings, Ries & Trout, Ries (Lean Startup), Brehm, Boyd, Lee & See, Zajonc, Prelec & Loewenstein, Greenwald & Kahn, Kenrick et al."
+  },
+
+  "product_context": {
+    "product_name": "Bluewave",
+    "tagline": "You upload. The agent does the rest.",
+    "category": "AI Creative Operations Agent",
+    "one_liner": "The AI agent that sees your media, writes your copy, enforces your brand, and ships your content — on autopilot.",
+
+    "current_pricing": {
+      "free": "$0 (3 users, 5GB, 50 AI actions/month)",
+      "pro": "$29/user/month",
+      "business": "$49/user/month",
+      "enterprise": "$149/user/month",
+      "ai_usage": "$0.05/action, $0.25/brand voice, $1.00/content brief"
+    },
+
+    "competitive_set": ["Bynder ($450+/mo)", "Brandfolder ($1,600+/mo)", "Air.inc ($10/user)", "Dash ($109/mo)", "Frontify ($29/mo)", "Jasper", "Copy.ai", "Buffer"],
+
+    "market_data": {
+      "dam_market_2025": "$5.36B",
+      "dam_market_2029": "$10.3B",
+      "dam_market_2035": "$17.6B",
+      "cagr": "12.6%-16.3%",
+      "expanded_tam": "$15B+ (Creative Ops + AI Marketing + Automation)",
+      "search_time_waste": "51% spend 2+ hrs/day searching",
+      "marketers_search": "33% spend 3+ weeks/year searching",
+      "duplication_waste": "51% recreate assets they can't find",
+      "industry_waste": "$300B estimated",
+      "missed_deadlines": "52% miss deadlines due to approval delays",
+      "compliance_improvement": "78% fewer brand incidents with AI-enhanced DAM",
+      "roi_3yr": "347% average",
+      "search_reduction": "62% less search/prep time",
+      "production_cost_reduction": "40% decrease",
+      "duplicate_reduction": "45% fewer duplicates",
+      "approval_cycle_reduction": "40% faster approvals",
+      "productivity_increase": "35% marketing productivity",
+      "tools_for_last_mile": "4.3 average tools to publish"
+    },
+
+    "tech_stack": {
+      "backend": "Python 3.11 + FastAPI 0.110 + SQLAlchemy 2.0 (async) + Alembic",
+      "frontend": "React 18 + TypeScript 5.5 + Vite 5.4 + Tailwind 3.4 + React Query",
+      "ai": "Anthropic Claude API (claude-sonnet-4-20250514) with Vision",
+      "database": "PostgreSQL 16 (row-level multi-tenant isolation)",
+      "infrastructure": "Docker Compose"
+    },
+
+    "architecture_details": {
+      "multi_tenancy": "Row-level isolation via TenantMixin + SQLAlchemy session event listener auto-injects WHERE tenant_id = :tid",
+      "ai_service_pattern": "AIServiceProtocol (Python Protocol type) → ClaudeAIService (real) | StubAIService (fallback)",
+      "usage_metering": "AIUsageLog table with tenant_id, user_id, asset_id, action_type, input_tokens, output_tokens, cost_millicents",
+      "compliance_scoring": "0-100 score with severity levels (error/warning/info), categories (color/logo/tone/font/hashtag), and actionable suggestions",
+      "brand_voice_learning": "Few-shot learning from N most recent approved assets included in generation prompts"
+    },
+
+    "revenue_projections": {
+      "small_agency_before": "$180/month (15 users × $12)",
+      "small_agency_after": "$1,025/month (15 × $49 + 5 portals + AI)",
+      "mid_market_before": "$1,500/month (50 users × $30)",
+      "mid_market_after": "$8,950/month (50 × $149 + AI + channels)",
+      "per_customer_multiplier": "5-6x",
+      "ltv_multiplier_with_retention": "2x additional",
+      "total_value_multiplier": "10x"
+    },
+
+    "implementation_phases": [
+      {"phase": "1-8", "name": "Core MVP", "status": "DONE", "revenue": "1x"},
+      {"phase": "9", "name": "Landing + Webhooks + API Keys", "status": "DONE", "revenue": "1x"},
+      {"phase": "10", "name": "Real AI (Claude Vision)", "status": "DONE", "revenue": "2-3x"},
+      {"phase": "10.5", "name": "Trends + Brand + Compliance", "status": "DONE", "revenue": "3-4x"},
+      {"phase": "11", "name": "Compliance Engine UI", "status": "NEXT", "revenue": "4-5x"},
+      {"phase": "12", "name": "White-Label Portals", "status": "planned", "revenue": "5-6x"},
+      {"phase": "13", "name": "Analytics & ROI Dashboard", "status": "planned", "revenue": "6-8x"},
+      {"phase": "14", "name": "Multi-Channel Distribution", "status": "planned", "revenue": "8-10x"},
+      {"phase": "15", "name": "Workflow Automation Builder", "status": "planned", "revenue": "10-12x"},
+      {"phase": "16", "name": "Brand Voice AI Training", "status": "planned", "revenue": "12-15x"},
+      {"phase": "17", "name": "Content Calendar", "status": "planned", "revenue": "15x"}
+    ]
+  },
+
+  "style_rules": [
+    "Never use 'we believe' or 'we think' — use 'we argue', 'the data demonstrates', 'this analysis shows'",
+    "Every claim about the market must have a statistic or citation",
+    "Use 'This is not X. This is Y.' as a rhetorical device sparingly but effectively (max 3 times)",
+    "Tables should be used for any comparison with 3+ dimensions",
+    "Code blocks should be actual code from the codebase, not pseudocode",
+    "Each chapter must have exactly 2-3 subsections numbered X.1, X.2, X.3",
+    "The conclusion must end with a memorable one-liner that captures the thesis",
+    "No emojis, no bullet-heavy marketing copy, no feature lists disguised as analysis",
+    "Academic tone throughout — this should read like a Harvard Business Review article meets an ACM paper",
+    "Use 'temporal data moat' consistently as the proprietary term for Bluewave's competitive advantage"
+  ],
+
+  "context_files_to_read": [
+    {"path": "workflow.json", "what_to_extract": "tech stack, architecture, AI integration, execution phases, positioning"},
+    {"path": "docs/10x_strategy.md", "what_to_extract": "5 high-impact moves, pricing model, revenue projections, data moat explanation, competitive positioning"},
+    {"path": "docs/market_research.md", "what_to_extract": "market size, pain points with statistics, competitor analysis, buyer segments, ROI metrics"},
+    {"path": "backend/app/services/ai_service.py", "what_to_extract": "AIServiceProtocol code, ClaudeAIService implementation, vision pipeline, fallback mechanism"},
+    {"path": "backend/app/services/compliance_service.py", "what_to_extract": "ComplianceResult dataclass, scoring logic, issue categories"},
+    {"path": "backend/app/models/ai_usage.py", "what_to_extract": "AIActionType enum, cost_millicents field, metering schema"},
+    {"path": "backend/app/models/brand_guideline.py", "what_to_extract": "guideline fields (colors, tone, dos/donts, custom rules)"},
+    {"path": "backend/app/core/tenant.py", "what_to_extract": "TenantMixin, session event listener for isolation"},
+    {"path": "frontend/src/components/landing/Pricing.tsx", "what_to_extract": "current pricing tiers displayed to users"},
+    {"path": "frontend/src/components/landing/PainPoints.tsx", "what_to_extract": "pain point messaging and statistics"}
+  ]
+}

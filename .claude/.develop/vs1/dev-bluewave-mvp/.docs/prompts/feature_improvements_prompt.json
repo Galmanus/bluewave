@@ -1,0 +1,765 @@
+{
+  "task": "Implementação de 20 melhorias no Bluewave — De MVP funcional a produto competitivo de mercado",
+  "output_format": "Código implementado diretamente no projeto existente",
+  "project_root": "/home/manuel/bluewave",
+
+  "context": {
+    "project_state": "MVP 98% funcional. Backend FastAPI + PostgreSQL async com 14 routers, 14 models, 11 migrations. Frontend React 18 + TypeScript + Tailwind com 12 páginas. AI integration com Claude Vision (caption, hashtags, compliance). OpenClaw skill server com 16 tools. Docker Compose com dev/staging/prod configs. LangSmith tracing, Stripe billing, Redis caching, Sentry, audit logging — tudo implementado.",
+    "what_is_missing": "Features que transformam o MVP em produto competitivo: email transacional, thumbnails, busca full-text, auto-resize, content calendar, social publishing, SSO, visual search, AI content briefs, video analysis.",
+    "tech_stack": {
+      "backend": "Python 3.11 + FastAPI 0.110 + SQLAlchemy 2.0 (async) + Alembic + asyncpg + Redis",
+      "frontend": "React 18.3 + TypeScript 5.5 + Vite 5.4 + Tailwind 3.4 + React Query 5.45 + Radix UI + Recharts",
+      "ai": "Anthropic Claude API (claude-sonnet-4-20250514) com Vision + LangSmith tracing",
+      "database": "PostgreSQL 16 (row-level multi-tenant via TenantMixin + session event listener)",
+      "infrastructure": "Docker Compose (postgres, backend, frontend, redis, openclaw-skill)",
+      "billing": "Stripe (checkout, portal, webhooks, metered usage)",
+      "storage": "Local Docker volume (/app/uploads/{tenant_id}/), storage.py com interface S3-compatible"
+    },
+
+    "existing_patterns": {
+      "new_model": "Herdar de Base + TenantMixin + TimestampMixin. Adicionar em backend/app/models/__init__.py. Criar migration Alembic.",
+      "new_router": "Criar em backend/app/routers/. Registrar em main.py com app.include_router(router, prefix='/api/v1'). Usar Depends(get_current_user) ou Depends(require_role('admin')).",
+      "new_service": "Criar em backend/app/services/. Importar nos routers. Async/await obrigatório.",
+      "new_frontend_page": "Criar em frontend/src/pages/. Lazy import em App.tsx. Usar React Query para data fetching. Adicionar rota com guard de role.",
+      "ai_call": "Usar ai_service.generate_caption/generate_hashtags pattern. Logar com log_ai_usage(). Instrumentar com LangSmith @traceable.",
+      "background_task": "Usar FastAPI BackgroundTasks para operações demoradas (AI, resize, export)."
+    }
+  },
+
+  "improvements": {
+
+    "tier_1_quick_wins": [
+      {
+        "id": "IMP-1",
+        "name": "Email transacional (Resend)",
+        "effort": "4 horas",
+        "impact": "Alto — features existem mas não enviam email",
+
+        "description": "O sistema já tem password reset (retorna token direto na response), convite de usuários (cria user sem notificar), e relatório mensal (gera PDF mas não envia). Falta apenas o serviço de email para conectar tudo.",
+
+        "implementation": {
+          "dependencies": ["resend>=2.0"],
+          "env_vars": {
+            "RESEND_API_KEY": "API key do Resend (se vazio, skip email silenciosamente e logar warning)",
+            "EMAIL_FROM": "noreply@bluewave.app",
+            "APP_URL": "http://localhost:5174 (para links nos emails)"
+          },
+
+          "service": {
+            "file": "backend/app/services/email_service.py",
+            "functions": [
+              {
+                "name": "send_password_reset",
+                "params": "email: str, reset_token: str, full_name: str",
+                "behavior": "Enviar email com link {APP_URL}/reset-password?token={reset_token}. Template HTML minimalista com logo Bluewave, saudação pelo nome, botão azul 'Resetar Senha', expiração de 1 hora. Fallback: se RESEND_API_KEY vazio, logar o token no console (dev mode).",
+                "template": "HTML inline no Python (sem engine de template — manter simples). Usar Tailwind-style inline CSS."
+              },
+              {
+                "name": "send_user_invitation",
+                "params": "email: str, full_name: str, inviter_name: str, tenant_name: str, temp_password: str",
+                "behavior": "Enviar email com: 'Você foi convidado por {inviter_name} para o workspace {tenant_name} no Bluewave. Suas credenciais: email {email}, senha temporária {temp_password}. Faça login em {APP_URL}/login'. Incluir botão 'Entrar no Bluewave'."
+              },
+              {
+                "name": "send_monthly_report",
+                "params": "email: str, full_name: str, tenant_name: str, report_pdf_path: str, summary: dict",
+                "behavior": "Enviar email com: assunto 'Seu Relatório de Operações Criativas — {mês/ano}', corpo com KPIs principais (assets processados, economia estimada, score médio de compliance), PDF anexado. Enviar para todos os admins do tenant."
+              },
+              {
+                "name": "send_asset_notification",
+                "params": "email: str, event: str, asset_caption: str, actor_name: str",
+                "behavior": "Notificação de workflow: 'Asset submetido/aprovado/rejeitado por {actor}'. Incluir preview da caption. Link direto para o asset."
+              }
+            ],
+            "error_handling": "Todas as funções de email devem ser async, fire-and-forget. Se Resend falhar, logar erro mas NUNCA bloquear a operação principal. Usar try/except ao redor de toda chamada."
+          },
+
+          "integration_points": [
+            "backend/app/routers/auth.py: reset_password_request() → chamar send_password_reset() em vez de retornar token na response",
+            "backend/app/routers/users.py: create_user() → chamar send_user_invitation() após criar o usuário",
+            "backend/app/services/report_service.py: após gerar PDF → chamar send_monthly_report() para cada admin do tenant",
+            "backend/app/routers/workflow.py: após approve/reject → chamar send_asset_notification() para o uploader"
+          ]
+        }
+      },
+
+      {
+        "id": "IMP-2",
+        "name": "Fix test suite",
+        "effort": "1 hora",
+        "impact": "Crítico — 16 arquivos escritos mas inutilizáveis",
+
+        "description": "Os 16 arquivos de teste existem mas não rodam devido a incompatibilidade com import de GenericAlias no pydantic_settings em Python 3.8. O container usa Python 3.11, então o problema pode ser versão de pydantic_settings ou conflito de imports.",
+
+        "implementation": {
+          "diagnosis": [
+            "Rodar: docker compose exec backend python -m pytest tests/ -v 2>&1 | head -50",
+            "Identificar o erro exato de import",
+            "Provável causa: pydantic_settings version pinning ou import circular"
+          ],
+          "fixes_provaveis": [
+            "Atualizar pydantic-settings para >=2.2.0 no requirements.txt",
+            "Verificar que conftest.py mocka settings corretamente (não importa config.py diretamente)",
+            "Se o problema é SQLite vs PostgreSQL: usar aiosqlite para testes OU criar PostgreSQL de teste via Docker",
+            "Adicionar pytest.ini ou pyproject.toml com: [tool.pytest.ini_options] asyncio_mode = 'auto'"
+          ],
+          "validation": "Todos os 16 test files devem rodar com: pytest tests/ -v --tb=short. Mínimo 50 testes passando.",
+          "ci_integration": "Após fix, verificar que .github/workflows/ci.yml roda os testes corretamente"
+        }
+      },
+
+      {
+        "id": "IMP-3",
+        "name": "Asset preview real nas listagens (thumbnails)",
+        "effort": "3 horas",
+        "impact": "Alto — UX drasticamente melhor",
+
+        "description": "Hoje o AssetListPage mostra ícone genérico (ImageIcon/VideoIcon) em vez da imagem real. O endpoint GET /assets/{id}/file existe e aceita auth via ?token= query param, mas não é usado na listagem. Além disso, servir a imagem full-size na listagem é lento. Precisamos gerar thumbnails.",
+
+        "implementation": {
+          "dependencies": ["Pillow>=10.2"],
+
+          "backend": {
+            "thumbnail_generation": {
+              "file": "backend/app/services/thumbnail_service.py",
+              "function": "async def generate_thumbnail(file_path: str, file_type: str, tenant_id: str, asset_id: str, size: tuple[int, int] = (400, 400)) -> str | None",
+              "behavior": [
+                "Se file_type começa com 'image/': abrir com Pillow, resize com thumbnail() mantendo aspect ratio, salvar como WebP (qualidade 80) em /app/uploads/{tenant_id}/thumbs/{asset_id}.webp",
+                "Se file_type começa com 'video/': retornar None (thumbnail de vídeo = fase futura com ffmpeg)",
+                "Retornar o path do thumbnail ou None se falhar",
+                "Chamar esta função no background task após upload (junto com AI pipeline)"
+              ]
+            },
+            "endpoint": {
+              "file": "backend/app/routers/assets.py",
+              "add": "GET /assets/{asset_id}/thumbnail — mesmo padrão do /file (auth via Bearer ou ?token=), mas serve o thumbnail WebP. Se thumbnail não existe, retornar 404 (frontend faz fallback para ícone)."
+            },
+            "model_change": {
+              "file": "backend/app/models/asset.py",
+              "add_column": "thumbnail_path: Mapped[str | None] = mapped_column(String, nullable=True) — path do thumbnail gerado",
+              "migration": "ALTER TABLE media_assets ADD COLUMN thumbnail_path VARCHAR NULL"
+            }
+          },
+
+          "frontend": {
+            "file": "frontend/src/pages/AssetListPage.tsx",
+            "change": "Substituir o ícone genérico por <img> real. Usar o mesmo padrão de getAssetFileUrl mas apontando para /thumbnail. Fallback para ícone se thumbnail retornar 404. Lazy loading com loading='lazy'. Aspect ratio container com object-cover.",
+            "component": "Criar AssetThumbnail.tsx: recebe assetId, renderiza <img> com src={getThumbnailUrl(assetId)}, onError fallback para ícone, loading skeleton enquanto carrega.",
+            "also_update": "AssetDetailPage.tsx — mostrar imagem full-size no detail (já funciona via /file endpoint, só precisa usar no layout)."
+          }
+        }
+      },
+
+      {
+        "id": "IMP-4",
+        "name": "Busca full-text com PostgreSQL tsvector",
+        "effort": "3 horas",
+        "impact": "Alto — DAM sem busca é inaceitável",
+
+        "description": "O AssetListPage tem um campo de busca mas ele faz ILIKE no caption apenas. Precisamos de busca full-text real cobrindo caption + hashtags + filename, com ranking por relevância.",
+
+        "implementation": {
+          "migration": {
+            "file": "Nova migration Alembic",
+            "sql": [
+              "ALTER TABLE media_assets ADD COLUMN search_vector tsvector",
+              "CREATE INDEX ix_media_assets_search ON media_assets USING gin(search_vector)",
+              "CREATE OR REPLACE FUNCTION media_assets_search_update() RETURNS trigger AS $$ BEGIN NEW.search_vector := setweight(to_tsvector('english', coalesce(NEW.caption, '')), 'A') || setweight(to_tsvector('english', coalesce(array_to_string(NEW.hashtags, ' '), '')), 'B') || setweight(to_tsvector('english', coalesce(split_part(NEW.file_path, '/', -1), '')), 'C'); RETURN NEW; END; $$ LANGUAGE plpgsql",
+              "CREATE TRIGGER media_assets_search_trigger BEFORE INSERT OR UPDATE OF caption, hashtags, file_path ON media_assets FOR EACH ROW EXECUTE FUNCTION media_assets_search_update()",
+              "UPDATE media_assets SET search_vector = setweight(to_tsvector('english', coalesce(caption, '')), 'A') || setweight(to_tsvector('english', coalesce(array_to_string(hashtags, ' '), '')), 'B')"
+            ],
+            "explanation": "tsvector com pesos: caption (A=mais relevante) > hashtags (B) > filename (C). Trigger auto-atualiza ao inserir/atualizar. Index GIN para buscas rápidas."
+          },
+
+          "backend": {
+            "file": "backend/app/routers/assets.py",
+            "change": "No endpoint GET /assets, quando query param 'q' estiver presente: usar plainto_tsquery('english', q) com ts_rank() para ordenar por relevância. Manter ILIKE como fallback para buscas com caracteres especiais que o tsvector não entende. Query: SELECT *, ts_rank(search_vector, query) AS rank FROM media_assets WHERE search_vector @@ plainto_tsquery('english', :q) ORDER BY rank DESC"
+          },
+
+          "frontend": {
+            "file": "frontend/src/pages/AssetListPage.tsx",
+            "change": "O campo de busca já existe. Adicionar debounce de 300ms (já deve ter). Mostrar indicador de 'buscando...' durante a query. Destacar termos encontrados no caption (highlight). Se nenhum resultado, mostrar 'Nenhum asset encontrado para \"{query}\"'."
+          }
+        }
+      },
+
+      {
+        "id": "IMP-5",
+        "name": "Export de assets em bulk (ZIP)",
+        "effort": "3 horas",
+        "impact": "Médio — feature esperada em DAM",
+
+        "description": "Permitir que o usuário selecione múltiplos assets e baixe um ZIP com todos os arquivos originais + metadata CSV.",
+
+        "implementation": {
+          "backend": {
+            "endpoint": {
+              "file": "backend/app/routers/assets.py",
+              "add": "POST /assets/export — body: {asset_ids: list[UUID]}. Validar que todos os assets pertencem ao tenant. Criar ZIP em memória (ou tmpfile) com: pasta de arquivos originais + metadata.csv (id, filename, caption, hashtags, status, compliance_score, created_at). Retornar StreamingResponse com content-type application/zip e Content-Disposition attachment.",
+              "limits": "Máximo 100 assets por export. Máximo 500MB total. Se exceder, retornar 400 com mensagem."
+            },
+            "dependencies": ["(nenhuma — zipfile é stdlib)"]
+          },
+
+          "frontend": {
+            "changes": [
+              "AssetListPage: adicionar checkbox em cada asset card. Quando 1+ selecionados, mostrar toolbar flutuante com 'X selecionados' + botões: 'Export ZIP', 'Aprovar todos', 'Deletar todos'.",
+              "Componente SelectionToolbar.tsx: barra fixa no bottom da tela, aparece com animação slide-up, mostra contagem + ações.",
+              "Ao clicar 'Export ZIP': POST /assets/export com IDs selecionados, mostrar progress (indeterminate), salvar arquivo via blob download."
+            ]
+          }
+        }
+      }
+    ],
+
+    "tier_2_competitive_differentiators": [
+      {
+        "id": "IMP-6",
+        "name": "Auto-resize inteligente",
+        "effort": "1 dia",
+        "impact": "Alto — multiplica receita de AI actions por 5x",
+
+        "description": "Upload de 1 imagem hero → auto-gera todas as variantes de formato social. Smart crop mantém o sujeito centralizado. Cada resize conta como 1 AI action ($0.05).",
+
+        "implementation": {
+          "dependencies": ["Pillow>=10.2 (já adicionado em IMP-3)"],
+
+          "formats": {
+            "instagram_square": {"width": 1080, "height": 1080, "name": "Instagram Feed"},
+            "instagram_story": {"width": 1080, "height": 1920, "name": "Instagram/TikTok Story"},
+            "facebook_post": {"width": 1200, "height": 630, "name": "Facebook Post"},
+            "twitter_post": {"width": 1600, "height": 900, "name": "Twitter/X Post"},
+            "linkedin_post": {"width": 1200, "height": 627, "name": "LinkedIn Post"},
+            "linkedin_banner": {"width": 1584, "height": 396, "name": "LinkedIn Banner"},
+            "youtube_thumbnail": {"width": 1280, "height": 720, "name": "YouTube Thumbnail"},
+            "pinterest_pin": {"width": 1000, "height": 1500, "name": "Pinterest Pin"}
+          },
+
+          "service": {
+            "file": "backend/app/services/resize_service.py",
+            "functions": [
+              {
+                "name": "smart_resize",
+                "params": "file_path: str, target_width: int, target_height: int, output_path: str",
+                "behavior": "Abrir imagem com Pillow. Calcular crop region que mantém o centro da imagem (smart crop simples — center crop). Resize para target dimensions. Salvar como WebP (qualidade 85) ou JPEG (qualidade 90). Retornar output_path."
+              },
+              {
+                "name": "generate_all_variants",
+                "params": "asset_id: UUID, file_path: str, tenant_id: UUID, formats: list[str] | None = None",
+                "behavior": "Para cada formato solicitado (ou todos se None): chamar smart_resize(), salvar em /app/uploads/{tenant_id}/resized/{asset_id}/{format_name}.webp. Criar registro na tabela asset_variants. Logar cada resize como AI action (AIActionType.resize, $0.05). Retornar lista de variantes criadas.",
+                "note": "Rodar como background task (não bloquear o request)"
+              }
+            ]
+          },
+
+          "model": {
+            "file": "backend/app/models/asset_variant.py",
+            "table": "asset_variants",
+            "columns": "id (UUID), asset_id (FK media_assets, cascade delete), tenant_id, format_name (str), width (int), height (int), file_path (str), file_size (bigint), created_at",
+            "migration": "Criar tabela asset_variants"
+          },
+
+          "endpoints": {
+            "POST /assets/{id}/resize": "Body: {formats: ['instagram_square', 'twitter_post', ...]} ou {formats: 'all'}. Dispara background task. Retorna 202 Accepted.",
+            "GET /assets/{id}/variants": "Lista todas as variantes do asset com URLs de download.",
+            "GET /assets/{id}/variants/{format}/file": "Serve o arquivo da variante (mesmo padrão de auth do /file)."
+          },
+
+          "frontend": {
+            "AssetDetailPage": "Adicionar seção 'Formatos' abaixo da imagem original. Grid de cards com preview de cada variante gerada. Botão 'Gerar todos os formatos' no topo. Cada card tem: preview, dimensões, botão download. Se variantes ainda não geradas, mostrar cards ghost com botão 'Gerar'.",
+            "AssetListPage": "Badge no card do asset indicando quantas variantes existem (ex: '5 formatos')."
+          },
+
+          "openclaw": {
+            "new_tool": "bluewave_resize_asset — params: asset_id, formats (array de nomes). Chama POST /assets/{id}/resize. Retorna mensagem com formatos gerados."
+          }
+        }
+      },
+
+      {
+        "id": "IMP-7",
+        "name": "Content calendar",
+        "effort": "3 dias",
+        "impact": "Alto — completa o workflow Brief→Publish",
+
+        "description": "Visualização de calendário onde o usuário arrasta assets aprovados para datas futuras, definindo quando cada conteúdo será publicado. Integra com o futuro social publishing.",
+
+        "implementation": {
+          "model": {
+            "file": "backend/app/models/scheduled_post.py",
+            "table": "scheduled_posts",
+            "columns": "id (UUID), tenant_id, asset_id (FK media_assets), scheduled_at (datetime com timezone), channel (enum: instagram, facebook, twitter, linkedin, tiktok, manual), caption_override (text, nullable — se quiser caption diferente do asset), hashtags_override (ARRAY, nullable), status (enum: scheduled, published, failed, cancelled), published_at (datetime, nullable), error_message (text, nullable), created_by (FK users), created_at, updated_at",
+            "enums": "PostChannel = {instagram, facebook, twitter, linkedin, tiktok, manual}. PostStatus = {scheduled, published, failed, cancelled}"
+          },
+
+          "endpoints": {
+            "file": "backend/app/routers/calendar.py",
+            "prefix": "/calendar",
+            "routes": [
+              "GET /calendar?start=2026-03-01&end=2026-03-31 → lista scheduled_posts no range, agrupados por dia. Incluir asset data (thumbnail, caption) via joinedload.",
+              "POST /calendar → criar scheduled_post. Body: {asset_id, scheduled_at, channel, caption_override?, hashtags_override?}. Validar: asset existe + está approved + scheduled_at é futuro.",
+              "PATCH /calendar/{post_id} → atualizar data/canal/caption. Só se status=scheduled.",
+              "DELETE /calendar/{post_id} → cancelar (soft delete, status=cancelled). Só se status=scheduled.",
+              "POST /calendar/{post_id}/publish → publicar manualmente (muda status para published). Para social publishing futuro, dispara o post real."
+            ]
+          },
+
+          "frontend": {
+            "page": "frontend/src/pages/CalendarPage.tsx",
+            "description": "Visualização de calendário mensal. Cada dia mostra thumbnails dos assets agendados. Click em um dia abre modal para agendar novo post. Drag-and-drop de assets do sidebar para datas (usar @dnd-kit/core ou react-beautiful-dnd). Sidebar com assets aprovados não agendados ('Available to schedule').",
+            "components": [
+              "CalendarGrid.tsx — grid 7x5 (dom-sáb × 5 semanas). Cada célula mostra até 3 thumbnails + '+N more' se houver mais.",
+              "CalendarDay.tsx — célula individual. Drop target para drag-and-drop. Click abre DayDetailModal.",
+              "DayDetailModal.tsx — modal com lista de posts agendados no dia. Para cada: thumbnail, caption, canal, horário, botões edit/delete/publish.",
+              "SchedulePostModal.tsx — modal para criar/editar agendamento. Campos: asset (selector com search), data/hora (datetime picker), canal (select), caption override (textarea).",
+              "AssetSidebar.tsx — sidebar colapsável com assets aprovados. Cada item é draggable. Filtro por busca."
+            ],
+            "dependencies_to_add": ["@dnd-kit/core", "@dnd-kit/sortable", "date-fns"],
+            "route": "/calendar (editor+ role guard)"
+          }
+        }
+      },
+
+      {
+        "id": "IMP-8",
+        "name": "Social publishing (one-click publish)",
+        "effort": "1 semana",
+        "impact": "Muito Alto — controla a 'última milha'",
+
+        "description": "Publicar assets aprovados diretamente no Instagram, Twitter/X e LinkedIn a partir do Bluewave. Usa as APIs oficiais de cada plataforma.",
+
+        "implementation": {
+          "dependencies": ["tweepy>=4.14 (Twitter/X)", "requests-oauthlib>=1.3 (LinkedIn)"],
+          "note_instagram": "Instagram Graph API requer Facebook Business Account. Para MVP, suportar Twitter + LinkedIn primeiro. Instagram via Buffer API como proxy (mais simples).",
+
+          "env_vars": {
+            "TWITTER_API_KEY": "", "TWITTER_API_SECRET": "", "TWITTER_ACCESS_TOKEN": "", "TWITTER_ACCESS_SECRET": "",
+            "LINKEDIN_CLIENT_ID": "", "LINKEDIN_CLIENT_SECRET": "",
+            "BUFFER_ACCESS_TOKEN": "(opcional — proxy para Instagram)"
+          },
+
+          "service": {
+            "file": "backend/app/services/social_publish_service.py",
+            "functions": [
+              {
+                "name": "publish_to_twitter",
+                "params": "image_path: str, caption: str, hashtags: list[str]",
+                "behavior": "Upload de mídia via Twitter API v2. Criar tweet com caption + hashtags (respeitar limite 280 chars — truncar se necessário). Retornar tweet_id e URL. Se falhar, retornar erro detalhado."
+              },
+              {
+                "name": "publish_to_linkedin",
+                "params": "image_path: str, caption: str, access_token: str",
+                "behavior": "Upload de imagem via LinkedIn API. Criar post com caption. Retornar post_id e URL."
+              },
+              {
+                "name": "publish_scheduled_post",
+                "params": "post_id: UUID",
+                "behavior": "Carregar scheduled_post + asset. Chamar a função de publish do canal apropriado. Atualizar status para 'published' com published_at e external_url. Se falhar, status='failed' com error_message."
+              }
+            ]
+          },
+
+          "scheduler": {
+            "description": "Background task que verifica a cada 1 minuto se há posts agendados para os próximos 60 segundos e publica. Implementar com asyncio.create_task no startup do app.",
+            "file": "backend/app/services/scheduler.py",
+            "function": "async def publish_scheduler_loop(): while True: await asyncio.sleep(60); posts = query scheduled_posts WHERE scheduled_at <= now() AND status='scheduled'; for post in posts: await publish_scheduled_post(post.id)"
+          },
+
+          "model_change": {
+            "add_to_scheduled_posts": "external_url (varchar, nullable) — URL do post publicado na plataforma",
+            "add_to_tenants_or_settings": "Tabela social_connections: id, tenant_id, platform (enum), access_token (encrypted), refresh_token, expires_at, connected_by, created_at"
+          },
+
+          "frontend": {
+            "IntegrationsPage": "Adicionar seção 'Canais Sociais' com cards para Twitter, LinkedIn, Instagram. Cada card: botão 'Conectar' (inicia OAuth flow), status (conectado/desconectado), botão 'Desconectar'.",
+            "CalendarPage": "No SchedulePostModal, o selector de canal mostra apenas canais conectados. Canais não conectados aparecem em cinza com 'Conectar em Integrações'."
+          }
+        }
+      },
+
+      {
+        "id": "IMP-9",
+        "name": "Asset versioning",
+        "effort": "2 dias",
+        "impact": "Médio — enterprises esperam isso",
+
+        "description": "Re-upload de um asset cria uma nova versão em vez de substituir. Histórico de versões visível. Possibilidade de reverter para versão anterior.",
+
+        "implementation": {
+          "model": {
+            "file": "backend/app/models/asset_version.py",
+            "table": "asset_versions",
+            "columns": "id (UUID), asset_id (FK media_assets, cascade delete), tenant_id, version_number (int), file_path (str), file_type (str), file_size (bigint), caption (text, nullable), hashtags (ARRAY, nullable), uploaded_by (FK users), comment (text, nullable — 'o que mudou'), created_at",
+            "behavior": "Quando um asset é atualizado com novo arquivo, a versão anterior é salva em asset_versions. O asset principal sempre aponta para a versão mais recente."
+          },
+
+          "endpoints": {
+            "POST /assets/{id}/versions": "Upload de nova versão. Multipart form com file + comment opcional. Salva versão anterior em asset_versions, atualiza asset principal com novo arquivo. Re-roda AI pipeline (caption, hashtags, compliance). Reseta status para 'draft'.",
+            "GET /assets/{id}/versions": "Lista todas as versões (mais recente primeiro). Inclui version_number, file_type, file_size, caption, uploaded_by, comment, created_at.",
+            "POST /assets/{id}/versions/{version_id}/restore": "Reverte o asset para uma versão anterior. Cria nova versão da atual, depois sobrescreve com a versão selecionada. Reseta status para 'draft'.",
+            "GET /assets/{id}/versions/{version_id}/file": "Serve o arquivo de uma versão específica."
+          },
+
+          "frontend": {
+            "AssetDetailPage": "Adicionar tab 'Versões' ao lado de 'Detalhes'. Lista vertical de versões com: número (v1, v2, v3...), thumbnail, quem fez upload, quando, comentário, botões 'Visualizar' e 'Restaurar'. Versão atual destacada. Botão 'Upload Nova Versão' no topo."
+          }
+        }
+      },
+
+      {
+        "id": "IMP-10",
+        "name": "Collaborative comments",
+        "effort": "2 dias",
+        "impact": "Médio — melhora o workflow de review",
+
+        "description": "Thread de comentários por asset, estilo Figma. Revisores podem deixar feedback específico. Histórico de discussão preservado.",
+
+        "implementation": {
+          "model": {
+            "file": "backend/app/models/comment.py",
+            "table": "asset_comments",
+            "columns": "id (UUID), asset_id (FK media_assets, cascade delete), tenant_id, user_id (FK users), parent_id (UUID, nullable, FK asset_comments — para replies), body (text, not null), is_resolved (bool, default false), created_at, updated_at",
+            "indexes": "ix_comments_asset_created (asset_id, created_at)"
+          },
+
+          "endpoints": {
+            "file": "backend/app/routers/comments.py",
+            "prefix": "/assets/{asset_id}/comments",
+            "routes": [
+              "GET / → lista comentários do asset, ordenados por created_at. Incluir user info (full_name, role) via joinedload. Replies aninhados (parent_id).",
+              "POST / → criar comentário. Body: {body, parent_id?}. Notificar via webhook (comment.created).",
+              "PATCH /{comment_id} → editar body (apenas o autor).",
+              "DELETE /{comment_id} → deletar (autor ou admin).",
+              "POST /{comment_id}/resolve → marcar como resolvido (editor+)."
+            ]
+          },
+
+          "frontend": {
+            "AssetDetailPage": "Adicionar seção 'Comentários' abaixo dos detalhes. Thread com avatar, nome, tempo relativo, corpo. Botão 'Responder' em cada comment. Input de novo comentário no bottom (textarea + botão Enviar). Badge com contagem de comentários não resolvidos no tab."
+          },
+
+          "webhook_event": "comment.created — notificar via webhook e OpenClaw"
+        }
+      }
+    ],
+
+    "tier_3_enterprise": [
+      {
+        "id": "IMP-11",
+        "name": "SSO/SAML (Okta/Azure AD)",
+        "effort": "3 dias",
+        "impact": "Alto — gate para enterprise tier ($149/user)",
+
+        "implementation": {
+          "dependencies": ["python-saml>=3.0 (ou onelogin/python3-saml)", "python-jose[cryptography] (já existe)"],
+
+          "model": {
+            "add_to_tenant": "sso_enabled (bool, default false), sso_provider (enum: okta, azure_ad, google, custom), sso_entity_id (str), sso_sso_url (str), sso_certificate (text), sso_metadata_url (str, nullable)"
+          },
+
+          "endpoints": {
+            "GET /auth/sso/login?tenant={slug}": "Redireciona para o IdP do tenant (Okta/Azure AD) com SAML AuthnRequest.",
+            "POST /auth/sso/callback": "Recebe SAML Response do IdP. Valida assinatura. Cria ou atualiza usuário. Gera JWT tokens. Redireciona para frontend.",
+            "GET /auth/sso/metadata": "Retorna SAML SP metadata XML para configuração no IdP."
+          },
+
+          "frontend": {
+            "LoginPage": "Adicionar botão 'Login com SSO' abaixo do form. Ao clicar, pedir domain/email do usuário, resolver tenant, redirecionar para /auth/sso/login."
+          }
+        }
+      },
+
+      {
+        "id": "IMP-12",
+        "name": "RBAC granular",
+        "effort": "2 dias",
+        "impact": "Médio — enterprises pedem isso",
+
+        "implementation": {
+          "model": {
+            "table": "permissions",
+            "columns": "id, tenant_id, user_id, resource_type (enum: portal, collection, all), resource_id (UUID, nullable — null=all), permission (enum: view, edit, manage, admin), granted_by, created_at"
+          },
+          "behavior": "Quando resource_type='portal' e resource_id=UUID de um portal, o user tem acesso apenas àquele portal. Fallback: se nenhuma permission específica, usar o role global (admin/editor/viewer).",
+          "endpoints": "CRUD em /permissions (admin only). GET /users/{id}/permissions."
+        }
+      },
+
+      {
+        "id": "IMP-13",
+        "name": "CDN para assets (Cloudflare R2)",
+        "effort": "1 dia",
+        "impact": "Alto — performance e escala",
+
+        "implementation": {
+          "description": "Migrar storage de Docker volume local para Cloudflare R2 (S3-compatible). O storage.py já tem interface S3-compatible — implementar o adapter.",
+          "env_vars": "S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, S3_PUBLIC_URL",
+          "change": "storage.py: se S3_ENDPOINT configurado, usar boto3/aioboto3. Senão, fallback para local. Assets servidos via CDN URL (S3_PUBLIC_URL/{tenant_id}/{filename}) em vez de via endpoint /file.",
+          "dependencies": ["aioboto3>=12.0"]
+        }
+      },
+
+      {
+        "id": "IMP-14",
+        "name": "Multi-region storage",
+        "effort": "2 dias",
+        "impact": "Médio — compliance GDPR",
+
+        "implementation": {
+          "description": "Cada tenant pode ter storage em região específica (us-east-1, eu-west-1, ap-southeast-1). Necessário para GDPR (dados de EU residents devem permanecer na EU).",
+          "model_change": "Adicionar storage_region ao modelo Tenant (default 'us-east-1').",
+          "service_change": "storage.py: resolver bucket/endpoint baseado no storage_region do tenant. Manter um dict de configs por região.",
+          "frontend": "Settings page: dropdown de região (Admin only, com warning 'migração de dados pode levar horas')."
+        }
+      },
+
+      {
+        "id": "IMP-15",
+        "name": "API rate limiting por plano",
+        "effort": "4 horas",
+        "impact": "Alto — monetização",
+
+        "implementation": {
+          "description": "O rate_limit.py já existe com limites genéricos. Precisa consultar o plano do tenant e aplicar limites diferenciados.",
+          "limits": {
+            "free": {"ai_actions_per_month": 50, "uploads_per_day": 10, "api_requests_per_minute": 30},
+            "pro": {"ai_actions_per_month": -1, "uploads_per_day": 100, "api_requests_per_minute": 120},
+            "business": {"ai_actions_per_month": -1, "uploads_per_day": 500, "api_requests_per_minute": 300},
+            "enterprise": {"ai_actions_per_month": -1, "uploads_per_day": -1, "api_requests_per_minute": 1000}
+          },
+          "enforcement": "Antes de cada AI action, verificar ai_usage_logs count do mês vs limite do plano. Se excedido no free tier, retornar 402 com {error: 'AI action limit reached', current: 50, limit: 50, upgrade_url: '/billing'}."
+        }
+      }
+    ],
+
+    "tier_4_innovation": [
+      {
+        "id": "IMP-16",
+        "name": "AI Content Brief",
+        "effort": "3 dias",
+        "impact": "Muito Alto — $1.00/brief, novo produto",
+
+        "description": "O usuário descreve o que quer ('Preciso de 5 posts para campanha de verão da marca X, foco em praia e lifestyle, tom jovem'), e a AI gera: brief completo com direcionamentos, sugestão de assets existentes similares, rascunhos de captions, hashtags sugeridas.",
+
+        "implementation": {
+          "model": {
+            "table": "content_briefs",
+            "columns": "id (UUID), tenant_id, created_by (FK users), prompt (text — o que o usuário pediu), brief_content (JSONB — o brief gerado pela AI), suggested_asset_ids (ARRAY UUID — assets existentes relacionados), status (enum: generating, completed, failed), cost_millicents (bigint, default 100000 = $1.00), created_at"
+          },
+
+          "service": {
+            "file": "backend/app/services/brief_service.py",
+            "function": "async def generate_brief(prompt: str, tenant_id: UUID, db: AsyncSession) -> ContentBrief",
+            "behavior": [
+              "1. Carregar brand guidelines do tenant (tom, cores, dos/donts)",
+              "2. Carregar últimos 20 approved captions como contexto de voz",
+              "3. Enviar ao Claude com system prompt: 'You are a creative strategist. Given the brief request and brand context, generate a comprehensive content brief with: (a) Campaign overview, (b) 5 content pieces with specific caption drafts, (c) Hashtag strategy, (d) Visual direction notes, (e) Timeline suggestion. Output as JSON.'",
+              "4. Buscar assets existentes com captions similares ao brief (ILIKE ou tsvector search)",
+              "5. Salvar brief_content (JSON) + suggested_asset_ids",
+              "6. Logar como AIActionType.content_brief ($1.00)"
+            ]
+          },
+
+          "endpoints": {
+            "POST /briefs → gerar brief (background task, retorna 202)",
+            "GET /briefs → lista briefs do tenant",
+            "GET /briefs/{id} → detail com conteúdo completo + assets sugeridos"
+          },
+
+          "frontend": {
+            "page": "BriefsPage.tsx — lista de briefs + botão 'Novo Brief'. Formulário com textarea grande para o prompt + contexto adicional (campanha, público, canais). Resultado: brief formatado com seções colapsáveis, grid de assets sugeridos com thumbnail, botão 'Criar assets a partir deste brief'."
+          }
+        }
+      },
+
+      {
+        "id": "IMP-17",
+        "name": "Visual similarity search (CLIP embeddings)",
+        "effort": "1 semana",
+        "impact": "Muito Alto — moat técnico",
+
+        "description": "Buscar assets por similaridade visual: 'encontre fotos parecidas com esta'. Usa embeddings CLIP para criar representação vetorial de cada imagem e busca por cosine similarity.",
+
+        "implementation": {
+          "dependencies": ["open-clip-torch>=2.24", "torch>=2.2 (CPU only)", "numpy>=1.26", "pgvector>=0.2"],
+
+          "database": {
+            "extension": "CREATE EXTENSION IF NOT EXISTS vector",
+            "migration": "ALTER TABLE media_assets ADD COLUMN embedding vector(512) — CLIP ViT-B/32 produz vetores 512-dim. CREATE INDEX ix_assets_embedding ON media_assets USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)"
+          },
+
+          "service": {
+            "file": "backend/app/services/embedding_service.py",
+            "functions": [
+              {
+                "name": "generate_embedding",
+                "params": "image_path: str",
+                "behavior": "Carregar imagem com Pillow. Preprocessar com CLIP transform. Gerar embedding com modelo CLIP ViT-B/32 (CPU). Retornar numpy array 512-dim. Cachear modelo na memória (singleton)."
+              },
+              {
+                "name": "find_similar",
+                "params": "asset_id: UUID, tenant_id: UUID, limit: int = 10",
+                "behavior": "Buscar embedding do asset. Query: SELECT id, caption, 1 - (embedding <=> :query_embedding) AS similarity FROM media_assets WHERE tenant_id = :tid AND id != :aid ORDER BY embedding <=> :query_embedding LIMIT :limit. Retornar lista de assets com similarity score."
+              }
+            ]
+          },
+
+          "endpoints": {
+            "GET /assets/{id}/similar?limit=10": "Retorna lista de assets visualmente similares com similarity score (0-1).",
+            "POST /assets/search/visual": "Body: upload de imagem (não precisa ser um asset existente). Gera embedding, busca similares. Para 'busca por imagem'."
+          },
+
+          "pipeline_integration": "Após upload de asset (background task), gerar embedding e salvar na coluna. Isso permite busca visual desde o primeiro upload.",
+
+          "frontend": {
+            "AssetDetailPage": "Seção 'Assets Similares' com grid horizontal de thumbnails. Cada item mostra similarity % e caption.",
+            "AssetListPage": "Botão 'Busca Visual' que abre modal para upload de imagem de referência."
+          }
+        }
+      },
+
+      {
+        "id": "IMP-18",
+        "name": "Predictive analytics",
+        "effort": "1 semana",
+        "impact": "Alto — data moat profundo",
+
+        "description": "Prever qual tipo de conteúdo terá melhor performance baseado em dados históricos. 'Posts com cores quentes tiveram 3x mais aprovações'. 'Imagens de produto performam melhor às terças-feiras'.",
+
+        "implementation": {
+          "service": {
+            "file": "backend/app/services/prediction_service.py",
+            "functions": [
+              {
+                "name": "analyze_patterns",
+                "params": "tenant_id: UUID, days: int = 90",
+                "behavior": "Agregar dados: assets por tipo de conteúdo (via hashtags clustering), taxa de aprovação por dia da semana, tempo médio de aprovação por reviewer, score de compliance por categoria de issue. Enviar ao Claude com prompt: 'Given these content operations metrics, identify the top 5 actionable patterns and predict what content types will perform best next month. Return JSON with patterns and predictions.'"
+              },
+              {
+                "name": "get_recommendations",
+                "params": "tenant_id: UUID",
+                "behavior": "Retornar recomendações cached (refresh diário). Ex: 'Publique mais conteúdo lifestyle — 78% dos seus assets de lifestyle foram aprovados na primeira revisão vs 45% para produto.' 'Evite uploads às sextas — tempo de aprovação é 2.3x maior.'"
+              }
+            ]
+          },
+
+          "endpoint": "GET /analytics/predictions → lista de patterns + recommendations",
+
+          "frontend": {
+            "AnalyticsPage": "Nova seção 'Insights AI' com cards de recomendação. Cada card: ícone (trending up/down), título do pattern, explicação, ação sugerida. Refresh semanal."
+          }
+        }
+      },
+
+      {
+        "id": "IMP-19",
+        "name": "Multi-language captions",
+        "effort": "4 horas",
+        "impact": "Médio — expande TAM para mercados globais",
+
+        "description": "Gerar caption em múltiplos idiomas automaticamente. O Claude já suporta 50+ idiomas nativamente.",
+
+        "implementation": {
+          "model_change": "ALTER TABLE media_assets ADD COLUMN captions_i18n JSONB DEFAULT '{}' — formato: {en: 'caption', pt: 'legenda', es: 'subtítulo'}",
+
+          "service_change": {
+            "file": "backend/app/services/ai_service.py",
+            "add_function": "async def generate_caption_multilang(self, filename, file_type, *, file_path=None, languages=['en', 'pt', 'es', 'fr', 'de']): chamar Claude uma vez com prompt: 'Generate a caption for this image in each of these languages: {languages}. Return JSON: {\"en\": \"...\", \"pt\": \"...\"}'. Parsear JSON. Retornar dict[str, str].",
+            "cost": "1 chamada AI = $0.05 (mesmo custo, mais valor). Ou cobrar $0.05 por idioma adicional."
+          },
+
+          "endpoints": {
+            "POST /ai/caption/{id}/translate?languages=pt,es,fr": "Gera captions adicionais. Salva em captions_i18n.",
+            "GET /assets/{id}": "Retornar captions_i18n no response."
+          },
+
+          "frontend": {
+            "AssetDetailPage": "Dropdown de idioma ao lado da caption. Botão 'Traduzir para...' com checklist de idiomas. Após tradução, tabs com caption em cada idioma."
+          }
+        }
+      },
+
+      {
+        "id": "IMP-20",
+        "name": "Video frame analysis",
+        "effort": "2 dias",
+        "impact": "Alto — hoje vídeo usa fallback filename-based",
+
+        "description": "Extrair 5 keyframes de vídeos uploadados, analisar cada frame com Claude Vision, gerar caption baseada na compreensão do conteúdo visual do vídeo completo.",
+
+        "implementation": {
+          "dependencies": ["opencv-python-headless>=4.9 (para extração de frames sem GUI)"],
+
+          "service": {
+            "file": "backend/app/services/video_service.py",
+            "functions": [
+              {
+                "name": "extract_keyframes",
+                "params": "video_path: str, num_frames: int = 5",
+                "behavior": "Abrir vídeo com cv2.VideoCapture. Calcular frame_interval = total_frames / num_frames. Extrair frames nos intervalos. Salvar como JPEG temporário. Retornar lista de paths dos frames. Se vídeo corrupto ou muito curto, retornar lista vazia."
+              },
+              {
+                "name": "analyze_video",
+                "params": "video_path: str, filename: str",
+                "behavior": "1. Extrair 5 keyframes. 2. Enviar os 5 frames como imagens ao Claude em uma única chamada (multi-image message). 3. Prompt: 'These are 5 keyframes from a video. Describe what happens in the video and generate a single engaging caption suitable for social media.' 4. Retornar caption + hashtags. 5. Cobrar como 1 AI action de caption ($0.05)."
+              }
+            ]
+          },
+
+          "integration": "Em ai_service.py, no generate_caption: se file_type começa com 'video/', chamar video_service.analyze_video() em vez de usar filename-based fallback. Isso remove a limitação atual onde vídeos recebem captions genéricas.",
+
+          "frontend": {
+            "AssetDetailPage": "Para vídeos, mostrar os 5 keyframes como strip horizontal abaixo do player. Cada frame clicável para ver full-size."
+          }
+        }
+      }
+    ]
+  },
+
+  "execution_plan": {
+    "semana_1": {
+      "items": ["IMP-2", "IMP-1", "IMP-4", "IMP-3"],
+      "focus": "Fix testes, email transacional, busca full-text, thumbnails",
+      "outcome": "Base sólida: testes rodam, emails enviam, busca funciona, assets têm preview real"
+    },
+    "semana_2": {
+      "items": ["IMP-6", "IMP-15", "IMP-5"],
+      "focus": "Auto-resize, rate limits por plano, export bulk",
+      "outcome": "Receita de AI actions multiplicada por 5x, monetização enforced, feature DAM essencial"
+    },
+    "semana_3_4": {
+      "items": ["IMP-7", "IMP-8", "IMP-10", "IMP-9"],
+      "focus": "Content calendar, social publishing, comments, versioning",
+      "outcome": "Workflow Brief→Publish completo, colaboração, enterprise-readiness"
+    },
+    "mes_2_semana_1": {
+      "items": ["IMP-11", "IMP-13", "IMP-19", "IMP-20"],
+      "focus": "SSO, CDN, multi-language, video analysis",
+      "outcome": "Enterprise gate ($149/user), performance global, cobertura de vídeo"
+    },
+    "mes_2_semana_2_3": {
+      "items": ["IMP-16", "IMP-17", "IMP-18"],
+      "focus": "Content briefs, visual search, predictive analytics",
+      "outcome": "Moat técnico profundo, novo produto ($1/brief), diferenciação impossível de copiar"
+    },
+    "mes_2_semana_4": {
+      "items": ["IMP-12", "IMP-14"],
+      "focus": "RBAC granular, multi-region storage",
+      "outcome": "Enterprise compliance (GDPR), permissões finas"
+    }
+  },
+
+  "style_rules": [
+    "Todo código em inglês (variáveis, comentários, docstrings, commit messages)",
+    "Toda documentação em português (docs/, README.md)",
+    "Async/await obrigatório em todo o backend",
+    "Type hints em todo o Python",
+    "TypeScript strict no frontend (nenhum 'any')",
+    "React Query para server state, Context para client state",
+    "Toda nova tabela: TenantMixin + TimestampMixin + migration Alembic",
+    "Toda nova rota: auth dependency + role guard",
+    "Toda operação AI: log_ai_usage() + LangSmith @traceable",
+    "Toda operação demorada: background task (não bloquear request)",
+    "Features opcionais: degradação graciosa se dependency não configurada",
+    "Testes para cada nova feature: pelo menos 3 test cases (happy path, error case, auth/permission)"
+  ]
+}

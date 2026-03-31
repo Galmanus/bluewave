@@ -1,0 +1,639 @@
+{
+  "task": "Integração completa do LangSmith no Bluewave — Observabilidade, avaliação e otimização de todas as chamadas AI",
+  "output_format": "Código implementado diretamente no projeto existente",
+  "project_root": "/home/manuel/bluewave",
+
+  "context": {
+    "what_is_langsmith": "LangSmith é a plataforma de observabilidade e avaliação de LLMs da LangChain. Ela captura traces de cada chamada a modelos de linguagem — incluindo prompts enviados, respostas recebidas, latência, tokens consumidos, custos, e metadados customizados. Permite criar datasets de avaliação, rodar evaluators automáticos, comparar versões de prompts (A/B testing), e monitorar qualidade em produção. É agnóstica de provider (funciona com Anthropic, OpenAI, etc.) e pode ser integrada via SDK Python sem precisar do LangChain framework.",
+
+    "why_langsmith": [
+      "O Bluewave faz 4 tipos de chamadas AI (caption, hashtags, compliance, brand_voice) que representam o core do produto e a principal fonte de receita ($0.05-$1.00/ação)",
+      "Hoje ZERO dessas chamadas são rastreadas — se um prompt retorna resultado ruim, não há como diagnosticar por quê",
+      "Sem traces, é impossível saber: qual prompt gerou qual resposta, quanto tempo levou, quantos tokens consumiu realmente, se houve fallback para stub",
+      "Brand Voice learning (few-shot) precisa de avaliação contínua — sem LangSmith, não dá para medir se os exemplos few-shot estão melhorando ou piorando as captions",
+      "Compliance check retorna score 50 silenciosamente quando JSON parse falha — sem trace, esse problema é invisível",
+      "Para justificar $0.05/ação para clientes, precisamos provar qualidade e consistência das respostas AI"
+    ],
+
+    "current_ai_architecture": {
+      "service_pattern": "AIServiceProtocol → ClaudeAIService (real) | StubAIService (dev)",
+      "sdk": "anthropic==0.43.0 (chamadas diretas via client.messages.create)",
+      "model": "claude-sonnet-4-20250514 (configurável via settings.AI_MODEL)",
+      "calls": {
+        "generate_caption": {
+          "file": "backend/app/services/ai_service.py",
+          "line": "152-193",
+          "sdk_method": "client.messages.create(model, max_tokens=300, messages=[...], system=...)",
+          "system_prompt": "You are a creative marketing copywriter for a digital asset management platform. Generate a single concise, engaging caption for the media asset described. The caption should be professional, brand-friendly, and suitable for social media or internal use. Reply ONLY with the caption text, no quotes or extra formatting.",
+          "vision": true,
+          "vision_types": ["image/jpeg", "image/png", "image/gif", "image/webp"],
+          "max_image_size": "20MB",
+          "brand_voice": "Se tenant tem 3+ captions aprovadas, carrega últimas 10 como few-shot examples e appenda ao system prompt",
+          "fallback_on_error": "f'Creative asset: {filename}'",
+          "tokens_logged": true,
+          "cost_millicents": 5000
+        },
+        "generate_hashtags": {
+          "file": "backend/app/services/ai_service.py",
+          "line": "197-220",
+          "sdk_method": "client.messages.create(model, max_tokens=200, messages=[...], system=...)",
+          "system_prompt": "You are a social media strategist. Generate 6-10 relevant hashtags for the media asset described. Return ONLY a JSON array of strings, each starting with #. Example: [\"#branding\", \"#design\"]. No other text.",
+          "vision": true,
+          "output_parsing": "json.loads(resp.content[0].text.strip()) → list[str]",
+          "fallback_on_error": "[\"#creative\", \"#content\", \"#branding\", \"#marketing\", \"#digital\"]",
+          "tokens_logged": false,
+          "cost_millicents": 5000
+        },
+        "check_compliance": {
+          "file": "backend/app/services/compliance_service.py",
+          "line": "62-196",
+          "sdk_method": "client.messages.create(model, max_tokens=1000, messages=[...])",
+          "system_prompt": "Nenhum — instruções completas no user message",
+          "vision": true,
+          "output_parsing": "json.loads() → {score: int, summary: str, issues: list}",
+          "fallback_on_error": "ComplianceResult(score=50, passed=False, issues=[warning genérico])",
+          "retry": "@retry(max_retries=2, base_delay=2.0)",
+          "tokens_logged": false,
+          "cost_millicents": 5000
+        }
+      },
+      "usage_tracking": {
+        "model": "AIUsageLog (tenant_id, user_id, asset_id, action_type, model_used, input_tokens, output_tokens, cost_millicents)",
+        "table": "ai_usage_logs",
+        "service": "backend/app/services/ai_usage.py → log_ai_usage()",
+        "note": "Rastreia custos para billing mas NÃO rastreia qualidade das respostas"
+      }
+    }
+  },
+
+  "integration_plan": {
+    "approach": "Usar o SDK langsmith diretamente (SEM LangChain framework). O LangSmith tem SDK Python standalone que permite instrumentar qualquer chamada a qualquer LLM. Vamos wrappear as chamadas existentes ao Anthropic SDK com tracers do LangSmith, sem mudar a interface AIServiceProtocol.",
+
+    "key_principle": "O LangSmith deve ser OPCIONAL — se LANGSMITH_API_KEY não estiver configurado, o sistema funciona exatamente como hoje. Zero impacto em performance ou funcionalidade quando desativado.",
+
+    "tasks": [
+      {
+        "id": "LS-1",
+        "name": "Instalar dependências e configurar variáveis de ambiente",
+        "priority": "PRIMEIRO — tudo depende disso",
+
+        "dependencies_to_add": {
+          "file": "backend/requirements.txt",
+          "packages": ["langsmith>=0.1.100"]
+        },
+
+        "env_vars": {
+          "file": "backend/app/core/config.py",
+          "add_settings": {
+            "LANGSMITH_API_KEY": {
+              "type": "str",
+              "default": "",
+              "description": "API key do LangSmith. Se vazio, tracing é desabilitado silenciosamente."
+            },
+            "LANGSMITH_PROJECT": {
+              "type": "str",
+              "default": "bluewave",
+              "description": "Nome do projeto no LangSmith. Recomendado: 'bluewave-dev', 'bluewave-staging', 'bluewave-prod'."
+            },
+            "LANGSMITH_TRACING_ENABLED": {
+              "type": "bool",
+              "default": true,
+              "description": "Master switch para tracing. Permite desativar mesmo com API key configurada (útil para testes de carga)."
+            }
+          }
+        },
+
+        "env_vars_system": {
+          "description": "O SDK do LangSmith lê variáveis de ambiente automaticamente. Configurar no .env ou docker-compose.",
+          "required_env": {
+            "LANGCHAIN_TRACING_V2": "true (habilita tracing v2 no SDK)",
+            "LANGCHAIN_API_KEY": "$(LANGSMITH_API_KEY) — o SDK ainda usa este nome legado",
+            "LANGCHAIN_PROJECT": "$(LANGSMITH_PROJECT)"
+          },
+          "where_to_set": "docker-compose.yml no serviço backend, passando das settings"
+        }
+      },
+
+      {
+        "id": "LS-2",
+        "name": "Criar módulo de tracing centralizado",
+        "priority": "SEGUNDO — wrapper reutilizável",
+
+        "file": "backend/app/core/tracing.py",
+        "description": "Módulo centralizado que configura o LangSmith client e fornece decorators/context managers para instrumentar chamadas AI.",
+
+        "implementation": {
+          "init_tracing": {
+            "description": "Função chamada no startup do app (main.py) que configura o LangSmith client",
+            "behavior": [
+              "Se LANGSMITH_API_KEY vazio → logar INFO 'LangSmith tracing disabled (no API key)' e retornar",
+              "Se configurado → inicializar langsmith.Client() com api_key e project",
+              "Setar variáveis de ambiente LANGCHAIN_TRACING_V2='true' e LANGCHAIN_API_KEY",
+              "Logar INFO 'LangSmith tracing enabled for project: {project}'"
+            ]
+          },
+
+          "trace_llm_call": {
+            "description": "Context manager / decorator que cria um run no LangSmith para uma chamada LLM",
+            "signature": "async def trace_llm_call(name: str, *, run_type: str = 'llm', metadata: dict | None = None, tags: list[str] | None = None)",
+            "behavior": [
+              "Se tracing desabilitado → yield sem fazer nada (no-op)",
+              "Se habilitado → criar run via langsmith.RunTree ou @traceable decorator",
+              "Capturar automaticamente: inputs (prompt/messages), outputs (response text), latência, tokens (input + output), modelo, erros",
+              "Adicionar metadata customizado: tenant_id, user_id, asset_id, action_type, file_type, has_vision, brand_voice_examples_count",
+              "Adicionar tags: ['caption'|'hashtags'|'compliance'], ['vision'|'text-only'], ['brand-voice'|'generic'], ['stub'|'claude'], tenant_id como tag"
+            ]
+          },
+
+          "traceable_decorator": {
+            "description": "Decorator @traceable do langsmith SDK — forma mais simples de instrumentar funções",
+            "usage": "Decorar generate_caption, generate_hashtags, check_compliance com @traceable(name='bluewave.caption', run_type='llm', tags=['caption'])",
+            "note": "O @traceable captura automaticamente args, return value, exceções e timing. Para capturar os inputs/outputs do Anthropic SDK especificamente, precisamos logar manualmente os messages e a response."
+          }
+        }
+      },
+
+      {
+        "id": "LS-3",
+        "name": "Instrumentar generate_caption com LangSmith tracing",
+        "priority": "TERCEIRO — chamada mais importante (receita)",
+
+        "file": "backend/app/services/ai_service.py",
+        "function": "ClaudeAIService.generate_caption",
+        "line_range": "152-193",
+
+        "changes": {
+          "description": "Adicionar tracing ao redor da chamada client.messages.create() dentro de generate_caption",
+
+          "before_call": {
+            "log_inputs": {
+              "system_prompt": "O system prompt completo (incluindo brand voice examples se houver)",
+              "user_messages": "A estrutura de messages enviada ao Claude (blocos de imagem + texto)",
+              "model": "self._model",
+              "max_tokens": 300,
+              "metadata": {
+                "tenant_id": "str(tenant_id) se disponível",
+                "filename": "filename",
+                "file_type": "file_type",
+                "has_vision": "bool — se enviou imagem base64",
+                "brand_voice_examples": "número de exemplos few-shot incluídos (0 se nenhum)",
+                "image_size_bytes": "tamanho da imagem em bytes (se vision)"
+              }
+            }
+          },
+
+          "after_call": {
+            "log_outputs": {
+              "caption": "O texto da caption gerada",
+              "input_tokens": "resp.usage.input_tokens",
+              "output_tokens": "resp.usage.output_tokens",
+              "total_tokens": "input + output",
+              "latency_ms": "tempo da chamada em ms",
+              "model_used": "resp.model (o modelo que realmente respondeu, pode diferir do solicitado)",
+              "stop_reason": "resp.stop_reason"
+            }
+          },
+
+          "on_error": {
+            "log_error": "Exception completa + stack trace. Marcar run como 'error' no LangSmith.",
+            "note": "O fallback caption ('Creative asset: {filename}') deve ser logado como output mesmo em caso de erro, com tag 'fallback'"
+          },
+
+          "implementation_pattern": "Usar langsmith.traceable decorator OU RunTree context manager. Exemplo:\n\n```python\nfrom langsmith import traceable\nfrom langsmith.run_helpers import get_current_run_tree\n\n@traceable(name='bluewave.generate_caption', run_type='llm')\nasync def generate_caption(self, filename, file_type, *, file_path=None, tenant_id=None):\n    # ... código existente ...\n    \n    # Antes da chamada ao Claude, adicionar metadata ao run atual\n    rt = get_current_run_tree()\n    if rt:\n        rt.add_metadata({\n            'tenant_id': str(tenant_id) if tenant_id else None,\n            'has_vision': has_image,\n            'brand_voice_count': len(approved_captions),\n        })\n    \n    resp = await self._client.messages.create(...)\n    \n    # O @traceable captura automaticamente o return value\n    return resp.content[0].text.strip()\n```\n\nOU usar wrap_anthropic para instrumentação automática do Anthropic SDK:\n\n```python\nfrom langsmith.wrappers import wrap_openai  # não existe wrap_anthropic\n# Alternativa: usar callback handler\n```"
+        }
+      },
+
+      {
+        "id": "LS-4",
+        "name": "Instrumentar generate_hashtags com LangSmith tracing",
+        "priority": "QUARTO",
+
+        "file": "backend/app/services/ai_service.py",
+        "function": "ClaudeAIService.generate_hashtags",
+        "line_range": "197-220",
+
+        "changes": {
+          "description": "Mesmo padrão de LS-3 mas com metadata e tags específicos para hashtags",
+          "additional_metadata": {
+            "output_format": "json_array",
+            "json_parse_success": "bool — se json.loads() funcionou ou caiu no fallback",
+            "hashtag_count": "número de hashtags retornadas",
+            "used_fallback": "bool — se retornou as hashtags default"
+          },
+          "tags": ["hashtags", "json-output"],
+          "critical_trace_point": "O ponto onde json.loads() falha é INVISÍVEL hoje. Com LangSmith, o raw response do Claude fica registrado, permitindo diagnosticar por que o JSON parsing falhou e ajustar o prompt."
+        }
+      },
+
+      {
+        "id": "LS-5",
+        "name": "Instrumentar check_compliance com LangSmith tracing",
+        "priority": "QUINTO",
+
+        "file": "backend/app/services/compliance_service.py",
+        "function": "check_compliance",
+        "line_range": "62-196",
+
+        "changes": {
+          "description": "Compliance é a chamada mais complexa (prompt longo, JSON output, retry logic) — LangSmith é ESSENCIAL aqui",
+
+          "additional_metadata": {
+            "guidelines_present": "bool",
+            "guideline_fields": "lista de campos preenchidos (colors, tone, dos, donts, etc.)",
+            "threshold": "int — o score mínimo para 'passed'",
+            "has_caption": "bool",
+            "has_hashtags": "bool",
+            "has_image": "bool"
+          },
+
+          "additional_outputs_to_log": {
+            "raw_response": "O texto bruto retornado pelo Claude ANTES do json.loads() — crucial para debug de parsing failures",
+            "score": "int",
+            "passed": "bool",
+            "issues_count": "número de issues retornadas",
+            "issues_by_severity": "{error: N, warning: N, info: N}",
+            "json_parse_success": "bool",
+            "retry_count": "quantas vezes a chamada foi retentada antes de sucesso"
+          },
+
+          "tags": ["compliance", "json-output", "brand-governance"],
+
+          "critical_insight": "Quando compliance retorna score=50 com fallback, hoje isso é COMPLETAMENTE INVISÍVEL. Com LangSmith, podemos: (1) Ver o raw response do Claude que causou o parse failure. (2) Identificar padrões — o Claude está retornando markdown code blocks? Está adicionando texto antes do JSON? (3) Ajustar o prompt para eliminar a classe de erro. (4) Criar evaluator automático que verifica se o JSON é válido."
+        }
+      },
+
+      {
+        "id": "LS-6",
+        "name": "Instrumentar StubAIService para tracing em dev",
+        "priority": "SEXTO",
+
+        "file": "backend/app/services/ai_service.py",
+        "function": "StubAIService",
+
+        "changes": {
+          "description": "Mesmo em dev com StubAIService, queremos traces para verificar que a instrumentação funciona",
+          "metadata": {
+            "is_stub": true,
+            "note": "Marcar runs como 'stub' para não contaminar métricas de qualidade do Claude real"
+          },
+          "tags": ["stub", "development"]
+        }
+      },
+
+      {
+        "id": "LS-7",
+        "name": "Criar parent traces para pipelines compostos",
+        "priority": "SÉTIMO — conecta as chamadas individuais em workflows",
+
+        "description": "Quando um asset é uploaded, 3 chamadas AI acontecem em sequência: caption → hashtags → compliance (se guidelines existem). Hoje essas são 3 chamadas independentes. Com LangSmith, devemos agrupá-las em um PARENT TRACE que representa o pipeline completo.",
+
+        "file": "backend/app/routers/assets.py",
+        "function": "_run_ai_pipeline (background task após upload)",
+
+        "implementation": {
+          "parent_trace": {
+            "name": "bluewave.asset_pipeline",
+            "run_type": "chain",
+            "metadata": {
+              "tenant_id": "str(tenant_id)",
+              "asset_id": "str(asset.id)",
+              "filename": "filename",
+              "file_type": "file_type",
+              "pipeline_steps": ["caption", "hashtags", "compliance"]
+            },
+            "children": [
+              "bluewave.generate_caption (child run tipo 'llm')",
+              "bluewave.generate_hashtags (child run tipo 'llm')",
+              "bluewave.check_compliance (child run tipo 'llm', só se guidelines existem)"
+            ]
+          },
+          "pattern": "Usar RunTree ou @traceable no nível do pipeline, e as chamadas individuais (já instrumentadas em LS-3/4/5) automaticamente se tornam children do parent trace. Exemplo:\n\n```python\n@traceable(name='bluewave.asset_pipeline', run_type='chain')\nasync def _run_ai_pipeline(asset_id, tenant_id, ...):\n    caption = await ai_service.generate_caption(...)  # child trace\n    hashtags = await ai_service.generate_hashtags(...)  # child trace\n    if guidelines:\n        compliance = await check_compliance(...)  # child trace\n```"
+        }
+      },
+
+      {
+        "id": "LS-8",
+        "name": "Criar datasets de avaliação no LangSmith",
+        "priority": "OITAVO — baseline de qualidade",
+
+        "description": "Criar datasets iniciais no LangSmith para avaliar qualidade dos prompts. Esses datasets são usados para: (1) Medir qualidade atual como baseline. (2) Comparar versões de prompts (A/B testing de prompts). (3) Regressão — garantir que mudanças de prompt não degradam qualidade.",
+
+        "file": "backend/scripts/create_langsmith_datasets.py",
+
+        "datasets": [
+          {
+            "name": "bluewave-caption-eval",
+            "description": "20-30 pares de (imagem + contexto) → caption esperada",
+            "examples": [
+              {
+                "input": {"filename": "hero-banner-summer.jpg", "file_type": "image/jpeg", "context": "Beach photo with surfboard"},
+                "expected_output": "Caption deve: (1) ser 1-2 frases, (2) tom profissional, (3) adequada para social media, (4) sem hashtags no corpo"
+              },
+              {
+                "input": {"filename": "product-launch-2026.png", "file_type": "image/png", "context": "Product on white background"},
+                "expected_output": "Caption deve: (1) mencionar o produto, (2) tom de lançamento, (3) sem preço, (4) brand-friendly"
+              }
+            ],
+            "evaluator_criteria": [
+              "Conciseness: caption tem 1-3 frases (não parágrafo)",
+              "Professionalism: tom profissional, sem gírias",
+              "Relevance: caption descreve o conteúdo visual real",
+              "No hashtags: caption não contém # no corpo",
+              "No quotes: caption não está entre aspas"
+            ]
+          },
+          {
+            "name": "bluewave-hashtags-eval",
+            "description": "20 exemplos de (imagem + contexto) → hashtags esperadas",
+            "evaluator_criteria": [
+              "Count: retorna 6-10 hashtags",
+              "Format: todas começam com #",
+              "JSON: output é JSON array válido",
+              "Relevance: hashtags são relevantes ao conteúdo",
+              "No duplicates: sem hashtags repetidas"
+            ]
+          },
+          {
+            "name": "bluewave-compliance-eval",
+            "description": "15 exemplos de (asset + guidelines) → compliance score esperado",
+            "evaluator_criteria": [
+              "JSON validity: output é JSON válido",
+              "Score range: 0-100",
+              "Issues structure: cada issue tem severity, category, message, suggestion",
+              "Score-issues consistency: score baixo = issues com severity 'error', score alto = poucos issues",
+              "Actionability: suggestions são específicas e acionáveis"
+            ]
+          }
+        ]
+      },
+
+      {
+        "id": "LS-9",
+        "name": "Criar evaluators automáticos",
+        "priority": "NONO — avaliação contínua",
+
+        "file": "backend/scripts/langsmith_evaluators.py",
+
+        "description": "Evaluators que rodam automaticamente em cada trace para medir qualidade. Podem ser rule-based (rápido, determinístico) ou LLM-based (mais caro, mais nuançado).",
+
+        "evaluators": [
+          {
+            "name": "caption_format_check",
+            "type": "rule-based",
+            "checks": [
+              "Caption não é vazia",
+              "Caption tem menos de 280 chars (limite Twitter)",
+              "Caption não contém hashtags (#)",
+              "Caption não está entre aspas",
+              "Caption não começa com 'Here is' ou 'Here's' (artifacts de prompt)",
+              "Caption não é o fallback 'Creative asset: ...'"
+            ]
+          },
+          {
+            "name": "hashtags_format_check",
+            "type": "rule-based",
+            "checks": [
+              "Output é JSON array válido",
+              "Array tem 6-10 elementos",
+              "Todos elementos são strings",
+              "Todos começam com #",
+              "Sem duplicatas",
+              "Nenhuma hashtag com mais de 30 chars",
+              "Não são as hashtags fallback default"
+            ]
+          },
+          {
+            "name": "compliance_format_check",
+            "type": "rule-based",
+            "checks": [
+              "Output é JSON válido",
+              "Tem campo 'score' (int, 0-100)",
+              "Tem campo 'summary' (string, não vazia)",
+              "Tem campo 'issues' (array)",
+              "Cada issue tem severity in ['error', 'warning', 'info']",
+              "Cada issue tem category in ['color', 'logo', 'tone', 'font', 'hashtag', 'general']",
+              "Score não é 50 (score fallback indica parsing failure)"
+            ]
+          },
+          {
+            "name": "caption_quality_llm",
+            "type": "llm-based",
+            "description": "Usar Claude (modelo barato, haiku) para avaliar se a caption é: profissional, relevante ao conteúdo visual, adequada para social media. Retorna score 1-5 com justificativa.",
+            "frequency": "Rodar em 10% dos traces (sampling) para controlar custo",
+            "prompt": "You are evaluating the quality of an AI-generated social media caption. Rate it 1-5 on: (1) Professional tone, (2) Relevance to the described content, (3) Engagement potential, (4) Brand-friendliness. Return JSON: {score: int, reasoning: str}"
+          }
+        ]
+      },
+
+      {
+        "id": "LS-10",
+        "name": "Dashboard de métricas AI no frontend",
+        "priority": "DÉCIMO — visibilidade para o usuário",
+
+        "description": "Expor métricas do LangSmith via API para mostrar no analytics dashboard do Bluewave",
+
+        "backend_endpoint": {
+          "file": "backend/app/routers/analytics.py",
+          "endpoint": "GET /analytics/ai-quality",
+          "response": {
+            "caption_quality": {
+              "avg_score": "float (1-5, do LLM evaluator)",
+              "format_pass_rate": "float (% que passa no format check)",
+              "fallback_rate": "float (% que usou fallback)",
+              "avg_latency_ms": "float",
+              "avg_tokens": "float"
+            },
+            "hashtags_quality": {
+              "json_parse_success_rate": "float (%)",
+              "avg_count": "float (idealmente 6-10)",
+              "fallback_rate": "float (%)"
+            },
+            "compliance_quality": {
+              "json_parse_success_rate": "float (%)",
+              "avg_score": "float (0-100)",
+              "retry_rate": "float (% que precisou de retry)",
+              "fallback_rate": "float (% que retornou score 50 fallback)"
+            }
+          },
+          "data_source": "Consultar LangSmith API (langsmith.Client().list_runs()) com filtros de projeto e período, OU manter cache local das métricas em tabela ai_quality_metrics"
+        },
+
+        "frontend_component": {
+          "file": "frontend/src/components/analytics/AIQualityCard.tsx",
+          "description": "Card no analytics dashboard que mostra: taxa de sucesso do JSON parsing, taxa de fallback, qualidade média das captions, latência média. Com indicadores verde/amarelo/vermelho baseado em thresholds."
+        }
+      },
+
+      {
+        "id": "LS-11",
+        "name": "Prompt versioning e A/B testing",
+        "priority": "DÉCIMO PRIMEIRO — otimização contínua",
+
+        "description": "Usar LangSmith para versionar prompts e comparar performance entre versões",
+
+        "implementation": {
+          "prompt_versioning": {
+            "file": "backend/app/services/prompts.py",
+            "description": "Criar módulo que centraliza todos os prompts do sistema com versão explícita. Cada prompt tem: name, version, text, metadata. O LangSmith Hub pode ser usado para armazenar/versionar prompts, ou podemos versionar localmente com constantes nomeadas.",
+            "prompts_to_version": [
+              {
+                "name": "caption_system",
+                "current_version": "v1",
+                "text": "You are a creative marketing copywriter..."
+              },
+              {
+                "name": "hashtags_system",
+                "current_version": "v1",
+                "text": "You are a social media strategist..."
+              },
+              {
+                "name": "compliance_user",
+                "current_version": "v1",
+                "text": "Analyze this media asset for brand compliance..."
+              }
+            ]
+          },
+
+          "ab_testing": {
+            "description": "Para testar nova versão de prompt: (1) Criar prompt v2 ao lado do v1. (2) Rotear 10% do tráfego para v2 (feature flag ou random). (3) Taguear traces com prompt_version='v1'|'v2'. (4) No LangSmith, comparar métricas entre v1 e v2. (5) Se v2 é melhor, promover para 100%.",
+            "metadata_tag": "prompt_version",
+            "example": "Se quisermos testar um prompt de caption que pede 'Generate a single-sentence caption' vs o atual 'Generate a single concise, engaging caption', criamos v2 e medimos se captions ficam melhores."
+          }
+        }
+      },
+
+      {
+        "id": "LS-12",
+        "name": "Feedback loop: aprovação/rejeição como sinal de qualidade",
+        "priority": "DÉCIMO SEGUNDO — fecha o loop de aprendizado",
+
+        "description": "Quando um usuário aprova ou rejeita um asset, isso é um sinal implícito de qualidade da caption/hashtags geradas pela AI. Devemos enviar esse feedback ao LangSmith como annotation no trace original.",
+
+        "implementation": {
+          "file": "backend/app/routers/workflow.py",
+          "on_approve": {
+            "action": "Buscar o trace_id da última geração de caption para este asset. Enviar feedback ao LangSmith: score=1 (positivo), comment='Asset approved by user'.",
+            "langsmith_call": "client.create_feedback(run_id=trace_id, key='user_approval', score=1.0, comment='approved')"
+          },
+          "on_reject": {
+            "action": "Buscar o trace_id da última geração de caption para este asset. Enviar feedback ao LangSmith: score=0 (negativo), comment=rejection_comment.",
+            "langsmith_call": "client.create_feedback(run_id=trace_id, key='user_approval', score=0.0, comment=rejection_comment)"
+          },
+          "storage": {
+            "description": "Armazenar o langsmith_run_id na tabela ai_usage_logs (adicionar coluna) para poder fazer o link entre ação AI e feedback posterior.",
+            "migration": "ALTER TABLE ai_usage_logs ADD COLUMN langsmith_run_id VARCHAR(64) NULL"
+          }
+        }
+      },
+
+      {
+        "id": "LS-13",
+        "name": "Monitoramento de custo real vs custo estimado",
+        "priority": "DÉCIMO TERCEIRO — controle financeiro",
+
+        "description": "Hoje o custo é FIXO por ação (5000 millicents = $0.05). Mas o custo REAL depende dos tokens consumidos. Com LangSmith rastreando tokens reais, podemos comparar custo estimado vs custo real e ajustar a tabela de preços.",
+
+        "implementation": {
+          "trace_metadata": {
+            "add_fields": [
+              "estimated_cost_millicents (da _COST_TABLE)",
+              "actual_cost_millicents (calculado: input_tokens * price_per_input_token + output_tokens * price_per_output_token)",
+              "cost_delta_pct (diferença percentual entre estimado e real)"
+            ]
+          },
+          "anthropic_pricing": {
+            "claude-sonnet-4-20250514": {
+              "input": "$3.00 / 1M tokens = 0.000003 USD/token = 0.3 millicents/token",
+              "output": "$15.00 / 1M tokens = 0.000015 USD/token = 1.5 millicents/token"
+            }
+          },
+          "alert": "Se custo real médio excede custo estimado por mais de 20%, logar WARNING e notificar admin via analytics dashboard"
+        }
+      },
+
+      {
+        "id": "LS-14",
+        "name": "Integrar com OpenClaw tracing",
+        "priority": "DÉCIMO QUARTO — visibilidade end-to-end",
+
+        "description": "Quando uma ação AI é triggerada via OpenClaw (chat → skill server → API → AI), o trace deve mostrar a cadeia completa: OpenClaw tool call → Bluewave API → Claude API",
+
+        "implementation": {
+          "file": "openclaw-skill/handler.py",
+          "change": "Ao chamar endpoints AI do Bluewave (/ai/caption, /ai/hashtags, /brand/check), passar header X-Langsmith-Trace com o run_id do OpenClaw. O backend lê esse header e usa como parent_run_id ao criar o trace do LangSmith. Isso conecta os traces cross-service.",
+          "header": "X-Langsmith-Trace: {run_id}",
+          "backend_change": "Em ai.py e brand.py, ler request.headers.get('X-Langsmith-Trace') e passar como parent_run_id ao @traceable"
+        }
+      }
+    ]
+  },
+
+  "execution_order": [
+    {
+      "phase": "Fase 1 — Fundação (1-2 dias)",
+      "tasks": ["LS-1", "LS-2"],
+      "outcome": "LangSmith configurado, módulo de tracing criado, env vars definidas"
+    },
+    {
+      "phase": "Fase 2 — Instrumentação core (2-3 dias)",
+      "tasks": ["LS-3", "LS-4", "LS-5", "LS-6", "LS-7"],
+      "outcome": "Todas as 4 chamadas AI instrumentadas com traces detalhados. Pipeline de upload gera parent trace com children."
+    },
+    {
+      "phase": "Fase 3 — Avaliação (2-3 dias)",
+      "tasks": ["LS-8", "LS-9"],
+      "outcome": "Datasets de avaliação criados, evaluators automáticos rodando em cada trace"
+    },
+    {
+      "phase": "Fase 4 — Feedback loop (1-2 dias)",
+      "tasks": ["LS-10", "LS-11", "LS-12"],
+      "outcome": "Dashboard de qualidade AI no frontend, prompt versioning, feedback de aprovação/rejeição alimentando LangSmith"
+    },
+    {
+      "phase": "Fase 5 — Otimização (1-2 dias)",
+      "tasks": ["LS-13", "LS-14"],
+      "outcome": "Monitoramento de custo real, tracing cross-service com OpenClaw"
+    }
+  ],
+
+  "success_criteria": {
+    "tracing": "100% das chamadas AI em produção geram traces no LangSmith com: prompt completo, response completa, tokens, latência, tenant_id, asset_id",
+    "quality": "Evaluators automáticos rodam em cada trace. Taxa de fallback < 5%. JSON parse success > 95%.",
+    "feedback": "Aprovação/rejeição de assets geram feedback no LangSmith linkado ao trace original",
+    "cost": "Custo real rastreado por trace. Diferença estimado vs real < 20%.",
+    "zero_impact_when_disabled": "Se LANGSMITH_API_KEY não configurado, zero overhead, zero erros, sistema funciona identicamente",
+    "dashboard": "Card de qualidade AI visível no analytics dashboard com métricas de sucesso, fallback e latência"
+  },
+
+  "files_to_modify": [
+    "backend/requirements.txt (adicionar langsmith)",
+    "backend/app/core/config.py (adicionar settings LangSmith)",
+    "backend/app/core/tracing.py (NOVO — módulo de tracing)",
+    "backend/app/main.py (chamar init_tracing no startup)",
+    "backend/app/services/ai_service.py (instrumentar generate_caption e generate_hashtags)",
+    "backend/app/services/compliance_service.py (instrumentar check_compliance)",
+    "backend/app/services/ai_usage.py (adicionar langsmith_run_id)",
+    "backend/app/models/ai_usage.py (adicionar coluna langsmith_run_id)",
+    "backend/app/routers/assets.py (parent trace no pipeline de upload)",
+    "backend/app/routers/workflow.py (feedback on approve/reject)",
+    "backend/app/routers/analytics.py (endpoint de qualidade AI)",
+    "backend/app/services/prompts.py (NOVO — prompt versioning)",
+    "backend/scripts/create_langsmith_datasets.py (NOVO — scripts de setup)",
+    "backend/scripts/langsmith_evaluators.py (NOVO — evaluators)",
+    "frontend/src/components/analytics/AIQualityCard.tsx (NOVO — card de qualidade)",
+    "openclaw-skill/handler.py (passar trace header)",
+    "docker-compose.yml (adicionar env vars LANGCHAIN_*)",
+    ".env.example (adicionar LANGSMITH_API_KEY, LANGSMITH_PROJECT)"
+  ],
+
+  "style_rules": [
+    "LangSmith deve ser 100% OPCIONAL — nunca quebrar o sistema se não configurado",
+    "Usar try/except ao redor de TODAS as chamadas ao LangSmith SDK — falha de tracing nunca deve impactar a funcionalidade",
+    "Logs do LangSmith devem ser async e non-blocking (fire-and-forget)",
+    "Nunca logar PII (emails, nomes de pessoas) nos traces — apenas IDs (tenant_id, user_id, asset_id)",
+    "Não logar conteúdo de imagens base64 nos traces (muito grande) — logar apenas metadata (size, type, dimensions)",
+    "Manter compatibilidade com StubAIService — traces de stub devem ser marcados com tag 'stub'",
+    "Custo das chamadas ao LangSmith API deve ser negligível vs custo das chamadas ao Claude (<1%)",
+    "Usar o SDK langsmith diretamente, NÃO usar LangChain framework (overhead desnecessário)"
+  ]
+}

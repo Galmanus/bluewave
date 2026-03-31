@@ -1,0 +1,461 @@
+{
+  "task": "Hardening de produção do Bluewave — Fechar todos os gaps críticos para lançamento beta e preparação Series A",
+  "output_format": "Código implementado diretamente no projeto existente",
+  "project_root": "/home/manuel/bluewave",
+
+  "context": {
+    "project_description": "Bluewave é uma plataforma de operações criativas AI-native com backend FastAPI + PostgreSQL, frontend React + TypeScript, integração Claude Vision, sistema de webhooks, API keys, multi-tenancy row-level, e integração OpenClaw (skill server para WhatsApp/Telegram/Discord/Slack). O projeto está em estágio Early MVP (7.2/10) e precisa de hardening para beta release e demo Series A.",
+    "current_score": "7.2/10 — funcional como demo, não pronto para clientes pagantes",
+    "target_score": "8.5-9/10 — pronto para beta com clientes reais e demo para investidores",
+    "estimated_effort": "4-6 semanas de desenvolvimento focado",
+
+    "tech_stack": {
+      "backend": "Python 3.11 + FastAPI 0.110 + SQLAlchemy 2.0 (async) + Alembic + asyncpg",
+      "frontend": "React 18.3 + TypeScript 5.5 + Vite 5.4 + Tailwind 3.4 + React Query 5.45 + Radix UI",
+      "ai": "Anthropic Claude API (claude-sonnet-4-20250514) com Vision",
+      "database": "PostgreSQL 16 (row-level multi-tenant via TenantMixin)",
+      "infrastructure": "Docker Compose (postgres, backend, frontend, openclaw-skill)",
+      "messaging_integration": "OpenClaw skill server (FastAPI :18790) com 16 tools"
+    }
+  },
+
+  "gaps": [
+    {
+      "id": "GAP-1",
+      "name": "Testes: Cobertura de <5% para 60-80%",
+      "severity": "CRITICO",
+      "current_state": "Apenas 1 arquivo de teste (retry.py). Zero testes de integração, zero testes de API, zero testes e2e, zero testes de frontend.",
+      "target_state": "Cobertura mínima de 60% no backend, testes de integração para todos os endpoints, testes unitários para todos os services, testes de componente no frontend.",
+
+      "backend_tests": {
+        "framework": "pytest + pytest-asyncio + httpx (TestClient) + factory-boy para fixtures",
+        "structure": {
+          "conftest.py": "Fixture global: async engine com SQLite in-memory OU PostgreSQL de teste, session factory, test client com auth headers, factory para User/Tenant/Asset/Webhook/APIKey/BrandGuideline",
+          "test_auth.py": "Testar registro (happy path + email duplicado + senha fraca), login (happy path + credenciais inválidas + conta inexistente), refresh token (happy path + token expirado + token inválido), logout (limpar cookie), reset password (request + execute + token inválido)",
+          "test_assets.py": "Testar CRUD completo: list (paginação, filtro por status, busca por texto), get (happy path + 404 + asset de outro tenant), upload (imagem válida + tipo inválido + arquivo muito grande + sem permissão), update (caption + hashtags + sem permissão), delete (admin only + 404 + cascata de usage logs), file serving (com JWT header + com query token + sem auth = 401 + arquivo não existe no disco = 404)",
+          "test_workflow.py": "Testar submit (draft→pending, estado inválido = 400), approve (pending→approved + compliance gate score<70 = 400, não-admin = 403), reject (pending→draft com comentário, sem comentário = 400)",
+          "test_ai.py": "Testar regenerate caption (mock do ClaudeAIService, verificar que ai_usage_log é criado), regenerate hashtags (mock, verificar JSON array), usage endpoint (filtro por dias, agrupamento por action_type, cálculo de custo em cents)",
+          "test_brand.py": "Testar get guidelines (vazio = null, existente = objeto completo), put guidelines (criar + atualizar + validação de cores hex), compliance check (mock do compliance_service, verificar score/issues/summary retornados, asset não encontrado = 404)",
+          "test_webhooks.py": "Testar CRUD: list (admin only), create (validar URL formato, events válidos), update, delete. Testar emit_event: mock httpx, verificar HMAC signature, verificar retry em 500, verificar filtro de events",
+          "test_api_keys.py": "Testar create (retorna key uma vez, armazena hash), list (não expõe hash), delete (soft delete via is_active=false), autenticação via X-API-Key (happy path + key inválida + key desativada + key de outro tenant)",
+          "test_portals.py": "Testar CRUD admin: create portal (slug único), add collection, add asset to collection, remove asset. Testar endpoints públicos: GET /p/{slug} (portal ativo + inativo = 404), GET /p/{slug}/collections, GET /p/{slug}/collections/{id}/assets",
+          "test_automations.py": "Testar CRUD: create com trigger_type + conditions + actions, toggle ativo/inativo, logs. Testar automation_engine.on_event: mock das ações, verificar condition evaluation (eq, gt, contains, etc.), verificar log de execução",
+          "test_subscriptions.py": "Testar GET /billing/plan (retorna tier + usage), GET /billing/usage (retorna contagem de AI actions vs limite)",
+          "test_tenant_isolation.py": "CRÍTICO — Criar 2 tenants, criar assets em cada, verificar que tenant A NUNCA vê assets do tenant B em nenhum endpoint (assets, webhooks, api_keys, brand, etc.)",
+          "test_security.py": "Testar JWT expirado = 401, JWT de outro tenant = isolamento, role guards (viewer não pode upload, editor não pode delete, admin pode tudo), bcrypt hash não reversível, API key hash não reversível"
+        },
+
+        "services_unit_tests": {
+          "test_ai_service.py": "Testar ClaudeAIService com mock do httpx: caption para imagem (com visão), caption para vídeo (fallback filename), hashtags (JSON parse + fallback), brand voice learning (verificar que approved assets são incluídos no prompt). Testar StubAIService: respostas determinísticas.",
+          "test_compliance_service.py": "Testar check_compliance com mock do Claude: score alto (>=90, passed=true, 0 issues), score médio (70-89, passed=true, warnings), score baixo (<70, passed=false, errors + suggestions). Testar JSON parse failure → fallback score 50. Testar sem guidelines → skip.",
+          "test_webhook_service.py": "Testar emit_event: carrega webhooks ativos do tenant, filtra por event type, assina com HMAC-SHA256, verifica headers (X-Bluewave-Signature, X-Webhook-Signature, X-Bluewave-Event, X-Bluewave-Delivery UUID). Testar retry: mock 500 na primeira tentativa, 200 na segunda. Testar webhook inativo = skip.",
+          "test_automation_engine.py": "Testar on_event com condições: eq (status=='draft'), gt (file_size>2MB), contains (file_type contains 'image'). Testar ações: auto_submit (muda status), run_compliance (chama compliance_service), notify_webhook (chama emit_event). Testar condição falsa = ação não executa. Testar automação inativa = skip."
+        },
+
+        "dependencies_to_add": ["pytest>=8.0", "pytest-asyncio>=0.23", "pytest-cov>=4.1", "httpx[http2]>=0.27", "factory-boy>=3.3", "aiosqlite>=0.20"],
+        "config_file": "backend/pyproject.toml ou backend/pytest.ini com: asyncio_mode=auto, testpaths=['tests'], addopts='--cov=app --cov-report=term-missing --cov-report=html -v'",
+        "ci_command": "cd backend && python -m pytest --cov=app --cov-fail-under=60 -v"
+      },
+
+      "frontend_tests": {
+        "framework": "Vitest + React Testing Library + MSW (Mock Service Worker) para mock de API",
+        "structure": {
+          "setup.ts": "Configurar jsdom, MSW server com handlers para todos os endpoints, mock de localStorage (access_token), mock de IntersectionObserver e ResizeObserver",
+          "components/": "Testar renderização de: AssetCard (com/sem caption, com/sem compliance score, diferentes status), Button (variantes, disabled, loading), StatusBadge (cores por status)",
+          "pages/": "Testar AssetListPage (lista vazia, lista com assets, filtro por status, paginação), LoginPage (submit form, validação, erro de API), LandingPage (renderiza sem crash, CTA links corretos)",
+          "hooks/": "Testar useAssets (fetch + cache + refetch), useAuth (login + logout + refresh), useComplianceCheck (trigger + loading + result)",
+          "lib/": "Testar api.ts (retry logic, token refresh em 401, headers corretos)"
+        },
+        "dependencies_to_add": ["vitest", "@testing-library/react", "@testing-library/jest-dom", "@testing-library/user-event", "msw", "jsdom"],
+        "config_file": "frontend/vitest.config.ts com: environment='jsdom', globals=true, setupFiles='./src/test/setup.ts', coverage.provider='v8', coverage.thresholds.statements=50",
+        "ci_command": "cd frontend && npx vitest run --coverage"
+      },
+
+      "openclaw_tests": {
+        "file": "openclaw-skill/test_handler.py",
+        "content": "Testar BlueWaveHandler com mock de httpx.AsyncClient: cada uma das 16 tools com response mock do formato esperado. Testar error handling: ConnectError retorna mensagem amigável, HTTPStatusError retorna status code + detail. Testar format_webhook_event para cada event type. Testar ToolResult.to_chat() e .to_dict().",
+        "ci_command": "cd openclaw-skill && python -m pytest test_handler.py -v"
+      }
+    },
+
+    {
+      "id": "GAP-2",
+      "name": "Observabilidade: Logging estruturado + monitoring + error tracking",
+      "severity": "CRITICO",
+      "current_state": "Zero logging estruturado, zero monitoring, zero error tracking. Apenas prints esparsos e logging.getLogger básico sem configuração.",
+      "target_state": "Logging JSON estruturado em todas as camadas, Sentry para error tracking, health check expandido com métricas, request logging middleware.",
+
+      "tasks": [
+        {
+          "id": "OBS-1",
+          "name": "Configurar logging estruturado JSON",
+          "file": "backend/app/core/logging_config.py",
+          "details": "Criar módulo de configuração de logging com: (1) Formatter JSON que inclui timestamp ISO, level, logger name, message, request_id (UUID por request via contextvars), tenant_id (do UserContext), user_id, extra fields. (2) Handler para stdout (JSON, uma linha por log). (3) Níveis configuráveis via env var LOG_LEVEL (default INFO). (4) Suprimir logs verbose do uvicorn.access e sqlalchemy.engine (a menos que LOG_LEVEL=DEBUG). Usar structlog ou python-json-logger.",
+          "dependencies_to_add": ["python-json-logger>=2.0", "structlog>=24.0"]
+        },
+        {
+          "id": "OBS-2",
+          "name": "Request logging middleware",
+          "file": "backend/app/core/middleware.py",
+          "details": "Criar middleware FastAPI que: (1) Gera request_id UUID para cada request e armazena em ContextVar. (2) Loga início do request: method, path, client IP, user-agent. (3) Loga fim do request: status code, duration_ms, response size. (4) Adiciona header X-Request-ID na response. (5) Não loga requests para /api/v1/health (evitar spam). (6) Em caso de exceção não tratada, loga o traceback completo como JSON com request_id."
+        },
+        {
+          "id": "OBS-3",
+          "name": "Sentry integration",
+          "file": "backend/app/core/sentry.py",
+          "details": "Integrar Sentry SDK: (1) Inicializar com SENTRY_DSN env var (optional — se não configurado, skip silenciosamente). (2) Configurar traces_sample_rate=0.1 (10% das transações). (3) Adicionar tag 'tenant_id' em cada transação. (4) Capturar exceções não tratadas automaticamente. (5) Não enviar PII (emails, nomes) — apenas IDs. (6) Configurar environment tag baseado em ENV var (development/staging/production).",
+          "dependencies_to_add": ["sentry-sdk[fastapi]>=1.40"]
+        },
+        {
+          "id": "OBS-4",
+          "name": "Health check expandido",
+          "file": "backend/app/routers/health.py",
+          "details": "Expandir GET /api/v1/health para retornar: (1) status geral (ok/degraded/error). (2) database: connectivity check (SELECT 1), latency_ms. (3) ai_service: tipo (claude/stub), api_key_configured (bool). (4) storage: uploads dir exists + free space. (5) uptime_seconds. (6) version (da config). Criar também GET /api/v1/health/ready (para k8s readiness probe — só checa DB) e GET /api/v1/health/live (para liveness probe — sempre 200)."
+        },
+        {
+          "id": "OBS-5",
+          "name": "Logging em services críticos",
+          "details": "Adicionar logs estruturados em: (1) ai_service.py: log antes e depois de cada chamada à API Claude com model, tokens, duration_ms, success/error. (2) compliance_service.py: log score retornado, número de issues, tenant_id, asset_id. (3) webhook_service.py: log cada entrega (url, event, status_code, duration_ms, retry_count). (4) automation_engine.py: log cada avaliação de condição (true/false), cada ação executada, cada erro. (5) auth router: log login success/failure com email (sem senha), IP, user-agent."
+        },
+        {
+          "id": "OBS-6",
+          "name": "Frontend error tracking",
+          "file": "frontend/src/lib/sentry.ts",
+          "details": "Integrar Sentry no React: (1) Sentry.init com VITE_SENTRY_DSN env var. (2) ErrorBoundary global que captura crashes React. (3) Capturar erros de API (axios interceptor em caso de 500). (4) Breadcrumbs para navegação de rota. (5) Não enviar PII. Adicionar @sentry/react ao package.json."
+        }
+      ]
+    },
+
+    {
+      "id": "GAP-3",
+      "name": "Security: CORS, TLS, secrets, hardening",
+      "severity": "ALTO",
+      "current_state": "CORS hardcoded para localhost:5173/5174. JWT_SECRET='super-secret-change-me' como default. DATABASE_URL com senha 'changeme'. Sem TLS. Sem rate limiting. Sem CSP headers. Sem HSTS.",
+      "target_state": "CORS configurável via env, secrets obrigatórios sem defaults inseguros, nginx reverse proxy com TLS, rate limiting, security headers.",
+
+      "tasks": [
+        {
+          "id": "SEC-1",
+          "name": "CORS dinâmico via env var",
+          "file": "backend/app/core/config.py + backend/app/main.py",
+          "details": "Em config.py: adicionar CORS_ORIGINS: str = '' (env var, comma-separated). Em main.py: parsear CORS_ORIGINS.split(',') se definido, senão usar ['http://localhost:5173', 'http://localhost:5174'] como fallback APENAS em development. Adicionar validação: se ENV=production e CORS_ORIGINS vazio, logar WARNING e recusar iniciar. Manter allow_credentials=True, allow_methods=['*'], allow_headers=['*']."
+        },
+        {
+          "id": "SEC-2",
+          "name": "Eliminar secrets defaults inseguros",
+          "file": "backend/app/core/config.py",
+          "details": "Mudar JWT_SECRET para sem default (campo obrigatório). Mudar DATABASE_URL para sem default. Adicionar validação no startup: se JWT_SECRET contém 'change-me' ou 'secret' ou tem menos de 32 chars, logar CRITICAL e recusar iniciar em production (ENV=production). Adicionar ENV: str = 'development' à config. Gerar .env.example com placeholders claros e .env.production.example com instruções de como gerar secrets seguros (python -c \"import secrets; print(secrets.token_urlsafe(64))\")."
+        },
+        {
+          "id": "SEC-3",
+          "name": "Nginx reverse proxy com TLS",
+          "files": ["nginx/nginx.conf", "nginx/Dockerfile", "docker-compose.prod.yml"],
+          "details": "Criar docker-compose.prod.yml que adiciona serviço nginx: (1) Termina TLS com certificado (mount volume para certs, ou usar certbot sidecar). (2) Proxy /api/* para backend:8000. (3) Proxy / para frontend:5173 (ou serve static build). (4) Headers de segurança: Strict-Transport-Security (max-age=31536000), X-Content-Type-Options (nosniff), X-Frame-Options (DENY), X-XSS-Protection (1; mode=block), Content-Security-Policy (default-src 'self'). (5) Rate limit global: 100 requests/min por IP. (6) Rate limit para /api/v1/auth/*: 10 requests/min por IP (anti-brute-force). (7) Gzip compression. (8) Request size limit: 50MB (para uploads)."
+        },
+        {
+          "id": "SEC-4",
+          "name": "Rate limiting por tier na API",
+          "file": "backend/app/core/rate_limit.py",
+          "details": "Implementar rate limiter in-memory (ou Redis se disponível): (1) Middleware que checa rate limit antes de processar request. (2) Limites configuráveis por rota pattern: /ai/* = 60/min (free) ou unlimited (pro+), /auth/* = 10/min, /assets upload = 30/min, default = 120/min. (3) Retornar 429 Too Many Requests com header Retry-After. (4) Logar rate limit violations. Para fase 1, usar dict em memória com cleanup periódico. Para fase 2, migrar para Redis."
+        },
+        {
+          "id": "SEC-5",
+          "name": "Validação de input mais rigorosa",
+          "details": "Em assets router: (1) Whitelist de extensões permitidas: .jpg, .jpeg, .png, .gif, .webp, .mp4, .mov, .avi, .mkv. Rejeitar tudo que não esteja na lista com 400. (2) Validar que content-type do upload corresponde à extensão (ex: .jpg deve ter image/jpeg). (3) Limit file size a 50MB via Pydantic/FastAPI. Em auth router: (1) Validar força de senha no registro: mínimo 8 chars, pelo menos 1 maiúscula, 1 número. (2) Rate limit de login failures por email: após 5 falhas em 15min, bloquear por 30min."
+        },
+        {
+          "id": "SEC-6",
+          "name": "Audit logging",
+          "file": "backend/app/models/audit_log.py + backend/app/services/audit_service.py",
+          "details": "Criar tabela audit_logs: id (UUID), tenant_id, user_id, action (enum: login, logout, asset.create, asset.delete, asset.approve, asset.reject, user.invite, user.remove, settings.change, api_key.create, api_key.revoke, webhook.create, webhook.delete), resource_type, resource_id, details (JSONB), ip_address, user_agent, created_at. Criar service audit_service.log_action() chamado nos pontos críticos. Criar endpoint GET /api/v1/audit-logs (admin only, paginado, filtrável por action e date range)."
+        }
+      ]
+    },
+
+    {
+      "id": "GAP-4",
+      "name": "Billing: Integração Stripe + invoicing",
+      "severity": "ALTO",
+      "current_state": "Modelo TenantSubscription existe com campos stripe_customer_id e stripe_subscription_id. AIUsageLog rastreia consumo com cost_millicents. Endpoint GET /billing/plan retorna tier e uso. Mas ZERO integração com Stripe — sem checkout, sem portal, sem webhooks de pagamento.",
+      "target_state": "Integração Stripe completa: checkout para upgrade, portal para gestão, webhooks para sincronizar estado, metering de AI usage reportado ao Stripe.",
+
+      "tasks": [
+        {
+          "id": "BIL-1",
+          "name": "Stripe SDK + configuração",
+          "file": "backend/app/core/config.py + backend/app/services/stripe_service.py",
+          "details": "Adicionar settings: STRIPE_SECRET_KEY (obrigatório em production), STRIPE_PUBLISHABLE_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_IDS (JSON dict: {pro: 'price_xxx', business: 'price_yyy', enterprise: 'price_zzz'}). Criar stripe_service.py com: (1) init_stripe() que configura stripe.api_key. (2) create_customer(tenant_id, email, name) → stripe Customer. (3) create_checkout_session(tenant_id, price_id, success_url, cancel_url) → session URL. (4) create_portal_session(customer_id, return_url) → portal URL. (5) report_usage(subscription_item_id, quantity, timestamp) para metered billing de AI actions.",
+          "dependencies_to_add": ["stripe>=8.0"]
+        },
+        {
+          "id": "BIL-2",
+          "name": "Endpoints de billing",
+          "file": "backend/app/routers/subscriptions.py (expandir)",
+          "details": "Adicionar aos endpoints existentes: (1) POST /billing/checkout — recebe target_plan (pro/business/enterprise), cria Stripe checkout session, retorna {url} para redirect. (2) POST /billing/portal — cria Stripe customer portal session, retorna {url}. (3) POST /billing/webhooks/stripe — endpoint público (sem auth JWT, validação via Stripe webhook signature): processa eventos checkout.session.completed (ativar subscription), customer.subscription.updated (mudar tier), customer.subscription.deleted (downgrade para free), invoice.payment_failed (marcar subscription como past_due). (4) GET /billing/invoices — lista faturas do Stripe para o tenant (admin only)."
+        },
+        {
+          "id": "BIL-3",
+          "name": "Metering de AI usage no Stripe",
+          "file": "backend/app/services/ai_usage.py (expandir)",
+          "details": "Após cada log_ai_usage(), se tenant tem subscription ativa com metered component: chamar stripe.SubscriptionItem.create_usage_record() com quantity=1 e timestamp. Isso permite Stripe calcular o billing automaticamente baseado no uso real. Fazer isso async (background task) para não bloquear o request. Se falhar, logar erro mas não impedir a ação de AI."
+        },
+        {
+          "id": "BIL-4",
+          "name": "Frontend: upgrade flow + billing page",
+          "files": ["frontend/src/pages/BillingPage.tsx", "frontend/src/components/PricingUpgrade.tsx"],
+          "details": "Criar BillingPage: (1) Mostrar plano atual (tier, período, próxima cobrança). (2) Mostrar uso de AI (actions usadas / limite, barra de progresso). (3) Mostrar uso de storage (GB usados / limite). (4) Botão 'Gerenciar assinatura' → redireciona para Stripe Customer Portal. (5) Botão 'Upgrade' → redireciona para Stripe Checkout. (6) Histórico de faturas (lista da API). Criar PricingUpgrade: modal/page com cards dos tiers (Free/Pro/Business/Enterprise) com features e preços, botão CTA por tier. Adicionar rota /billing ao App.tsx (admin only)."
+        },
+        {
+          "id": "BIL-5",
+          "name": "Enforcement de limites por tier",
+          "file": "backend/app/core/plan_limits.py",
+          "details": "Criar middleware/dependency que verifica limites antes de operações: (1) Antes de AI action: verificar se tenant não excedeu max_ai_actions_month. Se excedeu no free tier, retornar 402 Payment Required com mensagem 'Limite de ações AI atingido. Faça upgrade para continuar.' (2) Antes de upload: verificar storage total do tenant vs max_storage_bytes. Se excedeu, retornar 402. (3) Antes de criar usuário: verificar user count vs max_users. Se excedeu, retornar 402. (4) Cachear os limites em memória (refresh a cada 5min) para não consultar DB em cada request."
+        }
+      ]
+    },
+
+    {
+      "id": "GAP-5",
+      "name": "CI/CD: Pipeline automatizado + staging",
+      "severity": "MEDIO",
+      "current_state": "Zero automação. Build e deploy são manuais via docker compose. Sem linting automatizado, sem testes automatizados, sem deploy automatizado.",
+      "target_state": "GitHub Actions pipeline com lint + test + build + deploy. Staging environment. Branch protection rules.",
+
+      "tasks": [
+        {
+          "id": "CI-1",
+          "name": "GitHub Actions: CI pipeline",
+          "file": ".github/workflows/ci.yml",
+          "details": "Criar workflow triggered em push para main e em PRs: (1) Job 'lint': ruff check backend/, ruff format --check backend/, eslint frontend/. (2) Job 'test-backend': spin up PostgreSQL service container, run alembic upgrade head, run pytest --cov=app --cov-fail-under=60. (3) Job 'test-frontend': npm ci, npx vitest run --coverage. (4) Job 'test-openclaw': pip install -r requirements.txt, pytest test_handler.py. (5) Job 'build': docker compose build (verificar que builds não quebram). Todos os jobs devem usar cache (pip cache, npm cache, docker layer cache). Falha em qualquer job = PR não pode ser merged.",
+          "dependencies_to_add_backend": ["ruff>=0.3"],
+          "dependencies_to_add_frontend": ["eslint", "@typescript-eslint/eslint-plugin", "@typescript-eslint/parser"]
+        },
+        {
+          "id": "CI-2",
+          "name": "GitHub Actions: CD pipeline",
+          "file": ".github/workflows/deploy.yml",
+          "details": "Criar workflow triggered em push para main (após CI passar): (1) Build imagens Docker com tag latest + git sha. (2) Push para container registry (GitHub Container Registry ghcr.io). (3) Deploy para staging via SSH (docker compose pull + up -d) ou via webhook para plataforma de hosting. (4) Run smoke test: curl health endpoint do staging, verificar status=ok. (5) Notificar Slack/Discord com resultado do deploy."
+        },
+        {
+          "id": "CI-3",
+          "name": "Staging environment",
+          "files": ["docker-compose.staging.yml", ".env.staging.example"],
+          "details": "Criar docker-compose.staging.yml que: (1) Usa imagens built do registry (não build local). (2) Inclui nginx com TLS (Let's Encrypt ou cert auto-assinado para staging). (3) Usa PostgreSQL com credentials diferentes de dev. (4) Configura ENV=staging, LOG_LEVEL=INFO, SENTRY_DSN configurado. (5) Limita resources (CPU/memory). Criar .env.staging.example com todas as env vars necessárias e comentários explicando cada uma."
+        },
+        {
+          "id": "CI-4",
+          "name": "Branch protection + PR template",
+          "files": [".github/pull_request_template.md", ".github/CODEOWNERS"],
+          "details": "Criar PR template com: checklist (testes passam, sem secrets commitados, migration criada se schema mudou, docs atualizados). Criar CODEOWNERS que requer review para: backend/app/core/* (security-sensitive), backend/app/models/* (schema changes), docker-compose*.yml (infra changes). Documentar branch protection rules recomendadas: require CI pass, require 1 review, no direct push to main."
+        },
+        {
+          "id": "CI-5",
+          "name": "Database migration automation",
+          "file": "backend/entrypoint.sh",
+          "details": "Criar entrypoint.sh que: (1) Espera PostgreSQL ficar ready (pg_isready loop). (2) Roda alembic upgrade head automaticamente. (3) Inicia uvicorn. Atualizar Dockerfile do backend para usar entrypoint.sh como CMD. Isso elimina o passo manual de rodar migrations."
+        }
+      ]
+    },
+
+    {
+      "id": "GAP-6",
+      "name": "Performance: Redis caching + indexação + otimizações",
+      "severity": "MEDIO",
+      "current_state": "Sem caching. Queries ao DB para cada request. Indexes apenas em tenant_id. Sem connection pooling tuning. Sem CDN para static assets.",
+      "target_state": "Redis para cache de sessão e rate limiting, indexes otimizados, connection pool tuned, query optimization.",
+
+      "tasks": [
+        {
+          "id": "PERF-1",
+          "name": "Adicionar Redis ao stack",
+          "files": ["docker-compose.yml", "backend/app/core/cache.py"],
+          "details": "Adicionar serviço Redis 7 Alpine ao docker-compose.yml com healthcheck (redis-cli ping). Criar cache.py com: (1) redis_pool (aioredis connection pool). (2) cache_get(key) → cached value or None. (3) cache_set(key, value, ttl_seconds). (4) cache_delete(key). (5) cache_delete_pattern(pattern). Se Redis não disponível, fallback gracioso (skip cache, logar warning). Adicionar REDIS_URL à config (default redis://redis:6379/0).",
+          "dependencies_to_add": ["redis[hiredis]>=5.0"]
+        },
+        {
+          "id": "PERF-2",
+          "name": "Cachear queries frequentes",
+          "details": "Identificar e cachear: (1) GET /brand/guidelines: cache por tenant_id, TTL 5min, invalidar no PUT. (2) GET /billing/plan: cache por tenant_id, TTL 1min, invalidar no webhook Stripe. (3) GET /assets/counts: cache por tenant_id, TTL 30s, invalidar em qualquer mutação de asset. (4) GET /users/me: cache por user_id, TTL 5min, invalidar no PATCH. (5) Tenant subscription limits: cache por tenant_id, TTL 5min, invalidar no webhook Stripe. Pattern de invalidação: ao mutar recurso, chamar cache_delete(f'tenant:{tid}:{resource}')."
+        },
+        {
+          "id": "PERF-3",
+          "name": "Criar indexes otimizados no PostgreSQL",
+          "file": "backend/alembic/versions/xxx_add_performance_indexes.py",
+          "details": "Criar migration que adiciona: (1) CREATE INDEX ix_media_assets_tenant_status ON media_assets(tenant_id, status) — para filtro por status (80% das queries). (2) CREATE INDEX ix_media_assets_tenant_created ON media_assets(tenant_id, created_at DESC) — para ordenação padrão. (3) CREATE INDEX ix_media_assets_uploaded_by ON media_assets(uploaded_by) — para JOIN com users. (4) CREATE INDEX ix_ai_usage_logs_tenant_created ON ai_usage_logs(tenant_id, created_at DESC) — para billing queries. (5) CREATE INDEX ix_users_email ON users(email) — para login lookup (já pode existir via unique constraint). (6) CREATE INDEX ix_webhooks_tenant_active ON webhooks(tenant_id, is_active) WHERE is_active = true — partial index para emit_event. (7) ANALYZE após criação de indexes."
+        },
+        {
+          "id": "PERF-4",
+          "name": "Tunar connection pool do asyncpg",
+          "file": "backend/app/core/database.py",
+          "details": "Mudar create_async_engine para: pool_size=20 (era default 5), max_overflow=10, pool_pre_ping=True (detectar conexões mortas), pool_recycle=3600 (reconectar a cada hora). Adicionar settings: DB_POOL_SIZE=20, DB_MAX_OVERFLOW=10 para configuração via env."
+        },
+        {
+          "id": "PERF-5",
+          "name": "Frontend: lazy loading + code splitting",
+          "file": "frontend/src/App.tsx",
+          "details": "Converter imports de páginas para React.lazy(): const AssetListPage = lazy(() => import('./pages/AssetListPage')). Wrap em Suspense com fallback de loading skeleton. Isso reduz bundle inicial de ~800KB para ~200KB (carrega páginas sob demanda). Adicionar prefetch para rotas prováveis (ex: após login, prefetch /assets)."
+        },
+        {
+          "id": "PERF-6",
+          "name": "Otimizar query de listagem de assets",
+          "file": "backend/app/routers/assets.py",
+          "details": "Atualmente faz 2 queries (count + select). Otimizar: (1) Usar window function para count em uma única query (SELECT *, COUNT(*) OVER() as total FROM media_assets WHERE ...). (2) Usar select apenas colunas necessárias para listagem (não carregar file_path, compliance_issues que são grandes). (3) Eager load user name (joinedload) para evitar N+1 no frontend que mostra 'uploaded by'."
+        }
+      ]
+    },
+
+    {
+      "id": "GAP-7",
+      "name": "Analytics Dashboard: Implementação completa",
+      "severity": "MEDIO",
+      "current_state": "Zero implementação de analytics. Dados existem nas tabelas (ai_usage_logs, media_assets com timestamps, compliance scores) mas não há endpoints de agregação nem frontend para visualizar.",
+      "target_state": "Dashboard completo com métricas de velocidade, volume, eficiência, custo e ROI.",
+
+      "tasks": [
+        {
+          "id": "ANA-1",
+          "name": "Endpoints de analytics no backend",
+          "file": "backend/app/routers/analytics.py",
+          "details": "Criar router /analytics (admin only) com endpoints: (1) GET /analytics/overview?days=30 → {total_assets, total_approved, total_rejected, avg_approval_time_hours, ai_actions_count, ai_cost_cents, compliance_avg_score, assets_by_status:{draft:N, pending:N, approved:N}}. (2) GET /analytics/trends?days=90&interval=week → [{period:'2026-W10', uploads:N, approvals:N, rejections:N, ai_actions:N, avg_compliance:N}] — série temporal para gráficos. (3) GET /analytics/team?days=30 → [{user_id, full_name, uploads:N, approvals:N, rejections:N, avg_review_time_hours}] — produtividade por membro. (4) GET /analytics/ai?days=30 → {actions_by_type:{caption:N, hashtags:N, compliance:N}, total_cost_cents, avg_cost_per_asset_cents, brand_voice_accuracy_pct} — uso de AI detalhado. (5) GET /analytics/roi?days=30 → {estimated_hours_saved, estimated_cost_saved_usd, assets_auto_approved_pct, avg_time_to_approval_hours, time_improvement_pct} — calculado com benchmarks da indústria (8.8hrs/semana buscando, $45/hora profissional marketing). Todas as queries devem usar agregação SQL (não carregar rows individuais em Python). Cachear resultados no Redis com TTL de 5 minutos."
+        },
+        {
+          "id": "ANA-2",
+          "name": "Frontend: Analytics Dashboard page",
+          "files": ["frontend/src/pages/AnalyticsPage.tsx", "frontend/src/components/analytics/"],
+          "details": "Criar AnalyticsPage com: (1) Header com seletor de período (7d, 30d, 90d, custom). (2) KPI cards no topo: Total Assets, Tempo Médio de Aprovação, Score Médio de Compliance, Economia Estimada (ROI). (3) Gráfico de linha (usar recharts ou chart.js): uploads vs aprovações ao longo do tempo. (4) Gráfico de barras: uso de AI por tipo de ação. (5) Tabela de produtividade da equipe: membro, uploads, aprovações, rejections, avg review time. (6) Card de ROI: 'Bluewave economizou para sua equipe um estimado de $X,XXX este mês' com breakdown. (7) Card de compliance: score médio trending com spark line. Componentes: StatCard.tsx (KPI card com ícone + valor + variação %), TimeSeriesChart.tsx (gráfico de linha genérico), BarChart.tsx (gráfico de barras genérico), TeamTable.tsx (tabela de produtividade), ROICard.tsx (card de ROI com cálculo). Adicionar rota /analytics ao App.tsx (admin only). Usar React Query para fetch com staleTime de 5min (alinhar com cache do backend).",
+          "dependencies_to_add": ["recharts>=2.12"]
+        },
+        {
+          "id": "ANA-3",
+          "name": "Relatório executivo mensal auto-gerado",
+          "file": "backend/app/services/report_service.py",
+          "details": "Criar serviço que gera relatório PDF mensal: (1) Agrega dados do mês anterior usando os mesmos queries do analytics. (2) Gera PDF com: logo Bluewave, nome do tenant, período, KPIs principais, gráficos (matplotlib ou reportlab), tabela de equipe, cálculo de ROI. (3) Armazena PDF no uploads dir. (4) Envia por email (se SMTP configurado) para admins do tenant. (5) Expor endpoint GET /analytics/report?month=2026-03 que retorna o PDF. (6) Cron job (ou background task periódica) que gera no dia 1 de cada mês para todos os tenants ativos.",
+          "dependencies_to_add": ["reportlab>=4.1", "matplotlib>=3.8"]
+        }
+      ]
+    }
+  ],
+
+  "execution_order": [
+    {
+      "sprint": "Sprint 1 — Fundações (Semana 1-2)",
+      "items": ["SEC-1", "SEC-2", "OBS-1", "OBS-2", "OBS-4", "CI-5", "PERF-3"],
+      "justification": "Corrigir os problemas mais perigosos primeiro (CORS, secrets) e estabelecer logging para debugar tudo que vier depois. Indexes melhoram performance de todas as queries subsequentes. Migration automation elimina passo manual."
+    },
+    {
+      "sprint": "Sprint 2 — Testes (Semana 2-3)",
+      "items": ["GAP-1 inteiro"],
+      "justification": "Com logging em lugar, agora podemos escrever testes e debugar falhas. Testes devem existir ANTES de refatorar qualquer coisa — rede de segurança."
+    },
+    {
+      "sprint": "Sprint 3 — Security + CI/CD (Semana 3-4)",
+      "items": ["SEC-3", "SEC-4", "SEC-5", "SEC-6", "CI-1", "CI-2", "CI-3", "CI-4"],
+      "justification": "Com testes em lugar, podemos configurar CI que roda testes automaticamente. Nginx + rate limiting + audit logs completam o hardening de segurança."
+    },
+    {
+      "sprint": "Sprint 4 — Billing (Semana 4-5)",
+      "items": ["BIL-1", "BIL-2", "BIL-3", "BIL-4", "BIL-5"],
+      "justification": "Com infraestrutura segura e testada, agora podemos implementar billing. É a feature que transforma demo em produto que gera receita."
+    },
+    {
+      "sprint": "Sprint 5 — Performance + Observabilidade avançada (Semana 5-6)",
+      "items": ["PERF-1", "PERF-2", "PERF-4", "PERF-5", "PERF-6", "OBS-3", "OBS-5", "OBS-6"],
+      "justification": "Com billing ativo, agora precisamos garantir que o sistema performa sob carga real. Redis caching, Sentry para erros em produção, frontend otimizado."
+    },
+    {
+      "sprint": "Sprint 6 — Analytics + Polish (Semana 6-7)",
+      "items": ["ANA-1", "ANA-2", "ANA-3"],
+      "justification": "Analytics é o 'wow factor' para demo de Series A e o mecanismo de retenção para clientes reais. Implementar por último porque depende de todos os dados estarem fluindo corretamente."
+    }
+  ],
+
+  "success_criteria": {
+    "testes": "pytest --cov-fail-under=60 passa. Vitest coverage >50%. Zero testes falhando.",
+    "observabilidade": "Cada request gera log JSON com request_id. Errors aparecem no Sentry. Health check retorna status detalhado.",
+    "security": "CORS configurável. JWT_SECRET obrigatório sem default inseguro. Rate limiting ativo. Nginx com TLS. Audit logs para ações críticas.",
+    "billing": "Tenant pode fazer upgrade via Stripe Checkout. Webhook sincroniza estado. AI usage reportado ao Stripe. Limites de tier enforced (402 quando excedido).",
+    "ci_cd": "Push para main roda lint+test+build automaticamente. PR não pode ser merged se CI falhar. Deploy para staging é automático.",
+    "performance": "Redis cacheia queries frequentes. Indexes cobrem queries principais. Asset list carrega em <200ms. Frontend bundle inicial <250KB.",
+    "analytics": "Dashboard mostra KPIs, gráficos de tendência, produtividade de equipe, e ROI estimado. Relatório mensal auto-gerado em PDF."
+  },
+
+  "files_reference": {
+    "backend_core": [
+      "backend/app/main.py",
+      "backend/app/core/config.py",
+      "backend/app/core/deps.py",
+      "backend/app/core/security.py",
+      "backend/app/core/tenant.py",
+      "backend/app/core/database.py"
+    ],
+    "backend_models": [
+      "backend/app/models/base.py",
+      "backend/app/models/user.py",
+      "backend/app/models/tenant.py",
+      "backend/app/models/asset.py",
+      "backend/app/models/api_key.py",
+      "backend/app/models/ai_usage.py",
+      "backend/app/models/webhook.py",
+      "backend/app/models/automation.py",
+      "backend/app/models/brand_guideline.py",
+      "backend/app/models/portal.py",
+      "backend/app/models/subscription.py",
+      "backend/app/models/trend.py"
+    ],
+    "backend_routers": [
+      "backend/app/routers/auth.py",
+      "backend/app/routers/users.py",
+      "backend/app/routers/assets.py",
+      "backend/app/routers/workflow.py",
+      "backend/app/routers/ai.py",
+      "backend/app/routers/brand.py",
+      "backend/app/routers/webhooks.py",
+      "backend/app/routers/api_keys.py",
+      "backend/app/routers/trends.py",
+      "backend/app/routers/portals.py",
+      "backend/app/routers/automations.py",
+      "backend/app/routers/subscriptions.py"
+    ],
+    "backend_services": [
+      "backend/app/services/ai_service.py",
+      "backend/app/services/compliance_service.py",
+      "backend/app/services/webhook_service.py",
+      "backend/app/services/automation_engine.py",
+      "backend/app/services/ai_usage.py"
+    ],
+    "frontend_key_files": [
+      "frontend/src/App.tsx",
+      "frontend/src/lib/api.ts",
+      "frontend/src/contexts/AuthContext.tsx",
+      "frontend/src/pages/AssetListPage.tsx",
+      "frontend/src/pages/AssetDetailPage.tsx",
+      "frontend/src/pages/LandingPage.tsx"
+    ],
+    "openclaw": [
+      "openclaw-skill/handler.py",
+      "openclaw-skill/server.py",
+      "openclaw-skill/tools.json"
+    ],
+    "infra": [
+      "docker-compose.yml",
+      "docker-compose.openclaw.yml",
+      "backend/Dockerfile",
+      "frontend/Dockerfile"
+    ]
+  },
+
+  "style_rules": [
+    "Manter todo o código em inglês (variáveis, comentários, docstrings)",
+    "Usar type hints em todo o Python",
+    "Usar async/await em todo o backend (nunca bloqueante)",
+    "Testes devem ser independentes — cada teste cria seus próprios dados e limpa após si",
+    "Nunca commitar secrets reais — usar .env.example com placeholders",
+    "Logs devem ser JSON estruturado (nunca print())",
+    "Toda nova tabela deve incluir TenantMixin (exceto tabelas globais como tenants)",
+    "Toda nova rota deve incluir dependency de auth (get_current_user ou require_role)",
+    "Frontend: usar React Query para server state, Context para client state",
+    "Frontend: componentes devem ter TypeScript strict (nenhum 'any')",
+    "Migrations Alembic: uma migration por mudança lógica, mensagem descritiva",
+    "Docker: multi-stage builds, .dockerignore atualizado, sem secrets no build"
+  ]
+}

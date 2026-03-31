@@ -1,0 +1,1117 @@
+{
+  "meta": {
+    "title": "Bluewave 10x Implementation Prompt",
+    "version": "1.0.0",
+    "created": "2026-03-17",
+    "purpose": "Complete engineering specification to transform Bluewave from a $12/user DAM tool into a $29-149/user AI-native Creative Operations Platform",
+    "strategy_doc": "docs/10x_strategy.md",
+    "market_research": "docs/market_research.md"
+  },
+
+  "current_architecture": {
+    "summary": "Multi-tenant SaaS MVP with row-level isolation, JWT auth, FastAPI backend, React+TS frontend, PostgreSQL database. AI features are deterministic stubs behind an AIServiceProtocol interface.",
+    "backend": {
+      "framework": "FastAPI 0.110.0",
+      "orm": "SQLAlchemy 2.0.27 (async with asyncpg)",
+      "migrations": "Alembic 1.13.1",
+      "auth": "JWT HS256 via python-jose + bcrypt via passlib",
+      "ai_interface": "AIServiceProtocol (Protocol class) — currently StubAIService",
+      "background_tasks": "FastAPI BackgroundTasks (in-process, not distributed)",
+      "file_storage": "Local volume /app/uploads/{tenant_id}/{uuid}_{filename}",
+      "entry_point": "app/main.py"
+    },
+    "frontend": {
+      "framework": "React 18.3 + TypeScript 5.5 + Vite 5.4",
+      "styling": "Tailwind CSS 3.4 with CSS variable design tokens (light/dark)",
+      "state": "TanStack React Query 5.45",
+      "routing": "React Router DOM 6.23",
+      "http": "Axios with JWT interceptor + exponential backoff retry",
+      "animations": "Framer Motion",
+      "ui_components": "13 custom components in src/components/ui/ built on Radix UI"
+    },
+    "database": {
+      "engine": "PostgreSQL 16",
+      "tables": ["tenants", "users", "media_assets"],
+      "multi_tenancy": "Row-level via TenantMixin (tenant_id FK) + SQLAlchemy session event auto-filter"
+    },
+    "infrastructure": {
+      "orchestration": "Docker Compose (3 services: postgres, backend, frontend)",
+      "network": "bluewave_network bridge (postgres internal-only)",
+      "ports": { "frontend": "5174:5173", "backend": "8300:8000" }
+    }
+  },
+
+  "implementation_phases": [
+    {
+      "phase": 10,
+      "name": "Real AI Integration (Claude API)",
+      "priority": "CRITICAL — unlocks usage-based revenue immediately",
+      "estimated_time": "2 weeks",
+      "revenue_impact": "Enables $0.05/action pricing on top of seat fees",
+      "depends_on": ["Existing AIServiceProtocol interface"],
+
+      "backend_changes": {
+        "new_dependencies": [
+          "anthropic>=0.42.0",
+          "httpx>=0.27.0",
+          "tiktoken>=0.7.0",
+          "pillow>=10.3.0"
+        ],
+
+        "config_additions": {
+          "file": "backend/app/core/config.py",
+          "new_settings": {
+            "ANTHROPIC_API_KEY": { "type": "str", "default": "''", "description": "Claude API key for real AI features" },
+            "AI_MODEL": { "type": "str", "default": "claude-haiku-4-5-20251001", "description": "Default model — use Haiku for speed/cost on captions, Sonnet for complex tasks" },
+            "AI_ENABLED": { "type": "bool", "default": "true", "description": "Feature flag to disable real AI and fall back to stubs" },
+            "AI_MAX_TOKENS_CAPTION": { "type": "int", "default": "150", "description": "Max output tokens for caption generation" },
+            "AI_MAX_TOKENS_HASHTAGS": { "type": "int", "default": "100", "description": "Max output tokens for hashtag generation" },
+            "AI_PRICE_PER_ACTION": { "type": "float", "default": "0.05", "description": "Price charged to tenant per AI action" }
+          }
+        },
+
+        "new_files": {
+          "backend/app/services/claude_ai_service.py": {
+            "description": "Real AI service implementing AIServiceProtocol using Claude API",
+            "class": "ClaudeAIService",
+            "implements": "AIServiceProtocol",
+            "methods": {
+              "generate_caption": {
+                "signature": "async def generate_caption(self, filename: str, file_type: str, tenant_context: dict | None = None) -> str",
+                "prompt_strategy": "System prompt includes brand voice context if available. User prompt describes the media file. Returns a marketing-ready caption.",
+                "model": "claude-haiku-4-5-20251001 (fast, cheap — $0.80/MTok input, $4/MTok output)",
+                "fallback": "If API fails after retry, fall back to StubAIService result"
+              },
+              "generate_hashtags": {
+                "signature": "async def generate_hashtags(self, filename: str, file_type: str, tenant_context: dict | None = None) -> list[str]",
+                "prompt_strategy": "Analyze file metadata + any caption context. Return 6-10 relevant hashtags. If tenant has brand hashtags defined, include those.",
+                "model": "claude-haiku-4-5-20251001"
+              },
+              "analyze_image": {
+                "signature": "async def analyze_image(self, image_bytes: bytes, file_type: str) -> dict",
+                "description": "NEW — Send actual image to Claude vision for rich description, object detection, scene analysis, color palette extraction",
+                "model": "claude-haiku-4-5-20251001 (supports vision)",
+                "returns": "{ description: str, objects: list[str], scene: str, colors: list[str], mood: str }",
+                "note": "This is the foundation for smart auto-tagging and brand compliance"
+              },
+              "check_brand_compliance": {
+                "signature": "async def check_brand_compliance(self, image_bytes: bytes, brand_guidelines: dict) -> ComplianceResult",
+                "description": "NEW — Compare image against tenant's brand guidelines",
+                "model": "claude-sonnet-4-6 (needs reasoning for compliance judgments)",
+                "returns": "ComplianceResult { score: int (0-100), issues: list[ComplianceIssue], passed: bool }",
+                "guidelines_input": "{ colors: list[hex], fonts: list[str], logos: list[url], tone: str, dos: list[str], donts: list[str] }"
+              }
+            },
+            "retry": "@retry(max_retries=3, base_delay=1.0, retryable=(httpx.TransportError, httpx.HTTPStatusError, anthropic.APIStatusError))",
+            "error_handling": "Log failures, fall back to stub, never block the upload flow"
+          },
+
+          "backend/app/services/ai_factory.py": {
+            "description": "Factory that returns the appropriate AI service based on config",
+            "logic": "If AI_ENABLED and ANTHROPIC_API_KEY set → return ClaudeAIService() else return StubAIService()",
+            "singleton": "Instantiate once at module level, import everywhere as `ai_service`"
+          }
+        },
+
+        "modified_files": {
+          "backend/app/routers/assets.py": {
+            "changes": [
+              "Update _run_ai_stubs to pass image bytes to analyze_image() for vision-capable analysis",
+              "After AI generates caption/tags, also store the raw analysis in a new JSONB column",
+              "Log AI action for usage tracking (see Phase 10 ai_usage_logs table)"
+            ]
+          },
+          "backend/app/routers/ai.py": {
+            "changes": [
+              "Add POST /ai/analyze/{asset_id} — trigger full image analysis (vision)",
+              "Add POST /ai/compliance/{asset_id} — run brand compliance check",
+              "Add GET /ai/usage — return tenant's AI action count and cost for current billing period",
+              "All endpoints log to ai_usage_logs table"
+            ]
+          }
+        }
+      },
+
+      "database_changes": {
+        "new_tables": {
+          "ai_usage_logs": {
+            "description": "Track every AI action for billing and analytics",
+            "columns": {
+              "id": "UUID PK",
+              "tenant_id": "UUID FK tenants.id NOT NULL (TenantMixin)",
+              "user_id": "UUID FK users.id NOT NULL",
+              "asset_id": "UUID FK media_assets.id NULLABLE",
+              "action_type": "ENUM(caption, hashtags, analyze, compliance, brand_voice) NOT NULL",
+              "model_used": "VARCHAR(100) NOT NULL",
+              "input_tokens": "INTEGER NOT NULL DEFAULT 0",
+              "output_tokens": "INTEGER NOT NULL DEFAULT 0",
+              "cost_usd": "DECIMAL(10,6) NOT NULL — Anthropic API cost",
+              "price_charged": "DECIMAL(10,4) NOT NULL — price charged to tenant",
+              "created_at": "TIMESTAMPTZ NOT NULL DEFAULT now()"
+            },
+            "indexes": ["(tenant_id, created_at)", "(tenant_id, action_type)"]
+          }
+        },
+        "modified_tables": {
+          "media_assets": {
+            "new_columns": {
+              "ai_analysis": "JSONB NULLABLE — raw AI vision analysis result",
+              "compliance_score": "INTEGER NULLABLE — 0-100 brand compliance score",
+              "compliance_issues": "JSONB NULLABLE — list of compliance issues found",
+              "auto_tags": "ARRAY(String) NULLABLE — AI-detected objects, scenes, etc."
+            }
+          },
+          "tenants": {
+            "new_columns": {
+              "ai_actions_used": "INTEGER NOT NULL DEFAULT 0 — current billing period counter",
+              "ai_actions_limit": "INTEGER NULLABLE — NULL = unlimited (paid plans)",
+              "billing_period_start": "TIMESTAMPTZ NULLABLE"
+            }
+          }
+        },
+        "migration": "alembic revision --autogenerate -m 'add_ai_usage_and_analysis'"
+      },
+
+      "frontend_changes": {
+        "new_hooks": {
+          "src/hooks/useAI.ts": {
+            "hooks": [
+              "useAIAnalyze(assetId) — POST /ai/analyze/{id}, returns analysis result",
+              "useAICompliance(assetId) — POST /ai/compliance/{id}, returns compliance score",
+              "useAIUsage() — GET /ai/usage, returns { actions_used, actions_limit, cost_this_period }"
+            ]
+          }
+        },
+        "modified_pages": {
+          "AssetDetailPage.tsx": [
+            "Show compliance_score as a circular progress indicator (green ≥80, yellow ≥50, red <50)",
+            "Show auto_tags as pill badges below hashtags",
+            "Add 'Re-analyze with AI' button that triggers full vision analysis",
+            "Show ai_analysis.objects and ai_analysis.mood as metadata"
+          ]
+        },
+        "new_components": {
+          "src/components/ui/ComplianceScore.tsx": "Circular gauge showing 0-100 score with color coding",
+          "src/components/AIUsageBanner.tsx": "Shows 'X of Y AI actions used this month' in sidebar or settings"
+        }
+      },
+
+      "env_vars_to_add": {
+        "ANTHROPIC_API_KEY": "sk-ant-...",
+        "AI_ENABLED": "true",
+        "AI_MODEL": "claude-haiku-4-5-20251001"
+      }
+    },
+
+    {
+      "phase": 11,
+      "name": "Brand Compliance Engine",
+      "priority": "HIGH — justifies $29→$49 tier upgrade",
+      "estimated_time": "3 weeks",
+      "revenue_impact": "Primary differentiator that creates switching cost",
+      "depends_on": ["Phase 10 (Real AI)"],
+
+      "backend_changes": {
+        "new_files": {
+          "backend/app/models/brand_guideline.py": {
+            "table": "brand_guidelines",
+            "columns": {
+              "id": "UUID PK",
+              "tenant_id": "UUID FK tenants.id NOT NULL (TenantMixin)",
+              "primary_colors": "ARRAY(String) — hex codes e.g. ['#2563EB', '#111827']",
+              "secondary_colors": "ARRAY(String)",
+              "fonts": "ARRAY(String) — font family names",
+              "logo_urls": "ARRAY(String) — paths to uploaded logo files",
+              "tone_description": "TEXT — 'Professional but approachable, never use slang'",
+              "dos": "ARRAY(String) — 'Always include the tagline', 'Use sentence case'",
+              "donts": "ARRAY(String) — 'Never use the old logo', 'Avoid red backgrounds'",
+              "custom_rules": "JSONB NULLABLE — extensible rule definitions",
+              "is_active": "BOOLEAN NOT NULL DEFAULT true",
+              "created_at": "TIMESTAMPTZ",
+              "updated_at": "TIMESTAMPTZ"
+            },
+            "constraint": "One active guideline per tenant (soft constraint in app logic)"
+          },
+
+          "backend/app/routers/brand.py": {
+            "prefix": "/api/v1/brand",
+            "endpoints": [
+              {
+                "method": "GET",
+                "path": "/guidelines",
+                "auth": "any",
+                "description": "Get current tenant's active brand guidelines"
+              },
+              {
+                "method": "PUT",
+                "path": "/guidelines",
+                "auth": "admin",
+                "description": "Create or update brand guidelines. Accepts JSON body with colors, fonts, tone, dos/donts. Also accepts logo file uploads (multipart)."
+              },
+              {
+                "method": "POST",
+                "path": "/check/{asset_id}",
+                "auth": "editor+",
+                "description": "Run brand compliance check on a specific asset. Calls ClaudeAIService.check_brand_compliance() with the asset image and tenant's guidelines. Returns ComplianceResult. Logs to ai_usage_logs."
+              },
+              {
+                "method": "GET",
+                "path": "/compliance-report",
+                "auth": "admin",
+                "description": "Aggregate compliance stats: average score, most common issues, trend over time"
+              }
+            ]
+          },
+
+          "backend/app/schemas/brand.py": {
+            "models": [
+              "BrandGuidelineCreate { primary_colors, secondary_colors, fonts, tone_description, dos, donts }",
+              "BrandGuidelineOut { id, ...all fields, created_at, updated_at }",
+              "ComplianceResult { score: int, passed: bool, issues: list[ComplianceIssue] }",
+              "ComplianceIssue { severity: 'error'|'warning'|'info', category: str, message: str, suggestion: str }"
+            ]
+          }
+        },
+
+        "workflow_integration": {
+          "file": "backend/app/routers/workflow.py",
+          "change": "When asset is submitted (draft → pending_approval), automatically run brand compliance check as a background task if guidelines exist. Store score on the asset. If score < configurable threshold (default 50), auto-reject with compliance issues as the rejection comment."
+        }
+      },
+
+      "frontend_changes": {
+        "new_pages": {
+          "src/pages/BrandPage.tsx": {
+            "description": "Brand guidelines management page (admin only)",
+            "sections": [
+              "Color palette editor — color picker inputs for primary/secondary, shows swatches",
+              "Font list — text inputs for font family names",
+              "Logo upload — drag-and-drop zone for logo files, shows thumbnails",
+              "Tone description — textarea for voice/tone guidelines",
+              "Do's and Don'ts — two-column list with add/remove capability",
+              "Save button — PUT /brand/guidelines"
+            ],
+            "route": "/brand (admin only, add to AppLayout nav and RoleGuard)"
+          }
+        },
+        "modified_pages": {
+          "AssetDetailPage.tsx": [
+            "Compliance score badge next to status badge",
+            "If score < 80, show expandable list of compliance issues with severity icons",
+            "Manual 'Run compliance check' button"
+          ],
+          "AssetListPage.tsx": [
+            "Add compliance score as a small indicator on each asset card",
+            "Add filter tab: 'Non-compliant' showing assets with score < threshold"
+          ]
+        },
+        "new_hooks": {
+          "src/hooks/useBrand.ts": [
+            "useBrandGuidelines() — GET /brand/guidelines",
+            "useUpdateBrandGuidelines() — PUT /brand/guidelines",
+            "useComplianceCheck(assetId) — POST /brand/check/{id}"
+          ]
+        }
+      }
+    },
+
+    {
+      "phase": 12,
+      "name": "White-Label Client Portals",
+      "priority": "HIGH — new revenue stream ($29/portal), turns agencies into resellers",
+      "estimated_time": "3 weeks",
+      "revenue_impact": "$29/month per portal add-on. Agency with 10 clients = $290/month new revenue.",
+      "depends_on": ["Phase 10 (Real AI)", "Tenant model extensibility"],
+
+      "backend_changes": {
+        "new_files": {
+          "backend/app/models/portal.py": {
+            "table": "client_portals",
+            "columns": {
+              "id": "UUID PK",
+              "tenant_id": "UUID FK tenants.id NOT NULL (TenantMixin)",
+              "name": "VARCHAR(255) NOT NULL — e.g. 'Acme Corp Portal'",
+              "slug": "VARCHAR(100) UNIQUE NOT NULL — URL slug e.g. 'acme-corp'",
+              "client_name": "VARCHAR(255) NOT NULL",
+              "client_logo_url": "VARCHAR(512) NULLABLE",
+              "primary_color": "VARCHAR(7) DEFAULT '#2563EB' — hex color for branding",
+              "welcome_message": "TEXT NULLABLE",
+              "is_active": "BOOLEAN NOT NULL DEFAULT true",
+              "created_at": "TIMESTAMPTZ",
+              "updated_at": "TIMESTAMPTZ"
+            }
+          },
+
+          "backend/app/models/portal_collection.py": {
+            "table": "portal_collections",
+            "description": "Curated collections of approved assets shared with a client",
+            "columns": {
+              "id": "UUID PK",
+              "portal_id": "UUID FK client_portals.id NOT NULL",
+              "tenant_id": "UUID FK tenants.id NOT NULL (TenantMixin)",
+              "name": "VARCHAR(255) NOT NULL — e.g. 'Q1 Campaign Assets'",
+              "description": "TEXT NULLABLE",
+              "is_public": "BOOLEAN NOT NULL DEFAULT true",
+              "expires_at": "TIMESTAMPTZ NULLABLE — optional expiry for time-limited shares",
+              "created_at": "TIMESTAMPTZ"
+            }
+          },
+
+          "backend/app/models/portal_collection_asset.py": {
+            "table": "portal_collection_assets",
+            "description": "Many-to-many: which approved assets belong to which collection",
+            "columns": {
+              "collection_id": "UUID FK portal_collections.id — composite PK",
+              "asset_id": "UUID FK media_assets.id — composite PK",
+              "added_at": "TIMESTAMPTZ DEFAULT now()"
+            }
+          },
+
+          "backend/app/models/portal_access_log.py": {
+            "table": "portal_access_logs",
+            "description": "Track client downloads and views for analytics",
+            "columns": {
+              "id": "UUID PK",
+              "portal_id": "UUID FK client_portals.id",
+              "tenant_id": "UUID FK tenants.id NOT NULL",
+              "asset_id": "UUID FK media_assets.id NULLABLE",
+              "action": "ENUM(view, download, comment) NOT NULL",
+              "client_ip": "VARCHAR(45) NULLABLE",
+              "user_agent": "TEXT NULLABLE",
+              "created_at": "TIMESTAMPTZ DEFAULT now()"
+            }
+          },
+
+          "backend/app/routers/portals.py": {
+            "prefix": "/api/v1/portals",
+            "admin_endpoints": [
+              "POST /portals — Create new client portal",
+              "GET /portals — List all portals for tenant",
+              "GET /portals/{id} — Portal detail with collections",
+              "PATCH /portals/{id} — Update portal settings (name, logo, color)",
+              "DELETE /portals/{id} — Deactivate portal",
+              "POST /portals/{id}/collections — Create collection",
+              "POST /portals/{id}/collections/{cid}/assets — Add assets to collection",
+              "DELETE /portals/{id}/collections/{cid}/assets/{aid} — Remove asset",
+              "GET /portals/{id}/analytics — Download/view stats"
+            ]
+          },
+
+          "backend/app/routers/portal_public.py": {
+            "prefix": "/api/v1/p",
+            "description": "PUBLIC endpoints — no auth required (client-facing)",
+            "endpoints": [
+              "GET /p/{slug} — Portal landing page data (name, logo, color, welcome message)",
+              "GET /p/{slug}/collections — List public collections",
+              "GET /p/{slug}/collections/{id} — Collection assets (approved only, no internal metadata)",
+              "GET /p/{slug}/assets/{id}/download — Download asset (logged to portal_access_logs)",
+              "POST /p/{slug}/assets/{id}/comment — Client leaves feedback (stored on asset)"
+            ],
+            "security": "No JWT required. Rate-limited. Optional password protection per portal (future)."
+          }
+        },
+
+        "modified_files": {
+          "backend/app/models/tenant.py": {
+            "new_columns": {
+              "portal_limit": "INTEGER NULLABLE — NULL = unlimited, Free tier = 0, Pro = 1, Business = 5",
+              "portal_count": "INTEGER NOT NULL DEFAULT 0"
+            }
+          }
+        }
+      },
+
+      "frontend_changes": {
+        "new_pages": {
+          "src/pages/PortalsPage.tsx": {
+            "description": "Admin page listing all client portals with create/edit capability",
+            "route": "/portals (admin only)",
+            "features": [
+              "Grid of portal cards (client name, logo, asset count, last accessed)",
+              "Create portal dialog (name, slug, client name, logo upload, primary color picker)",
+              "Edit inline or via slide-over panel",
+              "Collection management: drag approved assets into collections",
+              "Share link: copy public URL to clipboard",
+              "Analytics: views, downloads per portal"
+            ]
+          },
+          "src/pages/PortalPublicPage.tsx": {
+            "description": "Client-facing public portal (no auth, white-labeled)",
+            "route": "/p/:slug (public, not inside AuthGuard)",
+            "features": [
+              "Branded header with client logo and primary color",
+              "Collection grid with thumbnails",
+              "Asset gallery view within collection",
+              "Download button with format selector",
+              "Simple feedback form per asset",
+              "Bluewave is NOT visible — fully white-labeled (optional 'Powered by Bluewave' in footer)"
+            ]
+          }
+        },
+        "routing_changes": {
+          "App.tsx": "Add <Route path='/p/:slug/*' element={<PortalPublicPage />} /> BEFORE AuthGuard routes"
+        }
+      }
+    },
+
+    {
+      "phase": 13,
+      "name": "Analytics & ROI Dashboard",
+      "priority": "HIGH — retention multiplier, prevents churn",
+      "estimated_time": "2 weeks",
+      "revenue_impact": "1.5x retention improvement → 2x lifetime value",
+      "depends_on": ["Phase 10 (AI usage logs)", "Phase 11 (compliance data)"],
+
+      "backend_changes": {
+        "new_files": {
+          "backend/app/routers/analytics.py": {
+            "prefix": "/api/v1/analytics",
+            "endpoints": [
+              {
+                "method": "GET",
+                "path": "/overview",
+                "auth": "admin",
+                "description": "Dashboard summary: total assets, assets by status, avg approval time, AI actions used, estimated savings",
+                "response": {
+                  "total_assets": "int",
+                  "assets_by_status": "{ draft: int, pending: int, approved: int }",
+                  "avg_approval_hours": "float — average time from submit to approve",
+                  "total_ai_actions": "int — this billing period",
+                  "ai_cost_this_period": "float",
+                  "estimated_hours_saved": "float — based on benchmark (8.8 hrs/week searching × reduction factor)",
+                  "estimated_money_saved": "float — hours_saved × $50/hr average creative rate",
+                  "compliance_avg_score": "float",
+                  "top_uploaders": "list[{ user_id, name, count }] — top 5",
+                  "approval_bottleneck": "list[{ user_id, name, avg_review_hours }] — slowest reviewers"
+                }
+              },
+              {
+                "method": "GET",
+                "path": "/trends",
+                "auth": "admin",
+                "query_params": "period=7d|30d|90d",
+                "description": "Time-series data for charts",
+                "response": {
+                  "uploads_per_day": "list[{ date, count }]",
+                  "approvals_per_day": "list[{ date, count }]",
+                  "ai_actions_per_day": "list[{ date, count }]",
+                  "avg_approval_time_per_day": "list[{ date, hours }]",
+                  "compliance_score_trend": "list[{ date, avg_score }]"
+                }
+              },
+              {
+                "method": "GET",
+                "path": "/assets/unused",
+                "auth": "admin",
+                "description": "Assets that are approved but never downloaded or shared — waste detection"
+              },
+              {
+                "method": "GET",
+                "path": "/assets/duplicates",
+                "auth": "admin",
+                "description": "Assets with similar AI analysis results — deduplication candidates"
+              }
+            ]
+          }
+        },
+
+        "computation_notes": {
+          "estimated_hours_saved": "Formula: (total_assets_this_period × avg_search_time_without_dam) - (total_assets_this_period × avg_search_time_with_dam). Industry benchmark: 8.8 hrs/week → reduced to ~2 hrs/week with DAM. Per asset: ~15 min saved on search + 10 min on metadata = 25 min saved per asset. At 200 assets/month = 83 hours saved.",
+          "estimated_money_saved": "hours_saved × $50/hr (configurable per tenant — creative team hourly rate)"
+        }
+      },
+
+      "frontend_changes": {
+        "new_pages": {
+          "src/pages/AnalyticsPage.tsx": {
+            "description": "ROI Dashboard with charts and key metrics",
+            "route": "/analytics (admin only)",
+            "sections": [
+              {
+                "name": "ROI Banner",
+                "description": "Top section: large number showing 'Estimated savings this month: $X,XXX' with hours saved beside it. Green if trending up."
+              },
+              {
+                "name": "Key Metrics Grid",
+                "description": "4 stat cards: Total Assets, Avg Approval Time, AI Actions Used, Compliance Score. Each shows current value + trend arrow (up/down from last period)."
+              },
+              {
+                "name": "Activity Charts",
+                "description": "Line charts using a lightweight chart library (recharts or chart.js): uploads/day, approvals/day, AI usage/day. Toggleable 7d/30d/90d."
+              },
+              {
+                "name": "Team Performance",
+                "description": "Table showing each user: uploads, approvals, avg review time, rejection rate. Sortable columns."
+              },
+              {
+                "name": "Waste Detection",
+                "description": "Card showing unused approved assets count with 'Review' link. Duplicate asset pairs with merge suggestion."
+              }
+            ]
+          }
+        },
+        "new_dependencies": ["recharts (lightweight React chart library)"],
+        "modified_components": {
+          "AppLayout.tsx": "Add 'Analytics' nav item with BarChart3 Lucide icon, admin-only"
+        }
+      }
+    },
+
+    {
+      "phase": 14,
+      "name": "Multi-Channel Distribution",
+      "priority": "MEDIUM — completes the content lifecycle loop",
+      "estimated_time": "4 weeks",
+      "revenue_impact": "$19/month per connected channel",
+      "depends_on": ["Phase 10 (Real AI for auto-resize)", "Phase 13 (tracking)"],
+
+      "backend_changes": {
+        "new_files": {
+          "backend/app/models/channel.py": {
+            "table": "distribution_channels",
+            "columns": {
+              "id": "UUID PK",
+              "tenant_id": "UUID FK tenants.id NOT NULL",
+              "platform": "ENUM(instagram, facebook, linkedin, twitter, tiktok, wordpress, shopify, mailchimp, custom_webhook) NOT NULL",
+              "name": "VARCHAR(255) NOT NULL — display name e.g. 'Our Instagram'",
+              "credentials": "JSONB NOT NULL — encrypted OAuth tokens or API keys per platform",
+              "is_active": "BOOLEAN NOT NULL DEFAULT true",
+              "created_at": "TIMESTAMPTZ"
+            }
+          },
+
+          "backend/app/models/publish_event.py": {
+            "table": "publish_events",
+            "columns": {
+              "id": "UUID PK",
+              "tenant_id": "UUID FK tenants.id NOT NULL",
+              "asset_id": "UUID FK media_assets.id NOT NULL",
+              "channel_id": "UUID FK distribution_channels.id NOT NULL",
+              "published_by": "UUID FK users.id NOT NULL",
+              "external_id": "VARCHAR(255) NULLABLE — post ID from the platform",
+              "external_url": "VARCHAR(512) NULLABLE — link to the published post",
+              "scheduled_at": "TIMESTAMPTZ NULLABLE — NULL = publish immediately",
+              "published_at": "TIMESTAMPTZ NULLABLE",
+              "status": "ENUM(scheduled, publishing, published, failed) NOT NULL DEFAULT scheduled",
+              "error_message": "TEXT NULLABLE",
+              "engagement_data": "JSONB NULLABLE — { likes, shares, comments, impressions } fetched periodically",
+              "created_at": "TIMESTAMPTZ"
+            }
+          },
+
+          "backend/app/services/publishers/base.py": {
+            "description": "Abstract publisher interface",
+            "class": "PublisherProtocol",
+            "methods": {
+              "publish": "async def publish(self, asset: MediaAsset, caption: str, channel: DistributionChannel) -> PublishResult",
+              "get_engagement": "async def get_engagement(self, external_id: str, channel: DistributionChannel) -> EngagementData"
+            }
+          },
+
+          "backend/app/services/publishers/instagram.py": "Instagram Graph API publisher",
+          "backend/app/services/publishers/facebook.py": "Facebook Pages API publisher",
+          "backend/app/services/publishers/linkedin.py": "LinkedIn sharing API publisher",
+          "backend/app/services/publishers/webhook.py": "Generic webhook publisher (POST JSON to custom URL)",
+
+          "backend/app/services/image_processor.py": {
+            "description": "Auto-resize images for each platform's requirements",
+            "methods": {
+              "resize_for_platform": "async def resize_for_platform(self, image_bytes: bytes, platform: str) -> dict[str, bytes]",
+              "supported_sizes": {
+                "instagram_feed": "1080x1080",
+                "instagram_story": "1080x1920",
+                "facebook_post": "1200x630",
+                "linkedin_post": "1200x627",
+                "twitter_post": "1600x900",
+                "tiktok_cover": "1080x1920"
+              }
+            },
+            "dependency": "Pillow for image manipulation"
+          },
+
+          "backend/app/routers/channels.py": {
+            "prefix": "/api/v1/channels",
+            "endpoints": [
+              "POST /channels — Connect new channel (OAuth flow or API key)",
+              "GET /channels — List connected channels",
+              "DELETE /channels/{id} — Disconnect channel",
+              "POST /channels/{id}/publish/{asset_id} — Publish asset to channel",
+              "POST /channels/{id}/schedule/{asset_id} — Schedule future publish",
+              "GET /channels/{id}/engagement — Fetch latest engagement data"
+            ]
+          }
+        },
+
+        "new_dependencies": ["pillow>=10.3.0", "httpx>=0.27.0"]
+      },
+
+      "frontend_changes": {
+        "new_pages": {
+          "src/pages/ChannelsPage.tsx": "Manage connected channels — list, connect, disconnect",
+          "src/pages/CalendarPage.tsx": {
+            "description": "Content calendar showing scheduled and published assets",
+            "features": [
+              "Monthly calendar grid view",
+              "Each day shows thumbnail pills of scheduled/published assets",
+              "Click day to see detail list",
+              "Drag approved assets from sidebar onto calendar dates",
+              "Color-coded by channel (Instagram=gradient, Facebook=blue, etc.)",
+              "Status indicators: scheduled (yellow), published (green), failed (red)"
+            ]
+          }
+        },
+        "modified_pages": {
+          "AssetDetailPage.tsx": [
+            "Add 'Publish' button group after 'Approved' status",
+            "Dropdown showing connected channels with platform icons",
+            "After publish: show external link and engagement metrics"
+          ]
+        },
+        "new_dependencies": ["@fullcalendar/react or a lightweight calendar grid component"]
+      }
+    },
+
+    {
+      "phase": 15,
+      "name": "Workflow Automation Builder",
+      "priority": "MEDIUM — enterprise unlock feature",
+      "estimated_time": "4 weeks",
+      "revenue_impact": "Justifies Enterprise tier at $149/user",
+      "depends_on": ["Phase 10", "Phase 11", "Phase 14"],
+
+      "backend_changes": {
+        "new_files": {
+          "backend/app/models/automation.py": {
+            "table": "automations",
+            "columns": {
+              "id": "UUID PK",
+              "tenant_id": "UUID FK tenants.id NOT NULL",
+              "name": "VARCHAR(255) NOT NULL",
+              "description": "TEXT NULLABLE",
+              "trigger_type": "ENUM(asset_uploaded, asset_submitted, asset_approved, asset_rejected, schedule, compliance_failed) NOT NULL",
+              "conditions": "JSONB NOT NULL — array of condition objects: [{ field, operator, value }]",
+              "actions": "JSONB NOT NULL — array of action objects: [{ type, config }]",
+              "is_active": "BOOLEAN NOT NULL DEFAULT true",
+              "run_count": "INTEGER NOT NULL DEFAULT 0",
+              "last_run_at": "TIMESTAMPTZ NULLABLE",
+              "created_at": "TIMESTAMPTZ",
+              "updated_at": "TIMESTAMPTZ"
+            },
+            "condition_example": "[{ \"field\": \"file_type\", \"operator\": \"starts_with\", \"value\": \"image/\" }, { \"field\": \"file_size\", \"operator\": \"gt\", \"value\": 2097152 }]",
+            "action_types": [
+              "{ type: 'auto_submit', config: {} }",
+              "{ type: 'auto_approve', config: { min_compliance_score: 90 } }",
+              "{ type: 'notify_slack', config: { webhook_url, message_template } }",
+              "{ type: 'notify_email', config: { to, subject_template, body_template } }",
+              "{ type: 'run_compliance', config: {} }",
+              "{ type: 'resize_image', config: { sizes: ['1080x1080', '1920x1080'] } }",
+              "{ type: 'publish_to_channel', config: { channel_id } }",
+              "{ type: 'add_to_collection', config: { collection_id } }",
+              "{ type: 'webhook', config: { url, method, headers } }"
+            ]
+          },
+
+          "backend/app/models/automation_log.py": {
+            "table": "automation_logs",
+            "columns": {
+              "id": "UUID PK",
+              "automation_id": "UUID FK automations.id NOT NULL",
+              "tenant_id": "UUID FK tenants.id NOT NULL",
+              "asset_id": "UUID FK media_assets.id NULLABLE",
+              "trigger_type": "VARCHAR(50) NOT NULL",
+              "actions_executed": "JSONB NOT NULL — which actions ran and their results",
+              "status": "ENUM(success, partial, failed) NOT NULL",
+              "error_message": "TEXT NULLABLE",
+              "created_at": "TIMESTAMPTZ DEFAULT now()"
+            }
+          },
+
+          "backend/app/services/automation_engine.py": {
+            "description": "Core engine that evaluates triggers, checks conditions, and executes actions",
+            "methods": {
+              "on_event": "async def on_event(self, event_type: str, asset: MediaAsset, tenant_id: UUID) — called from routers after state changes",
+              "evaluate_conditions": "def evaluate_conditions(self, conditions: list[dict], asset: MediaAsset) -> bool",
+              "execute_actions": "async def execute_actions(self, actions: list[dict], asset: MediaAsset, db: AsyncSession)"
+            },
+            "integration_points": [
+              "assets.py → after upload: on_event('asset_uploaded', asset)",
+              "workflow.py → after submit: on_event('asset_submitted', asset)",
+              "workflow.py → after approve: on_event('asset_approved', asset)",
+              "workflow.py → after reject: on_event('asset_rejected', asset)"
+            ]
+          },
+
+          "backend/app/routers/automations.py": {
+            "prefix": "/api/v1/automations",
+            "endpoints": [
+              "GET /automations — List tenant automations",
+              "POST /automations — Create automation",
+              "PATCH /automations/{id} — Update automation",
+              "DELETE /automations/{id} — Delete automation",
+              "POST /automations/{id}/toggle — Enable/disable",
+              "GET /automations/{id}/logs — Execution history",
+              "GET /automations/templates — Pre-built automation templates"
+            ]
+          }
+        },
+
+        "pre_built_templates": [
+          {
+            "name": "Social Media Fast Track",
+            "trigger": "asset_uploaded",
+            "conditions": [{ "field": "file_type", "operator": "starts_with", "value": "image/" }],
+            "actions": ["run_compliance", "auto_submit"]
+          },
+          {
+            "name": "Compliance Gate",
+            "trigger": "asset_submitted",
+            "conditions": [],
+            "actions": ["run_compliance", { "type": "auto_approve", "config": { "min_compliance_score": 90 } }]
+          },
+          {
+            "name": "Client Delivery",
+            "trigger": "asset_approved",
+            "conditions": [],
+            "actions": [{ "type": "add_to_collection", "config": { "collection_id": "latest" } }, "notify_slack"]
+          },
+          {
+            "name": "Slack Notify on Upload",
+            "trigger": "asset_uploaded",
+            "conditions": [],
+            "actions": ["notify_slack"]
+          }
+        ]
+      },
+
+      "frontend_changes": {
+        "new_pages": {
+          "src/pages/AutomationsPage.tsx": {
+            "description": "List and manage automations",
+            "route": "/automations (admin only)",
+            "features": [
+              "Card grid of automations with name, trigger type, active/inactive toggle, run count",
+              "Create from template (modal with template selector)",
+              "Create custom (visual builder — see below)",
+              "Execution log per automation"
+            ]
+          },
+          "src/pages/AutomationBuilderPage.tsx": {
+            "description": "Visual workflow builder for creating/editing automations",
+            "route": "/automations/new and /automations/:id/edit",
+            "features": [
+              "Step 1: Choose trigger (dropdown with icons)",
+              "Step 2: Add conditions (field picker + operator + value — dynamic based on trigger)",
+              "Step 3: Add actions (action type picker, each with its own config form)",
+              "Visual flow preview: trigger → conditions → actions as connected nodes",
+              "Test button: simulate the automation on a selected asset",
+              "Save and activate"
+            ]
+          }
+        }
+      }
+    },
+
+    {
+      "phase": 16,
+      "name": "Brand Voice AI Training",
+      "priority": "MEDIUM — the ultimate data moat",
+      "estimated_time": "3 weeks",
+      "revenue_impact": "$0.25 per Brand Voice generation (premium AI pricing)",
+      "depends_on": ["Phase 10 (Real AI)", "Phase 11 (Brand guidelines)"],
+
+      "backend_changes": {
+        "new_files": {
+          "backend/app/models/brand_voice.py": {
+            "table": "brand_voice_profiles",
+            "columns": {
+              "id": "UUID PK",
+              "tenant_id": "UUID FK tenants.id NOT NULL (TenantMixin)",
+              "name": "VARCHAR(255) NOT NULL DEFAULT 'Default Voice'",
+              "training_data_count": "INTEGER NOT NULL DEFAULT 0 — number of approved captions used",
+              "style_summary": "TEXT NULLABLE — AI-generated summary of the brand's writing style",
+              "tone_keywords": "ARRAY(String) NULLABLE — ['professional', 'approachable', 'witty']",
+              "vocabulary": "JSONB NULLABLE — { preferred_terms: [], avoided_terms: [], brand_terms: [] }",
+              "example_captions": "JSONB NULLABLE — top 20 highest-quality approved captions as few-shot examples",
+              "system_prompt_override": "TEXT NULLABLE — custom system prompt for this brand voice",
+              "last_trained_at": "TIMESTAMPTZ NULLABLE",
+              "is_active": "BOOLEAN NOT NULL DEFAULT true",
+              "created_at": "TIMESTAMPTZ"
+            }
+          },
+
+          "backend/app/services/brand_voice_trainer.py": {
+            "description": "Analyzes approved captions to build a brand voice profile",
+            "methods": {
+              "train": {
+                "signature": "async def train(self, tenant_id: UUID) -> BrandVoiceProfile",
+                "logic": [
+                  "1. Fetch all approved assets with captions for the tenant",
+                  "2. Send the top 50 captions to Claude Sonnet with a meta-prompt: 'Analyze these captions and describe the brand voice: tone, vocabulary, sentence structure, common patterns, preferred phrases'",
+                  "3. Claude returns a structured analysis — store as style_summary + tone_keywords + vocabulary",
+                  "4. Select the 20 best captions (longest, most detailed) as few-shot examples",
+                  "5. Generate a system_prompt_override that encodes the brand voice for future caption generation",
+                  "6. Update the BrandVoiceProfile record"
+                ],
+                "minimum_data": "Requires at least 30 approved captions. Show progress indicator: '12/30 captions needed for Brand Voice training.'"
+              },
+              "generate_with_voice": {
+                "signature": "async def generate_with_voice(self, filename: str, file_type: str, profile: BrandVoiceProfile) -> str",
+                "logic": "Use the profile's system_prompt_override + few-shot examples as context when calling Claude for caption generation. This produces captions that match the tenant's established voice."
+              }
+            }
+          }
+        },
+
+        "integration": {
+          "ai_service": "ClaudeAIService.generate_caption() checks if tenant has an active BrandVoiceProfile. If yes, uses generate_with_voice() instead of generic generation. Charges $0.25 instead of $0.05.",
+          "automatic_retraining": "After every 50 new approved captions, schedule a background retrain task. The voice improves over time."
+        }
+      },
+
+      "frontend_changes": {
+        "modified_pages": {
+          "BrandPage.tsx": [
+            "New section: 'Brand Voice AI' showing training status",
+            "Progress bar: 'X/30 approved captions — Y more needed to train'",
+            "If trained: show style_summary, tone_keywords, example captions",
+            "'Retrain' button to manually trigger retraining",
+            "Toggle: 'Use Brand Voice for all AI captions' (on/off)",
+            "Preview: 'Generate test caption with Brand Voice' — shows before/after comparison (generic vs. brand voice)"
+          ]
+        }
+      },
+
+      "data_moat_explanation": "After 6 months of use, the BrandVoiceProfile contains a deep understanding of the tenant's writing style. Switching to a competitor means losing this trained model and starting from scratch. This is the single most powerful retention mechanism."
+    },
+
+    {
+      "phase": 17,
+      "name": "Content Calendar & Scheduling",
+      "priority": "LOW — completes the platform experience",
+      "estimated_time": "2 weeks",
+      "revenue_impact": "Included in Business tier — reduces need for separate scheduling tool",
+      "depends_on": ["Phase 14 (Distribution channels)"],
+
+      "backend_changes": {
+        "description": "Mostly uses existing publish_events table with scheduled_at column. Add a scheduler background task.",
+        "new_files": {
+          "backend/app/services/scheduler.py": {
+            "description": "Background task that checks for publish_events where scheduled_at <= now() AND status == 'scheduled', then publishes them",
+            "method": "Run every 60 seconds via a startup background task or Celery beat",
+            "logic": "Query pending scheduled events → for each, call the appropriate publisher → update status to published or failed"
+          }
+        },
+        "new_endpoints": {
+          "GET /api/v1/calendar": {
+            "query_params": "start_date, end_date",
+            "response": "List of publish_events with asset thumbnails, channel info, status — grouped by date"
+          }
+        }
+      },
+
+      "frontend_changes": {
+        "uses": "CalendarPage.tsx from Phase 14 — extend with drag-and-drop scheduling and weekly/monthly views"
+      }
+    }
+  ],
+
+  "new_pricing_implementation": {
+    "description": "Implement tier-based feature gating and usage-based billing",
+
+    "backend_changes": {
+      "new_files": {
+        "backend/app/models/subscription.py": {
+          "table": "subscriptions",
+          "columns": {
+            "id": "UUID PK",
+            "tenant_id": "UUID FK tenants.id UNIQUE NOT NULL",
+            "plan": "ENUM(free, pro, business, enterprise) NOT NULL DEFAULT free",
+            "status": "ENUM(active, cancelled, past_due) NOT NULL DEFAULT active",
+            "seats_purchased": "INTEGER NOT NULL DEFAULT 3",
+            "ai_actions_limit": "INTEGER NULLABLE — NULL = unlimited (enterprise), free = 50, pro = unlimited, business = unlimited",
+            "portal_limit": "INTEGER NOT NULL DEFAULT 0 — free=0, pro=1, business=5, enterprise=unlimited",
+            "storage_limit_gb": "INTEGER NOT NULL DEFAULT 5",
+            "current_period_start": "TIMESTAMPTZ NOT NULL",
+            "current_period_end": "TIMESTAMPTZ NOT NULL",
+            "stripe_customer_id": "VARCHAR(255) NULLABLE",
+            "stripe_subscription_id": "VARCHAR(255) NULLABLE",
+            "created_at": "TIMESTAMPTZ"
+          }
+        }
+      },
+
+      "feature_gating_middleware": {
+        "file": "backend/app/core/billing.py",
+        "description": "FastAPI dependency that checks the tenant's subscription plan before allowing premium features",
+        "dependencies": {
+          "require_plan": "def require_plan(*allowed_plans: str) — raises 403 if tenant not on required plan",
+          "check_ai_quota": "async def check_ai_quota(tenant_id) — raises 429 if AI action limit exceeded",
+          "check_portal_quota": "async def check_portal_quota(tenant_id) — raises 403 if portal limit reached",
+          "check_storage_quota": "async def check_storage_quota(tenant_id, file_size) — raises 413 if storage limit exceeded"
+        }
+      },
+
+      "stripe_integration": {
+        "description": "For payment processing — Phase 18 or outsource to Stripe Billing",
+        "dependencies": ["stripe>=8.0.0"],
+        "endpoints": [
+          "POST /api/v1/billing/checkout — Create Stripe Checkout session",
+          "POST /api/v1/billing/portal — Create Stripe Customer Portal session (manage subscription)",
+          "POST /api/v1/billing/webhook — Stripe webhook handler (subscription created/updated/cancelled)"
+        ]
+      }
+    },
+
+    "plan_feature_matrix": {
+      "free": {
+        "price": "$0",
+        "seats": 3,
+        "storage_gb": 5,
+        "ai_actions_per_month": 50,
+        "approval_workflows": false,
+        "brand_compliance": false,
+        "client_portals": 0,
+        "distribution_channels": 0,
+        "automations": 0,
+        "analytics": "basic (asset count only)",
+        "brand_voice": false,
+        "support": "community"
+      },
+      "pro": {
+        "price": "$29/user/month",
+        "seats": "unlimited",
+        "storage_gb": 100,
+        "ai_actions_per_month": "unlimited",
+        "approval_workflows": true,
+        "brand_compliance": true,
+        "client_portals": 1,
+        "distribution_channels": 0,
+        "automations": 3,
+        "analytics": "full dashboard",
+        "brand_voice": false,
+        "support": "priority email"
+      },
+      "business": {
+        "price": "$49/user/month",
+        "seats": "unlimited",
+        "storage_gb": 500,
+        "ai_actions_per_month": "unlimited",
+        "approval_workflows": true,
+        "brand_compliance": true,
+        "client_portals": 5,
+        "distribution_channels": 3,
+        "automations": "unlimited",
+        "analytics": "full + executive reports",
+        "brand_voice": true,
+        "support": "priority chat"
+      },
+      "enterprise": {
+        "price": "$149/user/month",
+        "seats": "unlimited",
+        "storage_gb": "unlimited",
+        "ai_actions_per_month": "unlimited",
+        "approval_workflows": true,
+        "brand_compliance": true,
+        "client_portals": "unlimited",
+        "distribution_channels": "unlimited",
+        "automations": "unlimited + custom",
+        "analytics": "full + API export",
+        "brand_voice": true,
+        "support": "dedicated CSM + SLA"
+      }
+    }
+  },
+
+  "infrastructure_upgrades": {
+    "required_for_scale": {
+      "object_storage": {
+        "what": "Replace local volume with S3-compatible storage (MinIO for self-hosted or AWS S3)",
+        "why": "Local filesystem won't scale for multi-channel distribution, CDN delivery, and client portals",
+        "when": "Before Phase 14 (Distribution). Critical blocker.",
+        "implementation": "Create StorageProtocol with LocalStorage and S3Storage implementations. Swap via config flag."
+      },
+      "task_queue": {
+        "what": "Replace FastAPI BackgroundTasks with Celery + Redis (or ARQ for async)",
+        "why": "AI calls, image processing, publishing, and automation execution need distributed task processing with retries, rate limiting, and monitoring",
+        "when": "Before Phase 14 (Distribution). Recommended at Phase 10.",
+        "docker_compose": "Add redis and celery-worker services"
+      },
+      "caching": {
+        "what": "Add Redis for API response caching and rate limiting",
+        "why": "Analytics queries, portal public pages, and AI quota checks need fast lookups",
+        "when": "Phase 13 (Analytics)"
+      }
+    },
+
+    "docker_compose_additions": {
+      "redis": {
+        "image": "redis:7-alpine",
+        "ports": "internal only",
+        "volume": "redisdata"
+      },
+      "celery_worker": {
+        "build": "same as backend",
+        "command": "celery -A app.worker worker --loglevel=info",
+        "depends_on": ["redis", "postgres"]
+      },
+      "celery_beat": {
+        "build": "same as backend",
+        "command": "celery -A app.worker beat --loglevel=info",
+        "depends_on": ["redis"],
+        "purpose": "Scheduled tasks: AI retraining, engagement data fetching, publish scheduling"
+      }
+    }
+  },
+
+  "database_migration_summary": {
+    "new_tables": [
+      "ai_usage_logs — Track every AI action for billing",
+      "brand_guidelines — Tenant brand rules (colors, fonts, tone, dos/donts)",
+      "brand_voice_profiles — AI-trained brand voice per tenant",
+      "client_portals — White-label portals for agency clients",
+      "portal_collections — Curated asset collections in portals",
+      "portal_collection_assets — M2M linking assets to collections",
+      "portal_access_logs — Client download/view tracking",
+      "distribution_channels — Connected social/CMS platforms",
+      "publish_events — Scheduled and completed publish actions",
+      "automations — Workflow automation definitions",
+      "automation_logs — Automation execution history",
+      "subscriptions — Billing plan and feature gating"
+    ],
+    "modified_tables": {
+      "media_assets": ["ai_analysis (JSONB)", "compliance_score (INT)", "compliance_issues (JSONB)", "auto_tags (ARRAY)"],
+      "tenants": ["ai_actions_used (INT)", "ai_actions_limit (INT)", "billing_period_start (TIMESTAMPTZ)"]
+    },
+    "total_new_tables": 12,
+    "migration_command": "docker compose exec backend alembic revision --autogenerate -m 'phase_N_description'"
+  },
+
+  "frontend_navigation_final": {
+    "sidebar_items": [
+      { "label": "Assets", "icon": "Images", "path": "/assets", "min_role": "viewer" },
+      { "label": "Upload", "icon": "Upload", "path": "/assets/upload", "min_role": "editor" },
+      { "label": "Calendar", "icon": "Calendar", "path": "/calendar", "min_role": "editor", "min_plan": "business" },
+      { "label": "Portals", "icon": "Globe", "path": "/portals", "min_role": "admin", "min_plan": "pro" },
+      { "label": "Automations", "icon": "Zap", "path": "/automations", "min_role": "admin", "min_plan": "pro" },
+      { "label": "Brand", "icon": "Palette", "path": "/brand", "min_role": "admin", "min_plan": "pro" },
+      { "label": "Analytics", "icon": "BarChart3", "path": "/analytics", "min_role": "admin" },
+      { "label": "Team", "icon": "Users", "path": "/team", "min_role": "admin" }
+    ]
+  },
+
+  "execution_order": {
+    "description": "Strict build order — each phase depends on the previous",
+    "sequence": [
+      { "phase": 10, "name": "Real AI (Claude API)", "weeks": 2, "cumulative": 2, "revenue_unlock": "$0.05/AI action" },
+      { "phase": 11, "name": "Brand Compliance", "weeks": 3, "cumulative": 5, "revenue_unlock": "Pro tier at $29/user" },
+      { "phase": 12, "name": "Client Portals", "weeks": 3, "cumulative": 8, "revenue_unlock": "$29/portal add-on" },
+      { "phase": 13, "name": "Analytics Dashboard", "weeks": 2, "cumulative": 10, "revenue_unlock": "Retention ×1.5" },
+      { "phase": 14, "name": "Distribution", "weeks": 4, "cumulative": 14, "revenue_unlock": "Business tier at $49/user" },
+      { "phase": 15, "name": "Workflow Automation", "weeks": 4, "cumulative": 18, "revenue_unlock": "Enterprise tier at $149/user" },
+      { "phase": 16, "name": "Brand Voice AI", "weeks": 3, "cumulative": 21, "revenue_unlock": "$0.25/generation (data moat)" },
+      { "phase": 17, "name": "Content Calendar", "weeks": 2, "cumulative": 23, "revenue_unlock": "Platform completeness" }
+    ],
+    "total_weeks": 23,
+    "critical_path": "Phase 10 → 11 → 12 → 13 is the fastest path to revenue. 10 weeks to 4 new revenue streams."
+  }
+}
