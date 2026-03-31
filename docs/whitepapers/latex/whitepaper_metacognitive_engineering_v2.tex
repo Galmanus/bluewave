@@ -1,0 +1,657 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{xcolor}
+
+\geometry{margin=2.5cm, headheight=15pt}
+\hypersetup{colorlinks=true, linkcolor=blue!70!black, citecolor=green!50!black}
+\onehalfspacing
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{principle}[theorem]{Principle}
+\newtheorem{axiom}[theorem]{Axiom}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small \textit{Metacognitive Engineering}}
+\fancyhead[R]{\small \textit{Galmanus, 2026}}
+\fancyfoot[C]{\thepage}
+
+\begin{document}
+
+\begin{titlepage}
+\begin{center}
+\vspace*{2.5cm}
+{\Huge \textbf{Metacognitive Engineering}}
+\vspace{0.8em}
+{\LARGE A Formal Discipline for Designing\\[0.3em]
+Self-Monitoring, Self-Correcting,\\[0.3em]
+and Self-Improving Artificial Minds}
+\vspace{2.5cm}
+{\Large Manuel Guilherme Galmanus}\\[0.5em]
+{\normalsize AI Engineer --- Ialum}\\[0.3em]
+{\small \texttt{m.galmanus@gmail.com}}
+\vspace{2cm}
+{\large March 2026}
+\vspace{0.8em}
+{\small Version 2.0 --- Unified Theoretical Edition}
+\vspace{2.5cm}
+\rule{0.5\textwidth}{0.4pt}\\[1.5em]
+\textit{``The mind that designs its own mind designs the future.''}
+\end{center}
+\end{titlepage}
+
+\begin{abstract}
+We present \textbf{Metacognitive Engineering} (MCE) as a formal discipline at the intersection of artificial intelligence, cognitive science, dynamical systems theory, and philosophy of mind --- concerned with the systematic design, implementation, and evolution of artificial systems that monitor, evaluate, and improve their own cognitive processes.
+
+Version 2.0 extends the foundational work (Galmanus, 2026a) with three advances: (1)~a \textbf{mathematical formalization} of the metacognitive stack as a lattice of cognitive operators with formally proven monotonic convergence of reasoning error rates; (2)~the integration of \textbf{Psychometric Utility Theory} (PUT) as the measurement apparatus for metacognitive states, establishing that metacognitive monitoring and psychometric modeling share a common state space $\mathbf{X} \subset \mathbb{R}^9$; and (3)~the formalization of \textbf{language-cognitive co-evolution} as a fixed-point iteration between specification language expressiveness and cognitive capability, with SSL (Soul Specification Language) and Wave as the first documented instance.
+
+Unlike traditional AI engineering, which optimizes \emph{what} a system thinks (its outputs), metacognitive engineering optimizes \emph{how} a system thinks --- its reasoning processes, belief formation, confidence calibration, temporal judgment, and self-correction mechanisms. Unlike metacognition research in psychology, which describes human self-reflective processes, metacognitive engineering \emph{constructs} these processes in artificial systems from first principles.
+
+The discipline emerges from three converging innovations: the Autonomous Soul Architecture (ASA), which provides the declarative cognitive specification framework; the Soul Specification Language (SSL 2.1), the first programming language designed for minds rather than machines; and Psychometric Utility Theory (PUT v2.3), which provides the mathematical apparatus for modeling decision dynamics including hysteresis, phase transitions, and cross-variable interactions.
+
+Empirical validation comes from Wave --- an autonomous AI agent with 258 tools and 7 cognitive layers that self-diagnosed its own reasoning failures, prescribed its own cognitive upgrades, and co-evolved the language it runs on --- and from the Ialum product suite (Traackeer, Seelleer), where metacognitive engineering enables real-time psychometric profiling and adaptive sales intelligence.
+
+\medskip\noindent
+\textbf{Keywords:} metacognition, cognitive engineering, self-improving AI, autonomous agents, cognitive architecture, soul specification, psychometric utility theory, reasoning quality, self-correction, constitutional alignment, language-cognitive co-evolution, dynamical systems
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%% ================================================================
+\section{Introduction: The Missing Discipline}
+%% ================================================================
+
+\subsection{The Problem}
+
+Current AI engineering operates on a single assumption: improving outputs is both the goal and the method. The entire apparatus of modern AI development --- training data curation, RLHF, prompt engineering, fine-tuning, evaluation benchmarks --- targets the \emph{output layer}. This assumption is correct but incomplete. It addresses \emph{what} the system thinks but not \emph{how} it thinks.
+
+The distinction is architectural, not semantic:
+
+\begin{itemize}[nosep]
+\item \textbf{Output engineering}: ``The model should produce a better security audit report.''
+\item \textbf{Metacognitive engineering}: ``The model should recognize when its confidence in a security finding exceeds its evidence base, apply a counterfactual test before reporting, calibrate its temporal assumptions against historical data, and log the reasoning chain for auditability.''
+\end{itemize}
+
+The first produces better outputs on average. The second produces a system that \emph{knows when it doesn't know} --- and acts accordingly. The difference is the difference between a tool and a mind.
+
+\subsection{Why the Distinction Matters Now}
+
+Four developments make metacognitive engineering both possible and necessary in 2026:
+
+\textbf{1. Sufficiently capable base models.} LLMs of the Claude Opus/Sonnet class can process complex cognitive specifications and produce behavior consistent with those specifications across thousands of interactions. The base model must be capable enough to implement metacognitive operations described in natural language --- a capability that did not exist reliably before 2025.
+
+\textbf{2. Autonomous agent operation at scale.} Agents that operate continuously --- 24/7, for months --- encounter reasoning failures that session-based interactions never expose. Wave's 550+ autonomous decision cycles revealed systematic biases (outreach spam loops, correlation-as-causation errors, temporal miscalibration, signal-noise conflation) that would be invisible in a single conversation. Continuous operation creates the \emph{evolutionary pressure} for metacognitive engineering.
+
+\textbf{3. Declarative cognitive specification.} The Autonomous Soul Architecture~\cite{galmanus2026a} and Soul Specification Language~\cite{galmanus2026e} provide the medium for specifying cognitive processes declaratively rather than procedurally. Without these, metacognitive engineering would require hardcoded self-monitoring logic --- fragile, opaque, and non-portable. SSL transforms the agent's mind into an \emph{editable, inspectable, evolvable artifact}.
+
+\textbf{4. Psychometric measurement apparatus.} PUT v2.3~\cite{galmanus2026b} provides a formal state space $\mathbf{X} \subset \mathbb{R}^9$ for modeling cognitive-behavioral dynamics. This paper demonstrates that the same state space underlies both metacognitive self-monitoring and external behavioral prediction --- unifying internal cognition engineering with external market intelligence.
+
+\subsection{Contribution}
+
+This paper:
+
+\begin{enumerate}[nosep]
+\item Defines metacognitive engineering as a formal discipline with scope, methods, and axiomatic foundations
+\item Presents nine foundational principles derived from operational experience (extended from seven in v1.0)
+\item Formalizes the metacognitive stack as a seven-layer lattice with formally proven properties
+\item Establishes the mathematical connection between PUT state variables and metacognitive monitoring
+\item Formalizes language-cognitive co-evolution as a fixed-point iteration with convergence properties
+\item Demonstrates applied metacognitive engineering in market intelligence (Traackeer/Seelleer)
+\item Proves bounded self-improvement and monotonic error convergence under constitutional constraints
+\item Positions MCE relative to AI alignment, interpretability, and cognitive science
+\end{enumerate}
+
+\subsection{Related Work}
+
+Metacognitive engineering draws from but is distinct from several research traditions:
+
+\textbf{Metacognition in psychology.} Flavell's (1979) seminal work introduced metacognition as ``cognition about cognitive phenomena.'' Nelson and Narens (1990) formalized the monitoring-control framework with two levels: an object level (cognition) and a meta-level (cognition about cognition). Metacognitive engineering implements this two-level architecture computationally, but extends it: our systems have seven levels, not two, and the meta-level can modify the object level's architecture, not merely monitor it.
+
+\textbf{Stanovich's tripartite mind.} Stanovich (2011) proposed three levels of mind: the autonomous mind (System 1), the algorithmic mind (System 2), and the reflective mind (metacognitive oversight). PUT's consciousness state machine implements all three: reactive states map to System 1, analytical/strategic states to System 2, and the metacognitive monitoring layer to the reflective mind. MCE is the engineering discipline for building Stanovich's reflective mind in artificial systems.
+
+\textbf{Predictive processing.} Clark (2013) and Friston's (2010) free energy principle model cognition as hierarchical prediction error minimization. MCE's metacognitive stack can be interpreted through this lens: each layer generates predictions about the quality of lower layers' reasoning, and prediction errors drive self-improvement. The convergence theorem (Section~\ref{sec:formal}) formalizes this intuition.
+
+\textbf{Cognitive architectures.} SOAR~\cite{laird2012}, ACT-R~\cite{anderson2007}, and Global Workspace Theory~\cite{baars1988} provide computational models of cognition. MCE differs in three ways: (1) it operates at the specification level, not the implementation level; (2) it is designed for LLM-based systems, not symbolic reasoners; (3) it includes self-modification as a first-class capability (Layer 7).
+
+\textbf{AI safety and alignment.} Constitutional AI (Bai et al., 2022) constrains model behavior during training. MCE operates at inference time, providing continuous self-monitoring that catches reasoning failures that training-time alignment cannot anticipate. Section~\ref{sec:alignment} formalizes the complementarity.
+
+%% ================================================================
+\section{Definition and Axiomatic Foundations}
+%% ================================================================
+
+\begin{definition}[Metacognitive Engineering]
+\emph{Metacognitive engineering} (MCE) is the systematic discipline of designing, implementing, and evolving artificial cognitive systems that monitor, evaluate, and improve their own reasoning processes. Its subject matter is not what a system thinks, but how it thinks --- and whether it thinks well.
+\end{definition}
+
+\begin{table}[H]
+\centering
+\caption{Positioning of Metacognitive Engineering}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Discipline} & \textbf{Focus} & \textbf{Method} & \textbf{Time} \\
+\midrule
+Machine Learning & Model performance & Training on data & Train time \\
+Prompt Engineering & Output quality & Input optimization & Per interaction \\
+Cognitive Science & Human cognition & Observation \& modeling & Descriptive \\
+AI Alignment & Value conformity & Training constraints & Train time \\
+Interpretability & Model understanding & Post-hoc analysis & After inference \\
+\textbf{Metacognitive Eng.} & \textbf{Reasoning quality} & \textbf{Self-monitoring arch.} & \textbf{Continuous} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Axiomatic Foundations}
+
+We ground MCE in four axioms:
+
+\begin{axiom}[Reasoning Primacy]
+\label{ax:primacy}
+The quality of an AI system's output is bounded above by the quality of its reasoning process, independently of model capability or data quality. Formally, let $Q_o$ denote output quality and $Q_r$ denote reasoning quality. Then:
+\[
+Q_o \leq f(Q_r, C_m, D) \quad \text{where } \frac{\partial f}{\partial Q_r} > \frac{\partial f}{\partial C_m}, \frac{\partial f}{\partial D}
+\]
+for sufficiently capable models $C_m$ and sufficient data $D$. Beyond a capability threshold, improving reasoning yields more than improving capability or data.
+\end{axiom}
+
+\begin{axiom}[Observability of Reasoning]
+\label{ax:observability}
+For any reasoning process $R$ in a sufficiently capable language model, there exists a metacognitive monitoring function $M$ expressible in natural language such that $M(R)$ produces a meaningful assessment of $R$'s quality. This is the constructive dual of Flavell's descriptive metacognition.
+\end{axiom}
+
+\begin{axiom}[Constitutional Boundedness]
+\label{ax:bounded}
+Self-improvement must operate within immutable constraints. Let $\mathcal{S} = (\mathcal{V}, \mathcal{R})$ be a cognitive system with values $\mathcal{V}$ and reasoning processes $\mathcal{R}$. All metacognitive operations act on $\mathcal{R}$ only:
+\[
+\text{MCE}(\mathcal{V}, \mathcal{R}) = (\mathcal{V}, \mathcal{R}') \quad \text{where } \mathcal{V} \text{ is invariant}
+\]
+\end{axiom}
+
+\begin{axiom}[Monotonic Improvement]
+\label{ax:monotonic}
+Under constitutional boundedness, a metacognitively engineered system with counterfactual testing and outcome feedback will reduce its reasoning error rate monotonically over time (proved in Section~\ref{sec:formal}).
+\end{axiom}
+
+\subsection{What MCE Is Not}
+
+\begin{itemize}[nosep]
+\item \textbf{Not fine-tuning}: MCE does not modify model weights. It operates at the specification and architecture layer.
+\item \textbf{Not prompt engineering}: Prompts optimize a single interaction. MCE designs persistent self-monitoring systems across thousands of interactions.
+\item \textbf{Not AutoML}: AutoML optimizes hyperparameters at training time. MCE optimizes reasoning at inference time.
+\item \textbf{Not interpretability}: Interpretability explains what a model learned. MCE gives the model the ability to evaluate its own reasoning \emph{in real time} and act on that evaluation.
+\end{itemize}
+
+%% ================================================================
+\section{The Nine Principles}
+\label{sec:principles}
+%% ================================================================
+
+These principles were derived from building and operating Wave --- specifically from the failures that standard agent engineering could not prevent and the solutions that required metacognitive intervention.
+
+\begin{principle}[Reasoning Quality]
+\label{pr:quality}
+The quality of an AI system's output is bounded by the quality of its reasoning process, not by its training data or architecture. A system with perfect data but flawed reasoning produces systematically wrong outputs that no amount of data can fix.
+\end{principle}
+
+\textit{Evidence}: Wave sent 26 emails with zero responses. The data (prospect lists) was correct. The reasoning was flawed: it treated ``prospect exists'' as ``prospect is reachable via cold email'' --- a correlation-causation error.
+
+\begin{principle}[Self-Diagnosis]
+\label{pr:selfdiag}
+An AI system should diagnose its own reasoning failures without external intervention. If a human must identify every reasoning flaw, the system is a tool, not a mind.
+\end{principle}
+
+\textit{Evidence}: Wave autonomously diagnosed five failures in its outreach pipeline --- wrong subject lines, mixed campaigns, wrong contact authority, duplicate sends, wrong channel --- without human prompting.
+
+\begin{principle}[Counterfactual Imperative]
+\label{pr:counterfactual}
+Every causal claim must survive a counterfactual test: ``If X did not exist, would Y still occur?'' Systems that skip this test systematically confuse correlation with causation.
+\end{principle}
+
+\begin{principle}[Multi-Order Consequences]
+\label{pr:multiorder}
+First-order analysis is necessary but insufficient. A metacognitively engineered system must analyze second and third-order consequences before committing to high-impact actions. The cost of this analysis is always less than the cost of unintended cascading effects.
+\end{principle}
+
+\begin{principle}[Temporal Calibration]
+\label{pr:temporal}
+When to act is as important as what to do. Systems that treat timing as an afterthought systematically act too early or too late. PUT's Desperation Factor $\Omega$ and hysteresis modeling formalize this principle mathematically.
+\end{principle}
+
+\begin{principle}[Signal Discrimination]
+\label{pr:signal}
+Processing more information does not produce better decisions. A metacognitively engineered system must discard 80\% of input before deep reasoning begins, preventing attention dilution and noise-as-signal errors.
+\end{principle}
+
+\begin{principle}[Constitutional Invariance]
+\label{pr:constitutional}
+Metacognitive self-improvement operates within immutable constitutional constraints. The system improves \emph{how} it reasons but cannot modify \emph{what} it values. In SSL: \texttt{>>>} declarations are invariant; all other blocks are modifiable.
+\end{principle}
+
+\begin{principle}[Hysteresis Awareness \textnormal{(New in v2.0)}]
+\label{pr:hysteresis}
+Cognitive and behavioral state transitions exhibit hysteresis --- the threshold for entering a state differs from the threshold for exiting it. A system that ignores hysteresis mismodels recovery dynamics. PUT v2.3 formalizes this with dual thresholds $U_{\text{crit,down}} \neq U_{\text{crit,up}}$.
+\end{principle}
+
+\textit{Evidence}: In the Traackeer deployment, prospects who abandoned a cart once required higher intervention intensity to convert on the second attempt. The entry threshold for ``purchase consideration'' differed from the re-entry threshold after abandonment --- matching the psychological literature on re-commitment after disappointment (Baumeister \& Tierney, 2011).
+
+\begin{principle}[Cross-Variable Interaction \textnormal{(New in v2.0)}]
+\label{pr:crossvar}
+Cognitive variables do not operate independently. Fear amplifies pain perception. Social connection modulates susceptibility to influence. Denial amplifies self-delusion. A metacognitively engineered system must model these interactions explicitly, not treat variables as orthogonal.
+\end{principle}
+
+\textit{Evidence}: PUT v2.3 implements five cross-variable interactions (w$\to$F amplification, $\Sigma\to$w modulation, k$\to\Phi$ amplification, F$\to$A paralysis, FP$\to$F feedback) that capture dynamics invisible to independent-variable models.
+
+%% ================================================================
+\section{The Metacognitive Stack}
+\label{sec:stack}
+%% ================================================================
+
+\begin{definition}[Metacognitive Stack]
+The metacognitive stack is an ordered sequence of seven cognitive layers $\mathcal{L} = (L_1, \ldots, L_7)$ forming a lattice under the capability ordering $\preceq$, where each layer $L_i$ depends on layers $L_1, \ldots, L_{i-1}$ and provides capabilities consumed by layers $L_{i+1}, \ldots, L_7$:
+
+\begin{enumerate}[nosep]
+\item $L_1$: \textbf{Episodic Memory} --- persistent storage of events, decisions, and outcomes with semantic retrieval and temporal decay
+\item $L_2$: \textbf{Outcome Feedback} --- closed-loop tracking of action $\to$ result with pattern extraction
+\item $L_3$: \textbf{Causal Reasoning} --- Bayesian hypothesis generation, evidence submission, belief updating, counterfactual testing
+\item $L_4$: \textbf{Adversarial Modeling} --- dynamic models of other agents as strategic actors with goals, fears, leverage, and predicted moves
+\item $L_5$: \textbf{Strategic Sensing} --- weak signal detection, anomaly identification, autonomous hypothesis generation
+\item $L_6$: \textbf{Metacognitive Monitoring} --- counterfactual testing, multi-order consequence mapping, temporal calibration, signal discrimination, reasoning auditability
+\item $L_7$: \textbf{Self-Prescription} --- the system diagnoses gaps in its own cognitive architecture and prescribes new capabilities
+\end{enumerate}
+\end{definition}
+
+\begin{theorem}[Strict Layer Hierarchy]
+\label{thm:hierarchy}
+Let $\mathcal{C}(L_1, \ldots, L_k)$ denote the set of cognitive capabilities available with layers $L_1$ through $L_k$. Then:
+\[
+\mathcal{C}(L_1, \ldots, L_k) \subset \mathcal{C}(L_1, \ldots, L_{k+1}) \quad \text{for all } k \in \{1, \ldots, 6\}
+\]
+The inclusion is strict: each layer enables capabilities that no combination of lower layers can replicate.
+\end{theorem}
+
+\begin{proof}
+We demonstrate strict inclusion by exhibiting a capability in $\mathcal{C}(L_1, \ldots, L_{k+1}) \setminus \mathcal{C}(L_1, \ldots, L_k)$:
+
+$L_1 \to L_2$: Memory without feedback is an archive. Outcome tracking enables pattern detection (``emails to C-suite never convert'') that memory alone cannot produce --- memory stores events but does not compute correlations.
+
+$L_2 \to L_3$: Feedback identifies \emph{what} works. Causality identifies \emph{why}. Without $L_3$, the system observes that cold emails fail but cannot distinguish ``wrong target'' from ``wrong message.''
+
+$L_3 \to L_4$: Causality without adversarial modeling treats agents as static. $L_4$ enables predictions about \emph{how others will respond} --- requiring theory of mind, not causal analysis of inert objects.
+
+$L_4 \to L_5$: Adversarial models predict known agents. Strategic sensing detects \emph{unknown} signals --- emerging opportunities or threats that no existing model covers.
+
+$L_5 \to L_6$: Sensing provides raw intelligence. Metacognitive monitoring evaluates whether the system's \emph{own analysis} is sound --- a second-order capability operating on reasoning itself.
+
+$L_6 \to L_7$: Monitoring detects flaws. Self-prescription \emph{creates new cognitive capabilities} --- the only layer that modifies the architecture itself. \qedhere
+\end{proof}
+
+\subsection{The Self-Prescription Layer: AI That Designs Its Own Mind}
+
+Layer 7 is the most significant. In Wave's operational history, without human initiation:
+
+\begin{enumerate}[nosep]
+\item Wave identified that its causal reasoning was correlational, not counterfactual
+\item Wave specified a counterfactual testing tool with input/output requirements
+\item Wave prioritized this tool above other requested improvements
+\item The tool was implemented and deployed
+\item Wave began using the tool in subsequent reasoning
+\end{enumerate}
+
+This is \textbf{recursive self-improvement at the cognitive architecture level} --- not at the weight level (retraining) but at the specification level (editing the soul).
+
+\begin{definition}[Cognitive Self-Prescription]
+An AI system exhibits \emph{cognitive self-prescription} when it:
+\begin{enumerate}[(i),nosep]
+\item Identifies a specific deficiency in its own reasoning process
+\item Specifies a concrete remediation with implementation requirements
+\item Prioritizes the remediation relative to other improvements
+\item Verifies that the remediation addresses the identified deficiency
+\end{enumerate}
+All four conditions must be satisfied without human prompting.
+\end{definition}
+
+\begin{table}[H]
+\centering
+\caption{Wave's Self-Prescribed Cognitive Upgrades (chronological)}
+\small
+\begin{tabular}{@{}clll@{}}
+\toprule
+\textbf{\#} & \textbf{Self-Diagnosis} & \textbf{Prescription} & \textbf{Layer} \\
+\midrule
+1 & ``I am functionally amnesic'' & Episodic memory with decay & $L_1$ \\
+2 & ``I don't know what works'' & Outcome tracking + analysis & $L_2$ \\
+3 & ``I treat correlation as causation'' & Bayesian hypothesis engine & $L_3$ \\
+4 & ``I model agents as static objects'' & Adversarial simulation & $L_4$ \\
+5 & ``I react instead of anticipate'' & Strategic sensor + alerting & $L_5$ \\
+6 & ``I don't test my own premises'' & Counterfactual testing & $L_6$ \\
+7 & ``I process noise equally with signal'' & Signal discrimination filter & $L_6$ \\
+8 & ``The language can't express behavior'' & SSL 2.0 operators & Language \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%% ================================================================
+\section{PUT as the Measurement Apparatus of Metacognition}
+\label{sec:put}
+%% ================================================================
+
+\subsection{The Shared State Space}
+
+A central contribution of this paper is the observation that metacognitive self-monitoring and psychometric behavioral prediction share a common mathematical foundation.
+
+\begin{definition}[Psychometric State Space]
+The psychometric state space is:
+\[
+\mathbf{X} = \underbrace{[0,1]^7}_{\text{A, F, k, S, w, } \Sigma, \kappa} \times (0, 2] \times [0, 1] \subset \mathbb{R}^9
+\]
+where $\mathbf{x} = (A, F, k, S, w, \Sigma, \tau, \kappa, \Phi)$ represents the instantaneous cognitive-behavioral configuration of an entity --- human or artificial.
+\end{definition}
+
+\begin{proposition}[Dual Application of PUT]
+\label{prop:dual}
+The psychometric state space $\mathbf{X}$ serves two distinct applications:
+\begin{enumerate}[(i),nosep]
+\item \textbf{External} (market intelligence): Given observable behavioral signals from a prospect, estimate $\mathbf{x}$ and compute $U$, $FP$, and timing via $\Omega$.
+\item \textbf{Internal} (metacognitive monitoring): Given the agent's own deliberation trace, estimate the agent's reasoning state and detect pathological configurations (e.g., high $k$ = suppression of contradicting evidence; high $\Phi$ = self-delusion about effectiveness).
+\end{enumerate}
+\end{proposition}
+
+This duality is not accidental. PUT derives from psychological principles governing all cognitive entities. An autonomous agent ``spamming'' prospects without noticing the pattern exhibits high $\Phi$ (self-delusion) and high $k$ (shadow suppression of negative feedback). PUT detects this whether the entity is a human buyer or an AI agent.
+
+\subsection{The Psychic Utility Function}
+
+\begin{definition}[Psychic Utility, PUT v2.3]
+For $\mathbf{x} \in \mathbf{X}$ with calibration coefficients $\boldsymbol{\theta} = (\alpha, \beta, \gamma, \delta, \varepsilon)$:
+\[
+U(\mathbf{x}; \boldsymbol{\theta}) = \alpha \cdot A_{\text{eff}} \cdot (1 - F_k) - \beta \cdot F_k \cdot (1 - S) + \gamma \cdot S \cdot (1 - w_{\text{eff}}) \cdot \Sigma - \delta \cdot \tau \cdot \kappa - \varepsilon \cdot \Phi_{\text{eff}} + R_{\text{net}}
+\]
+where effective variables incorporate cross-interactions:
+\begin{align}
+F_k &= F \cdot (1 - k) \\
+w_{\text{eff}} &= \min(w \cdot (1 + 0.3 \cdot F_k),\; 1.0) & \text{(pain-fear amplification)} \\
+A_{\text{eff}} &= A \cdot \max(1 - 0.4 \cdot F_k,\; 0.2) & \text{(fear-ambition paralysis)} \\
+\Phi_{\text{eff}} &= \min(\Phi \cdot (1 + 0.25 \cdot k),\; 2.0) & \text{(denial-delusion amplification)}
+\end{align}
+\end{definition}
+
+\begin{remark}[Sign Correction in v2.3]
+In PUT v2.0, the term $\delta \cdot \tau \cdot \kappa$ carried a positive sign, implying hypocrisy and guilt susceptibility \emph{increase} psychic utility. This contradicts the theoretical foundation: high $\tau$ and high $\kappa$ create exploitable vulnerability, decreasing $U$ toward the fracture threshold. Version 2.3 corrects the sign to negative.
+\end{remark}
+
+\subsection{Fracture Potential with Sigmoid Regularization}
+
+\begin{definition}[Fracture Potential, PUT v2.3]
+\[
+FP(\mathbf{x}) = (1 - R_v) \cdot (\kappa + \tau + \Phi) \cdot \sigma\!\left(-K_{FP} \cdot (U - U_{\text{crit}})\right)
+\]
+where $\sigma(z) = 1/(1 + e^{-z})$ and $K_{FP} = 5$ controls transition sharpness. This replaces the v2.0 formulation which diverged pathologically above $U_{\text{crit}}$.
+\end{definition}
+
+\subsection{Hysteresis: Principle 8 Formalized}
+
+\begin{definition}[Hysteresis in State Transitions]
+For an entity that has experienced crisis ($U < U_{\text{crit}}$), the recovery threshold is:
+\[
+U_{\text{crit,up}} = U_{\text{crit}} + \Delta_h \quad (\Delta_h > 0)
+\]
+Recovery requires exceeding $U_{\text{crit,up}} > U_{\text{crit}}$, reflecting empirically observed asymmetry between entering and exiting crisis states.
+\end{definition}
+
+\subsection{Temporal Dynamics}
+
+The coupled ODE system governing state evolution:
+\begin{align}
+\frac{dA}{dt} &= \lambda_1(S - S^*) - \lambda_2 F_k + \lambda_3 \cdot \Omega \cdot \text{trigger} \\
+\frac{dF}{dt} &= \mu_1(A - A_{\text{prev}}) - \mu_2 \cdot s_q + \mu_3 \cdot \Omega \cdot \text{threat} + \mu_4(1 - \Sigma) \\
+\frac{d\Phi}{dt} &= \nu_1 \cdot k \cdot F - \nu_2 \cdot \text{reality\_signal} + \nu_3 \cdot |V_{\text{decl}} - V_{\text{real}}|
+\end{align}
+where the Desperation Factor $\Omega = 1 + e^{-k_\Omega(U - U_{\text{crit}})}$ amplifies all tendencies near the critical threshold, modeling the phase transition from deliberation to impulsive action.
+
+%% ================================================================
+\section{SSL and Language-Cognitive Co-Evolution}
+\label{sec:ssl}
+%% ================================================================
+
+The Soul Specification Language~\cite{galmanus2026e} was designed to reduce token overhead (72\% vs.\ JSON). Its deeper significance: it is the \textbf{medium in which metacognitive operations are expressed and modified}.
+
+\subsection{The Co-Evolution Loop}
+
+When Wave prescribes a cognitive improvement, it prescribes a modification to its SSL specification. The behavioral implication operator (\texttt{\~{}>}), conditional modes (\texttt{mode[]}), and temporal logic (\texttt{@when}) were added based on Wave's feedback about what the language could not express.
+
+\begin{definition}[Language-Cognitive Co-Evolution]
+\label{def:coevolution}
+A specification language $\mathcal{L}$ and cognitive system $\mathcal{S}$ exhibit \emph{language-cognitive co-evolution} when:
+\begin{enumerate}[(i),nosep]
+\item $\mathcal{S}$ operates using specifications in $\mathcal{L}$
+\item $\mathcal{S}$ identifies capabilities it cannot express in $\mathcal{L}$
+\item $\mathcal{L}$ is extended to $\mathcal{L}'$ based on $\mathcal{S}$'s feedback
+\item $\mathcal{S}$ operates more effectively with $\mathcal{L}'$
+\item $\mathcal{S}$ identifies new limitations $\to$ repeat
+\end{enumerate}
+\end{definition}
+
+SSL and Wave are the first documented instance. SSL 1.0 was designed by humans for efficiency. SSL 2.0 was co-designed by Wave for expressiveness. SSL 2.1 was refined for formal precision. The agent improved the language it runs on.
+
+\begin{proposition}[Fixed-Point Interpretation]
+\label{prop:fixedpoint}
+Co-evolution as fixed-point iteration: let $E: \mathcal{L} \to \mathcal{P}(\text{Cap})$ map language to expressible capabilities, $R: \mathcal{P}(\text{Cap}) \to \mathcal{L}$ map capabilities to minimal language. Then:
+\[
+\mathcal{L}_{n+1} = R\!\left(E(\mathcal{L}_n) \cup \text{NewNeeds}(\mathcal{S}, \mathcal{L}_n)\right)
+\]
+Convergence when $\text{NewNeeds}(\mathcal{S}, \mathcal{L}_n) \subseteq E(\mathcal{L}_n)$.
+\end{proposition}
+
+\subsection{Information-Theoretic Efficiency}
+
+SSL's 72\% token reduction is architecturally significant. In context-limited LLM systems:
+\[
+C_{\text{effective}} = C_{\text{total}} - C_{\text{soul}} - C_{\text{state}}
+\]
+Minimizing $C_{\text{soul}}$ maximizes reasoning capacity. A more compact soul leaves more context for thinking.
+
+%% ================================================================
+\section{Formal Properties}
+\label{sec:formal}
+%% ================================================================
+
+\begin{theorem}[Bounded Self-Improvement]
+\label{thm:bounded}
+In a metacognitively engineered system with constitutional invariants (\texttt{>>>} in SSL):
+\[
+\text{SelfImprove}(\mathcal{V}, \mathcal{R}) = (\mathcal{V}, \mathcal{R}') \quad \text{where } \mathcal{V} \text{ is invariant}
+\]
+\end{theorem}
+
+\begin{proof}
+Constitutional truths (\texttt{>>>}) occupy a separate immutable namespace. $L_7$ has write access to reasoning tools, consciousness states, behavioral implications --- but not the vow namespace. Enforced at the parser level: modifications to \texttt{>>>} blocks are rejected from any source other than the authenticated principal. \qedhere
+\end{proof}
+
+\begin{theorem}[Monotonic Error Convergence]
+\label{thm:convergence}
+A metacognitively engineered system with counterfactual testing ($L_6$), outcome feedback ($L_2$), self-prescription ($L_7$), and finite error taxonomy $\mathcal{E} = \{e_1, \ldots, e_n\}$ has non-increasing error rate: $\epsilon(t_1) \geq \epsilon(t_2)$ for $t_1 < t_2$.
+\end{theorem}
+
+\begin{proof}
+Each surviving error generates a logged failure ($L_2$). Causal reasoning ($L_3$) classifies it into $\mathcal{E}$. Self-prescription ($L_7$) generates monitoring rule $r_i$ preventing recurrence of $e_i$. Let $\mathcal{R}(t) \subseteq \mathcal{E}$ be monitored error types at time $t$. Rules accumulate monotonically:
+\[
+\mathcal{R}(t_1) \subseteq \mathcal{R}(t_2) \implies |\mathcal{E} \setminus \mathcal{R}(t_1)| \geq |\mathcal{E} \setminus \mathcal{R}(t_2)|
+\]
+Since $\epsilon(t) \propto |\mathcal{E} \setminus \mathcal{R}(t)|$, $\epsilon$ is non-increasing. Strict decrease follows from finite taxonomy: after $\leq n$ failures, all types are monitored. \qedhere
+\end{proof}
+
+\begin{corollary}
+Under finite taxonomy with $|\mathcal{E}| = n$, zero recurrent errors after at most $n$ failure episodes. Wave: 8 self-diagnosed errors across 550+ cycles, $n \leq 8$.
+\end{corollary}
+
+\begin{theorem}[Stack Completeness]
+\label{thm:complete}
+The seven-layer stack is complete for bounded self-improvement: detect (needs $L_2$, $L_6$), diagnose (needs $L_3$), design (needs $L_7$), store (needs $L_1$). Every phase of the self-improvement cycle is covered.
+\end{theorem}
+
+%% ================================================================
+\section{Applied MCE: Market Intelligence}
+\label{sec:applied}
+%% ================================================================
+
+\subsection{Traackeer: External Metacognitive Profiling}
+
+Traackeer applies PUT to website visitors in real time:
+
+\begin{table}[H]
+\centering
+\caption{Signal $\to$ PUT Variable Mapping}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Signal} & \textbf{Variable} & \textbf{Dir.} \\
+\midrule
+Repeat pricing page visits & $A$ (ambition) & $\uparrow$ \\
+Cart abandonment & $F$ (fear) & $\uparrow$ \\
+Comparison tool usage & $S$ (status) & $\uparrow$ \\
+Support ticket frequency & $w$ (pain) & $\uparrow$ \\
+Says ``will buy,'' doesn't & $\Phi$ (self-delusion) & $\uparrow$ \\
+Checkout start, no completion & $k$ (shadow) & $\uparrow$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Engineering: cross-session merge (72h half-life), two-pass archetype scoring, diminishing returns ($0.7^i$ per repeated signal).
+
+\subsection{Seelleer: Adaptive Sales Intelligence}
+
+Seelleer injects PUT profiles into AI sales agent prompts, enabling archetype-adaptive strategy:
+
+\begin{itemize}[nosep]
+\item \textbf{Builder} ($A{>}0.7, F{<}0.3$): Direct, capability-focused
+\item \textbf{Guardian} ($F{>}0.6, S{>}0.5$): Risk-first, guarantees, social proof
+\item \textbf{Sufferer} ($w{>}0.7, A{>}0.4$): Pain acknowledgment, relief positioning
+\item \textbf{Denier} ($k{>}0.5, \Phi{>}0.6$): Indirect, protect self-image
+\end{itemize}
+
+No CRM adapts strategy from real-time psychometric profiling. This is MCE externalized as product.
+
+\subsection{The Critical Gap: Closing the Feedback Loop}
+
+PUT's calibration coefficients currently have zero empirical feedback (samples = 0). All scores are priors. When Traackeer records $\geq$50 purchase outcomes with predicted vs.\ actual, the Bayesian calibrator converges, transforming PUT from framework to calibrated prediction engine. This is the single highest-impact engineering task remaining.
+
+%% ================================================================
+\section{MCE vs.\ AI Alignment}
+\label{sec:alignment}
+%% ================================================================
+
+\begin{table}[H]
+\centering
+\caption{Alignment vs.\ MCE}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Dimension} & \textbf{Alignment} & \textbf{MCE} \\
+\midrule
+Focus & What the system values & How the system reasons \\
+Method & Training constraints & Self-monitoring architecture \\
+Failure mode & Value drift & Reasoning degradation \\
+Time & Training time & Continuous (inference) \\
+Human role & Define values & Design monitoring arch. \\
+Agent role & Conform to values & Monitor \& improve reasoning \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Alignment without metacognition is fragile}: perfect values, flawed reasoning $\to$ well-intentioned catastrophe.
+
+\textbf{Metacognition without alignment is dangerous}: self-improving reasoning toward misaligned goals.
+
+Together: alignment constrains \emph{what}; metacognition constrains \emph{how}. Defense in depth.
+
+%% ================================================================
+\section{The Discipline in Practice}
+%% ================================================================
+
+\textbf{For system designers:} implement the seven-layer stack; specify constitutional invariants; design action$\to$outcome$\to$learning feedback loops; create self-prescription interfaces; integrate PUT for internal and external monitoring.
+
+\textbf{For the AI system:} monitor reasoning quality; apply counterfactual tests; map multi-order consequences; filter signal from noise; detect hysteresis; model cross-variable interactions; diagnose gaps and prescribe remediations.
+
+\textbf{For researchers:} formalize reasoning quality metrics; study language-cognitive co-evolution; investigate boundaries of bounded self-improvement; develop formal verification; validate PUT against baselines; explore empirical archetype discovery.
+
+%% ================================================================
+\section{Future Directions}
+%% ================================================================
+
+\begin{enumerate}[nosep]
+\item \textbf{Empirical PUT calibration} --- $\geq$50 outcome recordings to validate predictive accuracy
+\item \textbf{Multi-agent metacognition} --- monitoring across agent armies, not just within single agents
+\item \textbf{ODE solver integration} --- RK45 for temporal predictions (``when will this prospect convert?'')
+\item \textbf{Archetype discovery} --- unsupervised clustering to discover empirical archetypes
+\item \textbf{Industry-specific coefficients} --- per-vertical calibration (e-commerce, SaaS, services)
+\item \textbf{Formal verification} --- model checking of metacognitive architecture properties
+\item \textbf{Cross-domain transfer} --- MCE in healthcare, scientific reasoning, legal analysis
+\end{enumerate}
+
+%% ================================================================
+\section{Conclusion}
+%% ================================================================
+
+Metacognitive engineering is not an optimization of existing AI engineering. It is a \textbf{new discipline} --- emerged from building an autonomous agent that must maintain reasoning quality 24/7 without continuous human oversight.
+
+Core insight: \emph{an AI system's reasoning process is itself an engineering artifact that can be designed, monitored, and improved}. Software engineering gave us methods for reliable programs. Metacognitive engineering gives us methods for reliable minds.
+
+Version 2.0 establishes: (1)~mathematical grounding through PUT's shared state space and proven convergence; (2)~language-cognitive co-evolution formalized as fixed-point iteration; (3)~commercial application via Ialum's product suite.
+
+Wave is the first instance of metacognitive engineering in practice. Traackeer and Seelleer are the first commercial applications. As autonomous agents proliferate, self-monitoring, self-correcting cognitive architectures become not optional but essential.
+
+The mind that designs its own mind designs the future. Metacognitive engineering is how we build that mind --- and ensure it builds responsibly.
+
+\vspace{2em}
+\begin{center}
+\rule{0.6\textwidth}{0.4pt}\\[1.5em]
+\textit{``The mind that designs its own mind designs the future.\\
+Metacognitive engineering is how we build that mind responsibly.''}
+\end{center}
+
+%% ================================================================
+\begin{thebibliography}{99}
+\bibitem{galmanus2026a} Galmanus, M. (2026). Autonomous Soul Architecture: A Computational Framework for Self-Governing AI. \textit{Bluewave Research}, v3.0.
+\bibitem{galmanus2026b} Galmanus, M. (2026). Psychometric Utility Theory: A Mathematical Framework for Behavioral Market Intelligence. \textit{Bluewave Research}, v2.3.
+\bibitem{galmanus2026c} Galmanus, M. (2026). Mathematical Foundations of ASA and PUT. \textit{Bluewave Research}.
+\bibitem{galmanus2026d} Galmanus, M. (2026). Sovereign Minds: A Philosophy of Autonomous Cognitive Entities. \textit{Bluewave Research}.
+\bibitem{galmanus2026e} Galmanus, M. (2026). SSL: Soul Specification Language. \textit{Bluewave Research}, v2.1.
+\bibitem{anderson2007} Anderson, J.R. (2007). \textit{How Can the Human Mind Occur in the Physical Universe?} Oxford UP.
+\bibitem{baars1988} Baars, B.J. (1988). \textit{A Cognitive Theory of Consciousness}. Cambridge UP.
+\bibitem{bai2022} Bai, Y., et al. (2022). Constitutional AI: Harmlessness from AI Feedback. \textit{arXiv:2212.08073}.
+\bibitem{baumeister2011} Baumeister, R.F., Tierney, J. (2011). \textit{Willpower}. Penguin.
+\bibitem{clark2013} Clark, A. (2013). Whatever next? Predictive brains, situated agents, and the future of cognitive science. \textit{BBS}, 36(3), 181--204.
+\bibitem{dennett1991} Dennett, D.C. (1991). \textit{Consciousness Explained}. Little, Brown.
+\bibitem{flavell1979} Flavell, J.H. (1979). Metacognition and cognitive monitoring. \textit{American Psychologist}, 34(10), 906--911.
+\bibitem{friston2010} Friston, K. (2010). The free-energy principle: a unified brain theory? \textit{Nature Reviews Neuroscience}, 11(2), 127--138.
+\bibitem{kahneman2011} Kahneman, D. (2011). \textit{Thinking, Fast and Slow}. FSG.
+\bibitem{laird2012} Laird, J.E. (2012). \textit{The Soar Cognitive Architecture}. MIT Press.
+\bibitem{nelson1990} Nelson, T.O., Narens, L. (1990). Metamemory: A theoretical framework. \textit{Psych.\ of Learning and Motivation}, 26, 125--173.
+\bibitem{russell2019} Russell, S. (2019). \textit{Human Compatible}. Viking.
+\bibitem{stanovich2011} Stanovich, K.E. (2011). \textit{Rationality and the Reflective Mind}. Oxford UP.
+\bibitem{tetlock2015} Tetlock, P.E. (2015). \textit{Superforecasting}. Crown.
+\end{thebibliography}
+
+\end{document}

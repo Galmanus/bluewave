@@ -10,6 +10,8 @@ Endpoints:
   POST /hooks/bluewave        → Webhook receiver from Bluewave → formatted message
 """
 
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import hmac
@@ -17,8 +19,10 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Optional, Union, Any
 
 from handler import BlueWaveHandler, format_webhook_event
+from skills_handler import get_all_skill_tools, execute_skill as exec_skill_tool, is_skill_tool
 
 # Defer import — uvicorn will install these
 try:
@@ -36,14 +40,25 @@ app = FastAPI(title="Bluewave OpenClaw Skill", version="1.0.0")
 
 # Load tools manifest
 TOOLS_PATH = Path(__file__).parent / "tools.json"
-TOOLS_MANIFEST = json.loads(TOOLS_PATH.read_text()) if TOOLS_PATH.exists() else {}
+CORE_TOOLS = json.loads(TOOLS_PATH.read_text()).get("tools", []) if TOOLS_PATH.exists() else []
+
+# Load skill tools from skills_handler
+SKILL_TOOLS = get_all_skill_tools()
+
+# Combined tools manifest
+TOOLS_MANIFEST = {
+    "name": "bluewave",
+    "version": "1.0.0",
+    "description": "Bluewave AI Creative Operations + 260+ Specialized Research & Strategy Skills",
+    "tools": CORE_TOOLS + SKILL_TOOLS
+}
 
 # Load agents manifest
 AGENTS_PATH = Path(__file__).parent / "agents.json"
 AGENTS_MANIFEST = json.loads(AGENTS_PATH.read_text()) if AGENTS_PATH.exists() else {}
 
 # Initialize handler (will fail fast if no API key)
-handler: BlueWaveHandler | None = None
+handler: Optional[BlueWaveHandler] = None
 
 
 @app.on_event("startup")
@@ -93,15 +108,26 @@ async def execute_tool(request: Request):
 
     Body: { "tool": "bluewave_list_assets", "params": { "status": "draft" } }
     """
-    if not handler:
-        raise HTTPException(503, "Bluewave handler not initialized. Set BLUEWAVE_API_KEY.")
-
     body = await request.json()
     tool_name = body.get("tool", "")
     params = body.get("params", {})
 
     if not tool_name:
         raise HTTPException(400, "Missing 'tool' field.")
+
+    # 1. Check if it's a skill tool (e.g. web_search, unit_economics)
+    if is_skill_tool(tool_name):
+        result = await exec_skill_tool(tool_name, params)
+        # Wrap in consistent format
+        return {
+            "success": result.get("success", False),
+            "data": result.get("data"),
+            "message": result.get("message", "No message")
+        }
+
+    # 2. Otherwise it's a core Bluewave tool
+    if not handler:
+        raise HTTPException(503, "Bluewave handler not initialized. Set BLUEWAVE_API_KEY.")
 
     result = await handler.execute(tool_name, params)
     return result.to_dict()

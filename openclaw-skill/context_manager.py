@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import os
 from typing import Dict, List, Optional
+import anthropic
 
 from token_optimizer import compress_old_tool_results
 
@@ -55,26 +56,47 @@ def _build_summary_text(messages: List[Dict]) -> str:
         content = msg.get("content", "")
 
         if isinstance(content, str):
-            text = content[:200]
+            text = content[:500]
         elif isinstance(content, list):
             text_blocks = []
             for block in content:
                 if isinstance(block, dict):
                     if block.get("type") == "text":
-                        text_blocks.append(block.get("text", "")[:150])
+                        text_blocks.append(block.get("text", "")[:300])
                     elif block.get("type") == "tool_use":
                         text_blocks.append(f"[tool: {block.get('name', '?')}]")
                     elif block.get("type") == "tool_result":
-                        result_text = block.get("content", "")[:100]
+                        result_text = block.get("content", "")[:150]
                         text_blocks.append(f"[result: {result_text}]")
             text = " | ".join(text_blocks) if text_blocks else ""
         else:
-            text = str(content)[:200]
+            text = str(content)[:500]
 
         if text:
             parts.append(f"{role}: {text}")
 
     return "\n".join(parts)
+
+
+def distill_into_aphorisms(text: str) -> str:
+    """Use Haiku to compress conversational history into dense strategic aphorisms."""
+    try:
+        client = anthropic.Anthropic()
+        prompt = (
+            "Distill the following conversation history into dense 'Strategic Aphorisms' (axiomas densos). "
+            "Extract only the absolute core decisions, facts, completed actions, and tactical context. "
+            "Discard all conversational filler. Format as a bulleted list of high-density facts.\n\n"
+            f"HISTORY:\n{text[:24000]}"
+        )
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=600,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.content[0].text
+    except Exception as e:
+        logger.warning("Aphorism distillation failed, using raw summary: %s", e)
+        return text[:1500]
 
 
 class ContextWindowManager:
@@ -106,7 +128,7 @@ class ContextWindowManager:
 
         Applies two stages of optimization:
         1. Compress old tool results (always — cheap and effective)
-        2. If still over threshold, summarize older messages
+        2. If still over threshold, summarize older messages into Strategic Aphorisms
         """
         # Stage 1: Always compress old tool results (saves 30-60% on tool-heavy sessions)
         compress_old_tool_results(messages, keep_recent_turns=2)
@@ -117,7 +139,7 @@ class ContextWindowManager:
             return messages
 
         logger.info(
-            "Context window at ~%dk tokens (threshold: %dk) — summarizing older messages",
+            "Context window at ~%dk tokens (threshold: %dk) — distilling into aphorisms",
             estimated // 1000,
             SUMMARIZE_THRESHOLD // 1000,
         )
@@ -129,23 +151,21 @@ class ContextWindowManager:
         older = messages[:-self.keep_recent]
         recent = messages[-self.keep_recent:]
 
-        # Build summary
-        summary_text = _build_summary_text(older)
-        # Truncate summary if too long
-        if len(summary_text) > SUMMARY_MAX_TOKENS * 4:
-            summary_text = summary_text[:SUMMARY_MAX_TOKENS * 4] + "\n[... earlier context truncated]"
+        # Build raw text and distill
+        raw_summary = _build_summary_text(older)
+        aphorisms = distill_into_aphorisms(raw_summary)
 
-        self._summary = summary_text
+        self._summary = aphorisms
 
         # Ensure proper message alternation: summary as user, then a brief assistant ack
         compressed = [
             {
                 "role": "user",
-                "content": f"[CONTEXT SUMMARY — earlier conversation compressed]\n{summary_text}",
+                "content": f"[STRATEGIC APHORISMS — Past context distilled into dense axioms]\n{aphorisms}",
             },
             {
                 "role": "assistant",
-                "content": "Understood. I have the context from our earlier conversation. Continuing.",
+                "content": "Aphorisms integrated. I retain the strategic essence of our past exchanges.",
             },
         ]
 
@@ -158,7 +178,7 @@ class ContextWindowManager:
 
         new_estimate = estimate_tokens(compressed)
         logger.info(
-            "Context compressed: %dk -> %dk tokens (%d messages -> %d)",
+            "Context compressed via Aphorisms: %dk -> %dk tokens (%d messages -> %d)",
             estimated // 1000,
             new_estimate // 1000,
             len(messages),

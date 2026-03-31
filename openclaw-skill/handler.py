@@ -50,9 +50,9 @@ class BlueWaveHandler:
 
     def __init__(
         self,
-        api_url: str | None = None,
-        api_key: str | None = None,
-        langsmith_run_id: str | None = None,
+        api_url: Optional[str] = None,
+        api_key: Optional[str] = None,
+        langsmith_run_id: Optional[str] = None,
     ):
         self.api_url = (api_url or BLUEWAVE_API_URL).rstrip("/")
         self.api_key = api_key or BLUEWAVE_API_KEY

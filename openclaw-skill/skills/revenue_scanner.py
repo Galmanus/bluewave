@@ -1,219 +1,104 @@
-"""Revenue Scanner — finds money across the internet.
+"""Revenue Scanner — finds monetizable gaps across tech ecosystems.
 
-Scans HN, GitHub, Reddit, ProductHunt for revenue opportunities:
-bounties, contract gigs, desperate founders, acquirable micro-SaaS,
-and partnership leads. Scores each by estimated revenue × probability.
-Returns a ranked hit list.
-
-This is Wave's hunting instinct, automated.
+Scans HN, ProductHunt, GitHub trending, HuggingFace to identify
+micro-SaaS gaps, underserved niches, and cloneable products with
+validated demand. Scores by effort/reward ratio.
 """
 
 from __future__ import annotations
-
 import json
+import subprocess
 import logging
-import asyncio
-import re
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict
 
-logger = logging.getLogger("openclaw.skills.revenue_scanner")
-
-# --- Scoring engine ---
-
-REVENUE_SIGNALS = {
-    "hiring": 15, "contract": 20, "freelance": 18, "bounty": 25,
-    "paid": 20, "budget": 18, "$": 12, "revenue": 12, "saas": 14,
-    "api": 10, "integration": 8, "automat": 12, "consult": 15,
-    "rfp": 22, "looking for": 12, "need help": 15, "developer": 10,
-    "acquisition": 18, "sell my": 16, "buy": 8, "partnership": 12,
-    "sponsor": 15, "grant": 18, "funding": 10,
-    "ai agent": 22, "llm": 15, "claude": 18, "gpt": 12,
-    "startup": 8, "mvp": 14, "prototype": 12, "build": 6,
-    "struggling": 10, "urgent": 12, "asap": 15,
-    "k/mo": 20, "k/yr": 18, "per month": 15, "retainer": 22,
-    "technical co-founder": 20, "co-founder": 10,
-    "open source": 6, "bounties": 25, "reward": 15,
-    "needs automation": 20, "workflow": 10, "no-code": 12,
-    "scraping": 14, "data pipeline": 16, "etl": 14,
-    "consulting": 18, "advisory": 16, "fractional": 20,
-    "mrr": 16, "arr": 14, "churn": 10, "growth": 8,
-}
-
-SOURCE_MULTIPLIER = {"hn": 1.3, "github": 1.0, "reddit": 0.9, "ph": 1.15}
+logger = logging.getLogger("openclaw.revenue_scanner")
 
 
-def score_opportunity(title: str, source: str, context: str = "") -> int:
-    text = (title + " " + context).lower()
-    score = 20
-    for signal, weight in REVENUE_SIGNALS.items():
-        if signal in text:
-            score += weight
-    score *= SOURCE_MULTIPLIER.get(source, 1.0)
-    return min(int(score), 100)
-
-
-def classify_type(title: str, context: str = "") -> str:
-    text = (title + " " + context).lower()
-    checks = [
-        (["bounty", "reward", "prize"], "BOUNTY"),
-        (["hiring", "job", "contract", "freelance", "looking for dev"], "CONTRACT"),
-        (["acquisition", "acqui-hire", "buy my", "sell my"], "ACQUISITION"),
-        (["partner", "collab", "integration"], "PARTNERSHIP"),
-        (["saas", "mrr", "arr", "subscription", "launch"], "MICRO-SAAS"),
-        (["ai", "agent", "llm", "gpt", "claude", "automat"], "AI-OPS"),
-        (["consult", "advisory", "fractional"], "CONSULTING"),
-    ]
-    for keywords, label in checks:
-        if any(k in text for k in keywords):
-            return label
-    return "LEAD"
-
-
-def estimate_value(opp_type: str, score: int) -> str:
-    """Rough $/opportunity estimate."""
-    base = {
-        "BOUNTY": 500, "CONTRACT": 5000, "ACQUISITION": 20000,
-        "PARTNERSHIP": 3000, "MICRO-SAAS": 10000, "AI-OPS": 8000,
-        "CONSULTING": 6000, "LEAD": 2000,
-    }
-    val = base.get(opp_type, 1000) * (score / 50)
-    if val >= 10000:
-        return f"${val/1000:.0f}k"
-    return f"${val:,.0f}"
-
-
-async def _run_skill(skill_name: str, params: dict) -> str:
-    """Run a sibling skill."""
+def _run_skill(name: str, params: dict) -> str:
     try:
-        from skills_handler import execute_skill
-        result = await execute_skill(skill_name, params)
-        if isinstance(result, dict):
-            return json.dumps(result, default=str)
-        return str(result)
+        result = subprocess.run(
+            ["python3", "skill_executor.py", name, json.dumps(params)],
+            capture_output=True, text=True, timeout=45,
+            cwd="/home/manuel/bluewave/openclaw-skill"
+        )
+        return result.stdout
     except Exception as e:
-        return f"[scan-error:{skill_name}] {e}"
+        logger.warning(f"Skill {name} failed: {e}")
+        return ""
 
 
-def _extract_items(raw: str) -> List[str]:
-    """Extract meaningful lines from raw skill output."""
-    items = []
-    for line in raw.split("\n"):
+def _score(title: str, desc: str, source: str) -> int:
+    s = 50
+    combined = (title + " " + desc).lower()
+    for kw in ["api", "saas", "paid", "subscription", "pricing", "b2b", "enterprise",
+                "billing", "payment", "automat", "workflow", "dashboard", "analytic",
+                "monitor", "deploy", "devtool", "infra", "integrat"]:
+        if kw in combined: s += 7
+    for kw in ["ai", "llm", "agent", "gpt", "claude", "automation", "no-code",
+                "scraping", "data", "security", "compliance", "seo", "rag"]:
+        if kw in combined: s += 6
+    for kw in ["open-source", "cli", "tool", "wrapper", "template", "sdk", "plugin"]:
+        if kw in combined: s += 4
+    s += {"ph": 12, "hn": 8, "gh": 5, "hf": 7}.get(source, 0)
+    return min(s, 100)
+
+
+def _parse(raw: str, source: str) -> list:
+    opps = []
+    for line in raw.strip().split("\n"):
         line = line.strip()
         if not line or len(line) < 15:
             continue
-        if line.startswith(("{", "[")) and ("error" in line.lower() or "success" in line.lower()):
-            # Try to extract from JSON
-            try:
-                data = json.loads(raw)
-                if isinstance(data, dict) and "data" in data:
-                    inner = data["data"]
-                    if isinstance(inner, list):
-                        for item in inner:
-                            if isinstance(item, dict):
-                                t = item.get("title", "") or item.get("name", "") or item.get("text", "")
-                                if t:
-                                    items.append(t)
-                        return items
-                    elif isinstance(inner, str):
-                        return _extract_items(inner)
-            except json.JSONDecodeError:
-                pass
-            continue
-        if line.startswith("==") or line.startswith("--") or line.startswith("##"):
-            continue
-        items.append(line)
-    return items
+        sc = _score(line[:100], line, source)
+        if sc >= 55:
+            opps.append({"title": line[:140], "score": sc, "source": source})
+    return opps
 
 
-async def execute(params: Dict[str, Any]) -> str:
-    focus = params.get("focus", "all")
-    min_score = params.get("min_score", 35)
-    limit = params.get("limit", 20)
+async def run(params: Dict[str, Any]) -> Dict[str, Any]:
+    focus = params.get("focus", "ai tools")
+    min_score = params.get("min_score", 58)
 
-    # Define scan sources
-    scan_tasks = [
-        ("hn_top", {}, "hn"),
-        ("gh_trending_repos", {}, "github"),
-        ("ph_today", {}, "ph"),
+    all_opps = []
+    sources = [
+        ("ph", "ph_today", {}),
+        ("hn", "hn_top", {}),
+        ("gh", "gh_trending_repos", {}),
+        ("hf", "hf_trending", {"category": "text-generation"}),
     ]
 
-    reddit_map = {
-        "all": ["forhire", "startups", "SaaS"],
-        "ai": ["MachineLearning", "LocalLLaMA"],
-        "saas": ["SaaS", "microsaas", "startups"],
-        "contracts": ["forhire", "freelance"],
-    }
-    for sub in reddit_map.get(focus, reddit_map["all"]):
-        scan_tasks.append(("reddit_hot", {"subreddit": sub}, "reddit"))
+    for src_key, skill_name, skill_params in sources:
+        raw = _run_skill(skill_name, skill_params)
+        all_opps.extend(_parse(raw, src_key))
 
-    # Run all scans concurrently
-    async def scan_source(skill_name, skill_params, source_tag):
-        raw = await _run_skill(skill_name, skill_params)
-        items = _extract_items(raw)
-        results = []
-        for item in items:
-            scr = score_opportunity(item, source_tag)
-            if scr >= min_score:
-                results.append({
-                    "title": item[:250],
-                    "score": scr,
-                    "source": source_tag.upper(),
-                    "type": classify_type(item),
-                    "est_value": estimate_value(classify_type(item), scr),
-                })
-        return results
+    all_opps.sort(key=lambda x: x["score"], reverse=True)
+    filtered = [o for o in all_opps if o["score"] >= min_score]
+    top = filtered[:12]
 
-    all_results = await asyncio.gather(
-        *[scan_source(s, p, t) for s, p, t in scan_tasks],
-        return_exceptions=True
-    )
+    src_labels = {"ph": "ProductHunt", "hn": "HackerNews", "gh": "GitHub", "hf": "HuggingFace"}
 
-    opportunities = []
-    errors = []
-    for i, result in enumerate(all_results):
-        if isinstance(result, Exception):
-            errors.append(f"{scan_tasks[i][0]}: {result}")
-        elif isinstance(result, list):
-            opportunities.extend(result)
+    lines = [
+        f"{'='*60}",
+        f" REVENUE SCANNER — {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        f"{'='*60}",
+        f"Focus: {focus} | Threshold: {min_score} | Hits: {len(filtered)}",
+        "",
+    ]
 
-    # Deduplicate
-    seen = set()
-    unique = []
-    for opp in opportunities:
-        key = opp["title"][:60].lower()
-        if key not in seen:
-            seen.add(key)
-            unique.append(opp)
-
-    unique.sort(key=lambda x: x["score"], reverse=True)
-    top = unique[:limit]
-
-    # Format
-    lines = []
-    lines.append(f"\n{'='*72}")
-    lines.append(f"  ⚡ REVENUE SCANNER — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    lines.append(f"  Focus: {focus.upper()} | Threshold: {min_score} | Hits: {len(unique)}")
-    lines.append(f"{'='*72}\n")
-
-    total_est = 0
     for i, opp in enumerate(top, 1):
-        bar = "█" * (opp["score"] // 5)
-        lines.append(f"  #{i:02d} [{opp['score']:3d}] {bar}")
-        lines.append(f"       {opp['type']:12s} | {opp['source']:6s} | {opp['est_value']}")
-        lines.append(f"       {opp['title']}")
+        lines.append(f"#{i} [{opp['score']}/100] [{src_labels.get(opp['source'], '?')}]")
+        lines.append(f"   {opp['title']}")
+        if i <= 3:
+            lines.append(f"   → Strategy: Build focused SaaS wrapping this validated demand")
+            lines.append(f"   → Pricing: Freemium + $29-99/mo pro tiers")
+            lines.append(f"   → MVP timeline: 1-2 weeks with AI-assisted dev")
         lines.append("")
-        # Parse est_value back
-        v = opp["est_value"].replace("$", "").replace(",", "").replace("k", "000")
-        try:
-            total_est += float(v)
-        except ValueError:
-            pass
 
-    lines.append(f"{'─'*72}")
-    lines.append(f"  Pipeline value: ${total_est:,.0f} across {len(top)} opportunities")
-    if errors:
-        lines.append(f"  Scan errors: {len(errors)} sources failed")
-    lines.append(f"{'='*72}\n")
+    if not top:
+        lines.append("No opportunities above threshold. Lower min_score or broaden focus.")
 
-    return "\n".join(lines)
+    lines.append(f"{'='*60}")
+    report = "\n".join(lines)
+
+    return {"success": True, "data": report, "message": f"Found {len(filtered)} revenue opportunities"}

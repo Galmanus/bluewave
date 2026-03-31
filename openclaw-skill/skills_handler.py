@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger("openclaw.skills")
 
 # Import all skill modules
-from skills import web_search, x_twitter, email_skill, intelligence, self_evolve, moltbook_skill, notify, vision, learning, power_skills, prospecting, hedera_skill, monetization, pricing_engine, payments, payment_verification, tracing, x_post, put_skills, strategic_skills, self_awareness, legal_intel, financial_intel, huggingface_monitor, hackernews_monitor, producthunt_monitor, github_monitor, reddit_monitor, arxiv_monitor, wave_token, privacy_defi, starknet_deploy, midas_engineer, agent_factory, agent_commerce, db_skill, payment_monitor, self_modify, auto_pipeline, content_pipeline, put_calibrator, wave_memory, wave_cognition, causal_engine, adversarial_sim, strategic_sensor, metacognition, swarm_simulation, brave_search, hunter_io, groq_engine, tavily_search, apollo_leads, stripe_payments, email_outreach, cv_outreach, gmail_skill, revenue_radar
+from skills import web_search, x_twitter, email_skill, intelligence, self_evolve, moltbook_skill, notify, vision, learning, power_skills, prospecting, hedera_skill, monetization, pricing_engine, payments, payment_verification, tracing, x_post, put_skills, strategic_skills, self_awareness, legal_intel, financial_intel, huggingface_monitor, hackernews_monitor, producthunt_monitor, github_monitor, reddit_monitor, arxiv_monitor, wave_token, privacy_defi, starknet_deploy, midas_engineer, midas_operations, agent_factory, agent_commerce, db_skill, payment_monitor, self_modify, auto_pipeline, content_pipeline, put_calibrator, wave_memory, wave_cognition, causal_engine, adversarial_sim, strategic_sensor, metacognition, swarm_simulation, brave_search, hunter_io, groq_engine, tavily_search, apollo_leads, stripe_payments, email_outreach, cv_outreach, gmail_skill, revenue_radar, bitchat_lan, put_engine, midas_yield_optimizer, midas_risk_engine, midas_privacy_gateway
 
 # Import vector memory system (replaces JSONL-based learning for semantic recall)
 try:
@@ -59,6 +59,7 @@ ALL_SKILL_MODULES = [
     privacy_defi,
     starknet_deploy,
     midas_engineer,
+    midas_operations,
     agent_factory,
     agent_commerce,
     db_skill,
@@ -84,6 +85,10 @@ ALL_SKILL_MODULES = [
     cv_outreach,
     gmail_skill,
     revenue_radar,
+    put_engine,
+    midas_yield_optimizer,
+    midas_risk_engine,
+    midas_privacy_gateway,
 ]
 
 # Use vector_memory if available, otherwise fall back to JSONL learning

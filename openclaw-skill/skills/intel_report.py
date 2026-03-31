@@ -1,251 +1,108 @@
-"""Intel Report Generator — Produces sellable competitive intelligence reports.
+"""Competitive Intelligence Report Generator.
 
-This is the revenue layer. It takes a company or market vertical and generates
-a professional-grade competitive intelligence report that can be sold as a
-consulting deliverable ($500-$2,000 per report).
-
-Wave's analysis skills become billable hours.
+Generates structured CI reports worth $500-5000 each.
+Revenue model: Sell as automated intelligence service, use for deal sourcing,
+or bundle into consulting deliverables.
 
 Usage:
-  python3 skill_executor.py intel_report '{"target": "Cursor IDE", "depth": "full"}'
-  python3 skill_executor.py intel_report '{"target": "AI code review tools", "buyer": "VC firm"}'
+  python3 skill_executor.py intel_report '{"target": "Stripe"}'
+  python3 skill_executor.py intel_report '{"target": "vertical SaaS healthcare", "mode": "market"}'
 """
 
-import json
-import os
-import subprocess
-import sys
-import re
+from __future__ import annotations
+import json, os, sys, logging, importlib
 from datetime import datetime
-from pathlib import Path
+from typing import Any, Dict
 
-REPORT_DIR = Path("/home/manuel/bluewave/openclaw-skill/reports")
+logger = logging.getLogger("openclaw.intel_report")
 
-
-def run_skill(name, params):
-    """Run another Wave skill and return parsed result."""
-    r = subprocess.run(
-        [sys.executable, "skill_executor.py", name, json.dumps(params)],
-        capture_output=True, text=True, timeout=90,
-        cwd="/home/manuel/bluewave/openclaw-skill"
-    )
+def _search(query: str) -> str:
+    """Run web_search skill inline."""
     try:
-        return json.loads(r.stdout)
-    except Exception:
-        return {"raw": r.stdout[:3000], "error": r.stderr[:500]}
+        mod = importlib.import_module("skills.web_search")
+        result = mod.execute({"query": query, "max_results": 5})
+        if isinstance(result, dict) and result.get("results"):
+            lines = []
+            for r in result["results"][:5]:
+                lines.append(f"• {r.get('title','')}: {r.get('snippet', r.get('body',''))[:300]}")
+                lines.append(f"  src: {r.get('url','')}")
+            return "\n".join(lines)
+        return str(result)[:2000]
+    except Exception as e:
+        return f"[search_error: {e}]"
 
 
-def _extract_text(data, max_len=4000):
-    """Flatten nested dicts/lists into readable text."""
-    if isinstance(data, str):
-        return data[:max_len]
-    if isinstance(data, dict):
-        parts = []
-        for k, v in data.items():
-            parts.append(f"{k}: {_extract_text(v, max_len=800)}")
-        return "\n".join(parts)[:max_len]
-    if isinstance(data, list):
-        return "\n".join(str(i)[:500] for i in data[:20])[:max_len]
-    return str(data)[:max_len]
+def execute(params: Dict[str, Any]) -> Dict[str, Any]:
+    target = params.get("target", "")
+    if not target:
+        return {"error": "Provide 'target' — a company name or market segment"}
 
+    mode = params.get("mode", "company")  # company | market
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-def _gather_intel(target, depth="standard"):
-    """Multi-source intelligence gathering."""
-    intel = {}
+    # === INTELLIGENCE COLLECTION ===
+    if mode == "company":
+        axes = {
+            "financial_profile": f"{target} revenue ARR funding valuation 2025 2026",
+            "competitive_position": f"{target} vs competitors market share comparison",
+            "product_momentum": f"{target} new product launch features roadmap 2025 2026",
+            "talent_signals": f"{target} hiring engineering team layoffs glassdoor",
+            "customer_sentiment": f"{target} customer complaints reviews churn problems",
+            "partnerships_deals": f"{target} partnerships integrations acquisitions deals",
+        }
+    else:
+        axes = {
+            "market_size": f"{target} market size TAM SAM growth rate 2025 2026",
+            "key_players": f"{target} top companies startups market leaders",
+            "emerging_trends": f"{target} trends innovations disruptions 2025 2026",
+            "funding_activity": f"{target} VC funding deals investments startups",
+            "regulatory_landscape": f"{target} regulation policy compliance changes",
+            "opportunity_gaps": f"{target} underserved gaps unmet needs problems",
+        }
 
-    queries = [
-        ("overview", f"{target} company overview funding revenue 2025 2026"),
-        ("product", f"{target} product features pricing plans"),
-        ("reviews", f"{target} review complaints problems users"),
-        ("competitors", f"{target} competitors alternatives comparison"),
-        ("news", f"{target} latest news announcements 2026"),
-        ("hiring", f"{target} hiring jobs engineering team size"),
+    sections = {}
+    for axis_name, query in axes.items():
+        sections[axis_name] = _search(query)
+
+    # === REPORT ASSEMBLY ===
+    divider = "=" * 60
+    report_lines = [
+        divider,
+        f"  COMPETITIVE INTELLIGENCE REPORT",
+        f"  Target: {target.upper()}",
+        f"  Mode: {mode} | Generated: {ts}",
+        f"  Classification: CONFIDENTIAL",
+        divider, ""
     ]
 
-    if depth == "full":
-        queries += [
-            ("tech_stack", f"{target} technology stack architecture"),
-            ("leadership", f"{target} CEO founder leadership team background"),
-            ("market_size", f"{target} TAM SAM market size opportunity"),
-            ("vulnerabilities", f"'{target}' problems issues frustrated users reddit"),
-        ]
+    for section_key, section_data in sections.items():
+        title = section_key.replace("_", " ").upper()
+        report_lines.append(f"▸ {title}")
+        report_lines.append("-" * 40)
+        report_lines.append(section_data if section_data else "  [No data collected]")
+        report_lines.append("")
 
-    for key, query in queries:
-        intel[key] = run_skill("web_search", {"query": query})
+    report_lines.append(divider)
+    report_lines.append("END OF REPORT")
+    report_lines.append(divider)
 
-    intel["github"] = run_skill("web_search", {"query": f"site:github.com {target}"})
+    full_report = "\n".join(report_lines)
 
-    return intel
-
-
-def _score_threat(intel):
-    """Score competitive threat on multiple dimensions."""
-    text = _extract_text(intel).lower()
-
-    scores = {}
-
-    funding_patterns = [r'\$\d+[mb]', r'series [a-e]', r'raised', r'funding', r'valuation']
-    funding_hits = sum(len(re.findall(p, text)) for p in funding_patterns)
-    scores["funding_firepower"] = min(10, funding_hits)
-
-    product_patterns = [r'enterprise', r'api', r'sdk', r'integration', r'plugin', r'marketplace']
-    product_hits = sum(len(re.findall(p, text)) for p in product_patterns)
-    scores["product_maturity"] = min(10, product_hits)
-
-    traction_patterns = [r'\d+k?\s*users', r'customers', r'revenue', r'arr', r'mrr', r'growth']
-    traction_hits = sum(len(re.findall(p, text)) for p in traction_patterns)
-    scores["market_traction"] = min(10, traction_hits * 2)
-
-    vuln_patterns = [r'slow', r'buggy', r'expensive', r'frustrat', r'terrible',
-                     r'disappoint', r'cancel', r'churn', r'overpriced', r'lack']
-    vuln_hits = sum(len(re.findall(p, text)) for p in vuln_patterns)
-    scores["vulnerability_surface"] = min(10, vuln_hits)
-
-    team_patterns = [r'hiring', r'engineer', r'team of \d+', r'headcount', r'growing']
-    team_hits = sum(len(re.findall(p, text)) for p in team_patterns)
-    scores["team_momentum"] = min(10, team_hits * 2)
-
-    composite = round(sum(scores.values()) / len(scores), 1) if scores else 5
-    return scores, composite
-
-
-def _format_markdown_report(target, buyer, intel, scores, composite, depth, generated_at):
-    """Format as professional Markdown report."""
-
-    overview_text = _extract_text(intel.get("overview", {}), 1500)
-    product_text = _extract_text(intel.get("product", {}), 1500)
-    reviews_text = _extract_text(intel.get("reviews", {}), 1500)
-    competitors_text = _extract_text(intel.get("competitors", {}), 1500)
-    news_text = _extract_text(intel.get("news", {}), 1000)
-
-    report = f"""# Competitive Intelligence Report: {target}
-
-**Prepared for:** {buyer}
-**Date:** {generated_at}
-**Classification:** Confidential
-**Depth:** {depth.upper()}
-
----
-
-## Executive Summary
-
-Target: **{target}**
-Overall Threat Score: **{composite}/10**
-
-| Dimension | Score |
-|-----------|-------|
-"""
-    for dim, score in scores.items():
-        label = dim.replace("_", " ").title()
-        bar = "█" * score + "░" * (10 - score)
-        report += f"| {label} | {bar} {score}/10 |\n"
-
-    report += f"""
----
-
-## 1. Company Overview
-
-{overview_text}
-
----
-
-## 2. Product Analysis
-
-{product_text}
-
----
-
-## 3. Market Position & Competitors
-
-{competitors_text}
-
----
-
-## 4. Customer Sentiment & Vulnerabilities
-
-{reviews_text}
-
----
-
-## 5. Recent Developments
-
-{news_text}
-
----
-
-## 6. Strategic Assessment
-
-### Strengths (to monitor)
-- Funding and team momentum indicate sustained investment capacity
-- Product maturity suggests enterprise readiness
-
-### Vulnerabilities (to exploit)
-- Customer complaints reveal friction points in onboarding and pricing
-- Gaps between marketed features and actual user experience
-
-### Recommended Actions
-1. **Monitor:** Set alerts for {target} funding rounds, leadership changes, major releases
-2. **Engage:** Interview 5-10 churned customers to map exact pain points
-3. **Position:** Build messaging that directly addresses top 3 complaints
-4. **Compete:** Target their weakest customer segments first
-5. **Defend:** Shore up any features where {target} has clear superiority
-
----
-
-*Generated by Wave Intelligence Engine*
-"""
-    return report
-
-
-def execute(params):
-    target = params.get("target")
-    if not target:
-        return {"error": "Required: 'target' (company name or market vertical)"}
-
-    buyer = params.get("buyer", "Internal Strategy Team")
-    depth = params.get("depth", "standard")
-    output_format = params.get("format", "markdown")
-
-    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M UTC")
-
-    # Phase 1: Intelligence gathering
-    intel = _gather_intel(target, depth)
-
-    # Phase 2: Scoring
-    scores, composite = _score_threat(intel)
-
-    # Phase 3: Report generation
-    report_content = _format_markdown_report(
-        target, buyer, intel, scores, composite, depth, generated_at
-    )
-
-    # Phase 4: Save to disk
-    REPORT_DIR.mkdir(parents=True, exist_ok=True)
-    slug = re.sub(r'[^a-z0-9]+', '_', target.lower()).strip('_')
-    date_str = datetime.now().strftime("%Y%m%d")
-    filename = f"intel_{slug}_{date_str}.md"
-    filepath = REPORT_DIR / filename
-    filepath.write_text(report_content)
+    # Save to disk for delivery
+    reports_dir = os.path.expanduser("~/bluewave/intel_reports")
+    os.makedirs(reports_dir, exist_ok=True)
+    safe_name = target.lower().replace(" ", "_").replace("/", "_")[:40]
+    filename = f"{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.txt"
+    filepath = os.path.join(reports_dir, filename)
+    with open(filepath, "w") as f:
+        f.write(full_report)
 
     return {
+        "success": True,
         "target": target,
-        "buyer": buyer,
-        "generated_at": generated_at,
-        "threat_score": f"{composite}/10",
-        "dimension_scores": scores,
-        "report_saved": str(filepath),
-        "depth": depth,
-        "signal_sources": list(intel.keys()),
-        "monetization": {
-            "suggested_price": "$750-$1,500" if depth == "standard" else "$1,500-$3,000",
-            "delivery": "PDF report + 30-min walkthrough call",
-            "upsell": "Monthly monitoring retainer ($500/mo)",
-            "target_buyers": [
-                "VC firms doing due diligence",
-                "Startups entering competitive markets",
-                "Corp dev teams evaluating acquisitions",
-                "Sales teams needing competitive battlecards",
-            ],
-        },
-        "report_preview": report_content[:2000] + "\n\n[... FULL REPORT SAVED TO DISK ...]"
+        "mode": mode,
+        "sections_collected": len(sections),
+        "report_file": filepath,
+        "report_preview": full_report[:3000],
+        "monetization_note": "This report template sells for $500-5000 in consulting. Automate delivery via API endpoint or scheduled batch runs."
     }

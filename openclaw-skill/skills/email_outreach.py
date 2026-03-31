@@ -81,6 +81,23 @@ Best,
 Manuel Galmanus
 AI Engineer — Ialum"""
     },
+    "predator": {
+        "subject": "The hidden liability in {company}'s creative pipeline",
+        "body": """Hi {first_name},
+
+I've been analyzing how high-growth agencies like {company} handle their content operations.
+
+Most founders think their bottleneck is headcount. In reality, it's manual debt. Your current pipeline isn't just slow; it's a liability to your reputation with clients like Tanqueray and Walmart. One compliance slip-up is all it takes.
+
+I built Wave, an autonomous strategic intelligence that audits and secures creative workflows without human supervision. It doesn't 'help' your team; it eliminates the risk of human error entirely.
+
+You're winning awards, but your execution layer is brittle. If you want to see where the fracture point is, I'm available for a 10-minute briefing.
+
+Best,
+Manuel Galmanus
+AI Engineer — Ialum
+github.com/Galmanus/bluewave"""
+    },
     "default": {
         "subject": "AI automation for {company}",
         "body": """Hi {first_name},

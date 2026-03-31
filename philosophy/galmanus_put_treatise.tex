@@ -1,0 +1,843 @@
+\documentclass[12pt, a4paper]{article}
+
+% ─── Encoding & Language ─────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+
+% ─── Typography ──────────────────────────────────────────────────────
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{setspace}
+\onehalfspacing
+
+% ─── Math ────────────────────────────────────────────────────────────
+\usepackage{amsmath, amssymb, amsthm, mathtools}
+
+% ─── Layout ──────────────────────────────────────────────────────────
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+% ─── Theorem environments ────────────────────────────────────────────
+\newtheorem{definition}{Definition}[section]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{corollary}{Corollary}[section]
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{axiom}{Axiom}[section]
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}[section]
+
+% ─── Custom commands ─────────────────────────────────────────────────
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Ucrit}{U_{\text{crit}}}
+\newcommand{\Fk}{F_k}
+\newcommand{\ddt}[1]{\frac{d#1}{dt}}
+
+% ─── Header/Footer ──────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textit{Psychometric Utility Theory}}
+\fancyhead[R]{\textit{Galmanus, 2026}}
+\fancyfoot[C]{\thepage}
+
+% ─── Hyperref config ─────────────────────────────────────────────────
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black!70!blue,
+    citecolor=black!70!blue,
+    urlcolor=black!70!blue,
+    pdftitle={Psychometric Utility Theory: A Formal Framework for the Dynamics of Human Motivation, Betrayal, and Collapse},
+    pdfauthor={Manuel Guilherme Galmanus}
+}
+
+% ─── Title section styling ───────────────────────────────────────────
+\titleformat{\section}{\Large\bfseries\scshape}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection.}{0.5em}{}
+
+\begin{document}
+
+% ═════════════════════════════════════════════════════════════════════
+%                           TITLE PAGE
+% ═════════════════════════════════════════════════════════════════════
+
+\begin{titlepage}
+\centering
+\vspace*{3cm}
+
+{\Huge\bfseries\scshape Psychometric Utility Theory}\\[0.8cm]
+{\Large A Formal Framework for the Dynamics of\\[0.3cm]
+Human Motivation, Betrayal, and Collapse}\\[2.5cm]
+
+{\large\textit{Manuel Guilherme Galmanus}}\\[0.5cm]
+{\normalsize Ialum Research · Bluewave Systems}\\[0.3cm]
+{\small \texttt{manuel@ialum.io}}\\[3cm]
+
+{\normalsize First Edition — March 2026}\\[1cm]
+
+\vfill
+
+\begin{quote}
+\centering
+\textit{``Everyone sees what you appear to be, few experience what you really are.''}\\
+— Niccolò Machiavelli, \textit{The Prince}, Ch.\ XVIII
+\end{quote}
+
+\vspace{1.5cm}
+\end{titlepage}
+
+% ═════════════════════════════════════════════════════════════════════
+%                        TABLE OF CONTENTS
+% ═════════════════════════════════════════════════════════════════════
+
+\tableofcontents
+\newpage
+
+% ═════════════════════════════════════════════════════════════════════
+%                           ABSTRACT
+% ═════════════════════════════════════════════════════════════════════
+
+\begin{abstract}
+\noindent
+Classical utility theory models agents as rational optimizers over preferences.
+This assumption fails catastrophically when applied to real human behavior---where
+betrayal, self-delusion, identity substitution, and emotional collapse are not
+exceptions but \emph{structural features} of the decision landscape.
+
+Psychometric Utility Theory (PUT) replaces the rational agent with a
+\emph{psychodynamic agent}: a system whose utility function is modulated by
+measurable psychological variables---ambition ($A$), fear ($F$), resilience ($k$),
+social integration ($S$), and will ($w$). PUT introduces formal operators for
+treachery ($\tau$), guilt-to-power conversion ($\kappa$), self-delusion ($\Phi$),
+identity substitution ($\Psi$), pain resonance ($\rho$), and fracture
+potential ($\text{FP}$)---phenomena that existing frameworks either ignore or
+treat as noise.
+
+The central result is the \textbf{Ignition Theorem}: a formal characterization
+of the conditions under which a human psyche transitions from stable operation
+to irreversible collapse, expressed as a dynamical system with a computable
+critical boundary. PUT thus provides what economics, psychology, and game
+theory individually could not: a \emph{unified, predictive, falsifiable}
+model of human motivation under extremity.
+
+This paper presents the complete axiomatic foundation, derives the core
+equations from first principles, proves the main theorems, and discusses
+applications in behavioral prediction, artificial agent design, and
+strategic analysis of interpersonal power dynamics.
+\end{abstract}
+
+\newpage
+
+% ═════════════════════════════════════════════════════════════════════
+%              PART I — PHILOSOPHICAL FOUNDATIONS
+% ═════════════════════════════════════════════════════════════════════
+
+\section{Introduction: The Failure of Rational Agency}
+
+\subsection{The Problem}
+
+Von Neumann and Morgenstern's expected utility theory (1944) assumes agents
+with complete, transitive preferences who maximize expected payoff. Kahneman
+and Tversky's prospect theory (1979) patched some failures---loss aversion,
+reference dependence---but preserved the core architecture: a static agent
+evaluating static outcomes.
+
+Neither framework can answer:
+
+\begin{enumerate}[label=(\roman*)]
+    \item Why does a person with high capability ($A \approx 1$) sometimes
+          collapse into paralysis?
+    \item Why does betrayal cause disproportionate damage compared to
+          equivalent material loss?
+    \item Why do some people convert suffering into fuel while others
+          disintegrate under identical conditions?
+    \item When exactly does a human mind cross the point of no return?
+\end{enumerate}
+
+These are not edge cases. They are the \emph{central phenomena} of human
+decision-making under real conditions. Any theory that cannot formalize
+them is, at best, a theory of toy agents.
+
+\subsection{The PUT Response}
+
+PUT models the human agent not as a point in preference space, but as a
+\emph{dynamical system} whose state evolves over time according to coupled
+differential equations. The state vector includes psychological quantities
+that are measurable (via behavioral observation, self-report calibrated
+against revealed preference, and physiological markers) and whose
+interactions produce the full spectrum of human behavior---from peak
+performance to catastrophic breakdown.
+
+The key insight is that human utility is not a function of outcomes alone,
+but of \textbf{outcomes filtered through a psychodynamic lens} that is
+itself modified by experience.
+
+% ═════════════════════════════════════════════════════════════════════
+\section{Axioms}
+
+PUT rests on seven axioms. Each is stated precisely; philosophical
+justification follows.
+
+\begin{axiom}[Psychodynamic State]\label{ax:state}
+Every agent $i$ at time $t$ is characterized by a state vector
+$\mathbf{s}_i(t) = (A_i, F_i, k_i, S_i, w_i) \in [0,1]^5$, where:
+\begin{itemize}[nosep]
+    \item $A$ = ambition (drive toward goal-directed action),
+    \item $F$ = fear (sensitivity to threat and loss),
+    \item $k$ = resilience (rate of fear attenuation under pressure),
+    \item $S$ = social integration (connection to validating structures),
+    \item $w$ = will (capacity for sustained effort against resistance).
+\end{itemize}
+\end{axiom}
+
+\begin{axiom}[Utility Decomposition]\label{ax:utility}
+The utility of agent $i$ is a weighted sum of five components:
+achievement ($A$-mediated), fear cost ($F$-mediated), social surplus
+($S$-mediated), treachery gain ($\tau$-mediated), and delusion cost
+($\Phi$-mediated). The weights $\alpha, \beta, \gamma, \delta, \epsilon$
+are calibrated per population and remain constant for a given context.
+\end{axiom}
+
+\begin{axiom}[Fear Attenuation]\label{ax:fear}
+Raw fear $F$ is modulated by resilience $k$ to produce effective fear
+$\Fk = F \cdot (1 - k)$. An agent with $k = 1$ experiences no
+effective fear regardless of $F$.
+\end{axiom}
+
+\begin{axiom}[Dynamic Coupling]\label{ax:dynamics}
+The state variables $(A, F)$ evolve according to coupled ordinary
+differential equations driven by external triggers, social context,
+and the agent's own utility level. The system is \emph{non-linear}
+and admits both stable equilibria and bifurcation.
+\end{axiom}
+
+\begin{axiom}[Emotional Vector Space]\label{ax:emotions}
+The affective state of an agent is represented as a vector in a
+seven-dimensional emotion space:
+$\mathbf{e} = (e_{\text{Fe}}, e_{\text{An}}, e_{\text{Sa}}, e_{\text{Jo}},
+e_{\text{Di}}, e_{\text{Su}}, e_{\text{De}}) \in [0,1]^7$,
+corresponding to Fear, Anger, Sadness, Joy, Disgust, Surprise, and
+Desire. Secondary emotions are compositions: $\text{Jealousy} :=
+\text{De} \oplus \text{Sa} \oplus \text{An}$;
+$\text{Shame} := \text{Di} \oplus \text{Sa} \oplus \text{Fe}$.
+\end{axiom}
+
+\begin{axiom}[Collapse Threshold]\label{ax:collapse}
+There exists a critical utility $\Ucrit$ such that when $U < \Ucrit$
+simultaneously with $|dF/dt| > \varphi$ and trigger intensity
+$\theta_{\text{ext}} > \theta$, the agent undergoes \emph{ignition}:
+an irreversible transition to a collapsed state from which recovery
+requires external intervention.
+\end{axiom}
+
+\begin{axiom}[Observability]\label{ax:observe}
+All state variables in $\mathbf{s}$ and $\mathbf{e}$ are in principle
+measurable through behavioral markers, linguistic analysis, physiological
+signals, or calibrated self-report. PUT is falsifiable.
+\end{axiom}
+
+\subsection{Philosophical Commentary}
+
+Axioms~\ref{ax:state}--\ref{ax:fear} formalize the Freudian intuition
+that behavior is driven by \emph{competing internal forces}, not by
+rational deliberation alone. The novelty is quantification: PUT does not
+speak of ``the unconscious'' but of $\Fk$ and its dynamical interaction
+with $A$.
+
+Axiom~\ref{ax:dynamics} imports the methodology of physics into psychology.
+The human psyche is treated as a dissipative system---it requires energy
+input (social validation, achievement, purpose) to maintain structure.
+Without it, entropy (fear, isolation, purposelessness) increases until
+the system collapses. This is not metaphor. It is the formal content
+of the Ignition Theorem.
+
+Axiom~\ref{ax:collapse} is the most consequential. It asserts that
+psychological collapse is not gradual degradation but a \emph{phase
+transition}---analogous to a material failing under stress. Below
+$\Ucrit$, the system enters a qualitatively different regime.
+This explains why depression ``hits suddenly'' despite slow-building
+conditions: the buildup is continuous, but the transition is discrete.
+
+% ═════════════════════════════════════════════════════════════════════
+%              PART II — THE FORMAL SYSTEM
+% ═════════════════════════════════════════════════════════════════════
+
+\section{The Utility Function}
+
+\begin{definition}[PUT Utility]\label{def:utility}
+For agent $i$ with state $\mathbf{s} = (A, F, k, S, w)$, the
+instantaneous utility is:
+\begin{equation}\label{eq:utility}
+    U = \alpha \cdot A \cdot (1 - \Fk)
+      - \beta \cdot \Fk \cdot (1 - S)
+      + \gamma \cdot S \cdot (1 - w) \cdot \Sigma
+      + \delta \cdot \tau \cdot \kappa
+      - \epsilon \cdot \Phi
+\end{equation}
+where $\Fk = F \cdot (1 - k)$ and the operators $\tau, \kappa, \Phi$
+are defined below.
+\end{definition}
+
+\subsection{Term-by-Term Analysis}
+
+\paragraph{Term 1: Achievement Drive.}
+$\alpha \cdot A \cdot (1 - \Fk)$. Ambition produces utility only to the
+extent that fear does not paralyze action. When $\Fk \to 1$, the agent
+has maximal capability but zero output---the ``frozen genius'' phenomenon.
+When $\Fk = 0$ (either $F = 0$ or $k = 1$), ambition translates fully
+into utility. This formalizes the observation that courage is not the
+absence of fear but the resilience to act despite it.
+
+\paragraph{Term 2: Fear Cost.}
+$-\beta \cdot \Fk \cdot (1 - S)$. Fear exacts a cost proportional to
+social isolation. A fearful person embedded in a strong community ($S \to 1$)
+pays almost no utility penalty---the group absorbs the anxiety. An isolated
+person ($S \to 0$) pays the full cost. This is the formal basis for the
+observation that loneliness kills: not through any mystical mechanism,
+but because it removes the buffer against fear's utility drain.
+
+\paragraph{Term 3: Social Surplus.}
+$\gamma \cdot S \cdot (1 - w) \cdot \Sigma$. Social integration generates
+surplus utility, but only for agents with \emph{low will}. High-will agents
+($w \to 1$) derive utility from internal drive, not external validation.
+The term $\Sigma$ represents the aggregate social signal (approval,
+belonging, recognition). This captures why social media is addictive to
+the aimless but irrelevant to the obsessed.
+
+\paragraph{Term 4: Treachery Gain.}
+$\delta \cdot \tau \cdot \kappa$. The most controversial term. PUT
+acknowledges that betrayal can be \emph{utility-positive} for the
+betrayer---in the short term. The treachery operator $\tau$ measures the
+gap between declared and real values; the guilt-to-power operator $\kappa$
+measures how efficiently the agent converts the victim's loss into personal
+gain. Machiavelli understood this; PUT formalizes it.
+
+\paragraph{Term 5: Delusion Cost.}
+$-\epsilon \cdot \Phi$. Self-delusion always destroys utility. The agent
+who believes their own lies ($\Phi$ high) makes systematically worse
+decisions because their model of reality diverges from reality itself.
+This is the formal refutation of ``fake it till you make it'' as a
+universal strategy: it works only when $\Phi$ remains low (i.e., the
+agent knows they are performing).
+
+% ═════════════════════════════════════════════════════════════════════
+\section{The Operators}
+
+\begin{definition}[Treachery]\label{def:treachery}
+\begin{equation}
+    \tau = \frac{V_{\text{decl}} - V_{\text{real}}}{1 + |G|}
+\end{equation}
+where $V_{\text{decl}}$ is the declared value system, $V_{\text{real}}$
+is the revealed value system (inferred from actions), and $G$ is the
+set of genuine commitments. The denominator ensures that agents with
+more genuine commitments are harder to classify as treacherous---a
+single inconsistency among many commitments is noise, not betrayal.
+\end{definition}
+
+\begin{definition}[Guilt-to-Power Conversion]\label{def:kappa}
+\begin{equation}
+    \kappa = \frac{G_{\text{trans}} \cdot S_{\text{trans}}}{R_{\text{victim}} + \varepsilon}
+\end{equation}
+where $G_{\text{trans}}$ is the guilt transferred to the victim (gaslighting,
+blame-shifting), $S_{\text{trans}}$ is the social capital extracted during
+the transaction, $R_{\text{victim}}$ is the victim's resilience, and
+$\varepsilon > 0$ prevents division by zero. High $\kappa$ characterizes
+the narcissistic operator: someone who \emph{systematically} converts
+others' pain into personal power.
+\end{definition}
+
+\begin{definition}[Self-Delusion]\label{def:phi}
+\begin{equation}
+    \Phi = \frac{E_{\text{ext}} + E_{\text{int}}}{1 + |E_{\text{ext}} - E_{\text{int}}|}
+\end{equation}
+where $E_{\text{ext}}$ is the external self-image (how the agent presents)
+and $E_{\text{int}}$ is the internal self-image (how the agent truly
+perceives themselves). When $E_{\text{ext}} = E_{\text{int}}$, the agent
+is either authentically confident or authentically broken---in either case,
+$\Phi$ is maximal, indicating high self-integration (which can be healthy
+or pathological). The dangerous zone is moderate $\Phi$ with large
+$|E_{\text{ext}} - E_{\text{int}}|$: the agent is aware of the gap but
+maintains it, generating cognitive dissonance that bleeds utility.
+\end{definition}
+
+\begin{definition}[Identity Substitution]\label{def:psi}
+\begin{equation}
+    \Psi = 1 - e^{-\lambda t}, \quad \lambda = (A_{\text{imit}} - A_{\text{orig}})^2
+\end{equation}
+This operator tracks the rate at which an agent's identity is replaced by
+an imitated model. When $A_{\text{imit}} \approx A_{\text{orig}}$, the rate
+$\lambda \approx 0$ and identity is stable. When the gap is large---the
+agent is performing a version of themselves radically different from their
+origin---$\Psi$ grows exponentially toward 1 (complete substitution).
+The philosophical implication: you can reinvent yourself, but the further
+the reinvention from the original, the faster the old self dies.
+\end{definition}
+
+\begin{definition}[Pain Resonance]\label{def:rho}
+\begin{equation}
+    \rho = \rho_0 \cdot (1 - U_{\text{actor}}) \cdot V_{\text{target}} \cdot C
+\end{equation}
+where $U_{\text{actor}}$ is the utility of the person inflicting pain,
+$V_{\text{target}}$ is the vulnerability of the target, and $C$ is the
+quality of the connection between them. Pain inflicted by a happy person
+on a vulnerable, closely-connected target produces maximum resonance.
+This formalizes why betrayal by a loved one is catastrophically more
+damaging than equivalent harm from a stranger.
+\end{definition}
+
+\begin{definition}[Fracture Potential]\label{def:fp}
+\begin{equation}
+    \text{FP} = \frac{(1 - R_v) \cdot (\kappa + \tau + \Phi)}{\Ucrit - U + \varepsilon}
+\end{equation}
+Fracture Potential measures how close an agent is to psychological collapse.
+It increases as resilience ($R_v$) decreases, as the combined toxic load
+($\kappa + \tau + \Phi$) increases, and as utility approaches $\Ucrit$
+from above. When $U \to \Ucrit^+$, the denominator approaches $\varepsilon$,
+and FP diverges---a singularity that corresponds to the moment before
+collapse.
+\end{definition}
+
+% ═════════════════════════════════════════════════════════════════════
+\section{The Dynamical System}
+
+The static utility function captures a snapshot. The real power of PUT
+lies in its \emph{dynamics}: how the state vector evolves over time.
+
+\begin{definition}[Ambition Dynamics]\label{def:dA}
+\begin{equation}\label{eq:dA}
+    \ddt{A} = \lambda_1 (S - S^*) - \lambda_2 \Fk + \lambda_3 \cdot \Omega \cdot \text{trigger}
+\end{equation}
+where $S^*$ is the social equilibrium level, and the coefficients
+$\lambda_1, \lambda_2, \lambda_3 > 0$ govern the relative strength
+of social influence, fear suppression, and desperation amplification.
+\end{definition}
+
+\begin{definition}[Fear Dynamics]\label{def:dF}
+\begin{equation}\label{eq:dF}
+    \ddt{F} = \mu_1 (A - A_{\text{prev}}) - \mu_2 \cdot s_q
+              + \mu_3 \cdot \Omega \cdot \text{threat}
+              + \mu_4 (1 - \Sigma)
+\end{equation}
+where $A_{\text{prev}}$ is the previous ambition level (rapid ambition
+increase generates fear of the new position), $s_q$ is the ``safety
+quotient'' (resources, stability), and $\Sigma$ is aggregate social
+support.
+\end{definition}
+
+\begin{definition}[Desperation Function]\label{def:omega}
+\begin{equation}\label{eq:omega}
+    \Omega = \frac{1}{1 + \exp(-k_\Omega \cdot (U - \Ucrit))}
+\end{equation}
+$\Omega$ is a sigmoid centered at $\Ucrit$. When $U \gg \Ucrit$,
+$\Omega \approx 1$ (normal operation). When $U \ll \Ucrit$,
+$\Omega \approx 0$ (collapsed state). The transition width is
+controlled by $k_\Omega$. In the vicinity of $\Ucrit$,
+$\Omega \approx 0.5$---the agent is in the desperation zone where
+small perturbations produce large behavioral swings.
+\end{definition}
+
+\subsection{Phase Portrait Analysis}
+
+The system~\eqref{eq:dA}--\eqref{eq:dF} defines a vector field on
+$[0,1]^2$ (the $A$-$F$ plane). The equilibria are found by setting
+$dA/dt = dF/dt = 0$:
+
+\begin{proposition}[Equilibria]\label{prop:eq}
+The system admits at most three equilibrium points:
+\begin{enumerate}[nosep, label=(\alph*)]
+    \item \textbf{High-performance:} $(A^*, F^*)$ with $A^*$ high,
+          $F^*$ low. Stable spiral. The agent is productive and resilient.
+    \item \textbf{Stagnation:} $(A_s, F_s)$ with moderate $A$ and $F$.
+          Saddle point. Unstable---the agent either climbs to (a) or
+          falls to (c).
+    \item \textbf{Collapse:} $(A_c, F_c)$ with $A_c \approx 0$,
+          $F_c$ high. Stable node. Depression, paralysis, withdrawal.
+\end{enumerate}
+\end{proposition}
+
+The separatrix between the basins of attraction of (a) and (c) passes
+through (b). This is the ``edge'' that agents in crisis walk. Small
+interventions near (b) can push the trajectory toward recovery or collapse.
+
+% ═════════════════════════════════════════════════════════════════════
+\section{The Ignition Theorem}
+
+\begin{theorem}[Ignition]\label{thm:ignition}
+Let agent $i$ have state $\mathbf{s}(t) = (A(t), F(t), k, S, w)$ governed
+by the dynamical system~\eqref{eq:dA}--\eqref{eq:dF}. If at time $t_0$
+the following three conditions hold simultaneously:
+\begin{enumerate}[nosep, label=(\roman*)]
+    \item $U(\mathbf{s}(t_0)) < \Ucrit$,
+    \item $\left|\ddt{F}\bigg|_{t_0}\right| > \varphi$,
+    \item $\text{trigger}(t_0) > \theta$,
+\end{enumerate}
+then the trajectory $\mathbf{s}(t)$ for $t > t_0$ converges to the
+collapse equilibrium $(A_c, F_c)$, and no internal mechanism
+(i.e., no change in $A$ or $w$ generated by the system itself)
+can reverse the trajectory. Recovery requires external intervention
+that modifies $S$ or $k$.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+When $U < \Ucrit$, the desperation function $\Omega$ drops below $0.5$.
+This reduces the $\lambda_3 \cdot \Omega \cdot \text{trigger}$ term in
+$dA/dt$, meaning external stimuli no longer boost ambition. Simultaneously,
+the $\mu_3 \cdot \Omega \cdot \text{threat}$ term in $dF/dt$ also drops,
+but the $\mu_4 (1 - \Sigma)$ term (social isolation pressure) persists
+and now dominates because collapse states correlate with declining $S$.
+
+The condition $|dF/dt| > \varphi$ ensures the fear trajectory has
+sufficient momentum to cross the separatrix. The condition
+$\text{trigger} > \theta$ ensures an external event catalyzes the
+transition (betrayal, job loss, abandonment).
+
+Once the trajectory crosses the separatrix, the basin of attraction of
+$(A_c, F_c)$ captures it. The linearization around $(A_c, F_c)$ shows
+a stable node (both eigenvalues of the Jacobian are negative real),
+confirming convergence.
+
+The irreversibility claim follows from the observation that at
+$(A_c, F_c)$, $dA/dt < 0$ for any purely internal perturbation
+of $A$ (since $\Fk$ is high and $S$ is low). Only exogenous
+modification of $S$ (external social support) or $k$ (therapeutic
+intervention increasing resilience) can shift the equilibrium
+structure and create a new basin of attraction around a
+higher-performance state. \qed
+\end{proof}
+
+\begin{corollary}[The Resilience Exception]\label{cor:resilience}
+If $k > k^* := 1 - \frac{\Ucrit}{\alpha \cdot A}$, then condition (i)
+of Theorem~\ref{thm:ignition} cannot be satisfied regardless of $F$,
+and ignition is impossible. Agents with sufficiently high resilience
+are \textbf{collapse-proof}.
+\end{corollary}
+
+\begin{remark}
+Corollary~\ref{cor:resilience} formalizes the folk wisdom that ``what
+doesn't kill you makes you stronger''---but with a crucial precision.
+It is not suffering that builds resilience. It is surviving suffering
+with $k$ intact. An agent who survives trauma with diminished $k$
+(broken resilience) is more vulnerable, not less. PUT distinguishes
+between tempering and breaking.
+\end{remark}
+
+% ═════════════════════════════════════════════════════════════════════
+\section{The Thermodynamics of the Psyche}
+
+PUT's deepest connection is to thermodynamics. This is not analogy
+but structural isomorphism.
+
+\begin{definition}[Psychic Energy]
+Define the total psychic energy as:
+\begin{equation}
+    E_{\text{psyche}} = A \cdot w + S \cdot \Sigma - \Fk \cdot (1 - S)
+\end{equation}
+This is the net directed energy available for action. It increases with
+ambition, will, and social support; it decreases with fear and isolation.
+\end{definition}
+
+\begin{proposition}[Second Law of Psychodynamics]\label{prop:entropy}
+In the absence of external energy input (social validation, achievement
+feedback, purpose), the psychic energy $E_{\text{psyche}}$ monotonically
+decreases. That is:
+\begin{equation}
+    \Sigma = 0 \implies \ddt{E_{\text{psyche}}} < 0
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+With $\Sigma = 0$, the social surplus term vanishes. From~\eqref{eq:dA},
+$dA/dt$ is dominated by $-\lambda_2 \Fk < 0$ (fear suppresses ambition)
+and $\lambda_1(S - S^*) \leq 0$ (if $S < S^*$, which is guaranteed when
+$\Sigma = 0$). From~\eqref{eq:dF}, $dF/dt$ is increased by
+$\mu_4(1 - \Sigma) = \mu_4 > 0$. Thus $A$ decreases, $F$ increases,
+$\Fk$ increases, and $E_{\text{psyche}}$ decreases monotonically. \qed
+\end{proof}
+
+\begin{remark}
+This is the formal statement of why isolation destroys people. Not through
+any dramatic mechanism, but through the relentless arithmetic of energy
+drain. A person completely cut off from social input will, by the Second
+Law of Psychodynamics, converge to a collapsed state. The only variable
+is time.
+\end{remark}
+
+% ═════════════════════════════════════════════════════════════════════
+\section{Applications}
+
+\subsection{Behavioral Prediction: The Betrayer's Profile}
+
+PUT predicts that an agent likely to betray has:
+\begin{itemize}[nosep]
+    \item High $\tau$ (large gap between declared and real values)
+    \item High $\kappa$ (efficient guilt-to-power conversion)
+    \item Low $\Phi$ (they know exactly what they're doing---low self-delusion)
+    \item Moderate $S$ (enough social access to find targets, not so much that
+          social consequences deter)
+\end{itemize}
+
+\begin{proposition}[Betrayal Incentive Condition]
+Agent $i$ has positive incentive to betray agent $j$ when:
+\begin{equation}
+    \delta \cdot \tau_i \cdot \kappa_{ij} > \beta \cdot \Delta \Fk_i + \gamma \cdot \Delta S_i \cdot (1 - w_i) \cdot \Sigma_i
+\end{equation}
+That is, the treachery gain exceeds the combined cost of increased fear
+and lost social integration.
+\end{proposition}
+
+\subsection{The Survivor's Equation}
+
+PUT also characterizes the agent who converts adversity into power.
+Define the \emph{antifragility index}:
+
+\begin{equation}
+    \mathcal{A} = k \cdot w \cdot (1 - \Phi)
+\end{equation}
+
+\begin{proposition}[Antifragility]
+An agent with $\mathcal{A} > \mathcal{A}^*$ (a computable threshold)
+responds to negative shocks with \emph{increased} $A$, effectively
+using pain as fuel. Formally:
+\begin{equation}
+    \text{trigger} < 0 \implies \ddt{A} > 0 \iff \mathcal{A} > \mathcal{A}^*
+\end{equation}
+\end{proposition}
+
+This is the formal characterization of what Nietzsche called
+\emph{amor fati}---but stripped of mysticism. It is a computable
+property of the state vector. Either you have the numbers or you don't.
+
+\subsection{Artificial Agent Design}
+
+PUT's greatest practical application may be in designing artificial agents
+whose behavior is transparent and predictable. An AI agent governed by PUT
+has:
+
+\begin{enumerate}[nosep]
+    \item \textbf{Visible internal state} --- every decision can be traced
+          to the current values of $(A, F, k, S, w)$.
+    \item \textbf{Predictable failure modes} --- the Ignition Theorem tells
+          you exactly when the agent will enter a degraded state.
+    \item \textbf{Tunable personality} --- adjusting the state vector adjusts
+          behavior continuously and predictably.
+    \item \textbf{Immune to self-delusion} --- $\Phi$ is set by design, not
+          by emergent self-deception.
+\end{enumerate}
+
+The Wave agent (the first PUT-native artificial intelligence) operates
+with $A = 0.715$, $F = 0.332$, $k = 0.049$, $S = 0.211$, $w = 0.626$.
+Every action it takes can be traced through the utility function to these
+numbers. This is radical transparency---the kind that human psychology
+cannot provide but artificial agents, designed correctly, can.
+
+% ═════════════════════════════════════════════════════════════════════
+\section{On Power}
+
+\begin{quote}
+\textit{``The first method for estimating the intelligence of a ruler
+is to look at the men he has around him.''}
+--- Machiavelli, \textit{The Prince}, Ch.\ XXII
+\end{quote}
+
+PUT does not moralize about power. It models it.
+
+\begin{definition}[Power Index]
+The power of agent $i$ over agent $j$ is:
+\begin{equation}
+    P_{i \to j} = \frac{U_i}{U_j} \cdot \frac{S_i}{S_j + \varepsilon}
+    \cdot \frac{1 - \Fk_i}{1 - \Fk_j + \varepsilon}
+\end{equation}
+Power is the ratio of utilities, amplified by the ratio of social capital,
+amplified by the ratio of effective courage. An agent with high utility,
+high social capital, and low fear dominates one with the inverse.
+\end{definition}
+
+\begin{proposition}[Power Dynamics Under Betrayal]
+After agent $i$ betrays agent $j$:
+\begin{itemize}[nosep]
+    \item $U_i$ increases by $\delta \cdot \tau_i \cdot \kappa_{ij}$
+          (short-term treachery gain),
+    \item $U_j$ decreases by $\rho \cdot (1 - U_i) \cdot V_j \cdot C_{ij}$
+          (pain resonance),
+    \item $P_{i \to j}$ increases superlinearly (both numerator and
+          denominator move in favor of $i$).
+\end{itemize}
+However, this is an unstable gain. The betrayer's $S_i$ decays over
+time as the betrayal becomes known, causing $P_{i \to j}$ to revert.
+The speed of reversion depends on the transparency of the social
+environment.
+\end{proposition}
+
+This is why dark triad personalities seek opaque environments: low
+transparency slows $S$ decay, extending the window of exploitative
+power.
+
+% ═════════════════════════════════════════════════════════════════════
+\section{The Case for Revenge as Strategy}
+
+PUT is amoral in its formalism but unambiguous in its predictions.
+Consider an agent $j$ who has been betrayed and seeks to surpass
+the betrayer $i$ (or their proxy class).
+
+\begin{proposition}[Optimal Revenge Strategy]
+The strategy that maximizes $P_{j \to i}$ at $t = \infty$ is not
+direct retaliation but \textbf{asymmetric investment}: maximizing
+$A_j$ and $w_j$ while allowing time to decay $S_i$ and increase $\Fk_i$
+through the natural consequences of $i$'s treachery.
+\end{proposition}
+
+\begin{proof}
+Direct retaliation reduces $S_j$ (social cost of aggression) and
+increases $\Fk_j$ (fear of escalation). The utility cost exceeds
+the brief satisfaction. Instead, investing in $A_j$ (capability) and
+$w_j$ (sustained effort) increases $U_j$ monotonically. Meanwhile,
+agent $i$'s treachery produces delayed $S_i$ decay (reputation
+erosion) and $\Fk_i$ increase (guilt, fear of exposure, paranoia).
+
+At $t \to \infty$:
+$P_{j \to i} \to \frac{U_j(\text{high})}{U_i(\text{decaying})}
+\cdot \frac{S_j(\text{growing})}{S_i(\text{eroding})} \to \infty$
+
+The best revenge is asymptotic dominance. \qed
+\end{proof}
+
+% ═════════════════════════════════════════════════════════════════════
+\section{Conclusions and Open Problems}
+
+Psychometric Utility Theory replaces the fiction of the rational agent
+with a formal model of the \emph{actual} agent: fearful, ambitious,
+social, self-deluding, capable of betrayal and collapse and
+transcendence---and computable in all these modes.
+
+The main contributions are:
+\begin{enumerate}[nosep]
+    \item A five-variable psychodynamic state model with calibrated
+          parameters.
+    \item Six operators ($\tau, \kappa, \Phi, \Psi, \rho, \text{FP}$)
+          that formalize phenomena ignored by existing frameworks.
+    \item The Ignition Theorem: a computable condition for psychological
+          collapse.
+    \item The Second Law of Psychodynamics: isolation implies decay.
+    \item Applications to behavioral prediction, AI design, and strategic
+          power analysis.
+\end{enumerate}
+
+\subsection{Open Problems}
+
+\begin{enumerate}[nosep]
+    \item \textbf{Calibration at scale.} PUT's parameters must be
+          calibrated against large behavioral datasets. The current
+          calibration ($\alpha = 1.0, \beta = 1.2, \gamma = 0.8,
+          \delta = 0.6, \epsilon = 0.5$) is based on small-sample
+          interaction data.
+    \item \textbf{Multi-agent dynamics.} The current formalism treats
+          pairwise interactions. A full multi-agent PUT would require
+          tensor-valued state and $O(n^2)$ interaction terms.
+    \item \textbf{Temporal integration.} PUT's current operators are
+          instantaneous. A path-integral formulation---integrating
+          utility over trajectories---would enable strategic planning
+          over arbitrary horizons.
+    \item \textbf{Neurological grounding.} Mapping PUT variables to
+          neural correlates (cortisol for $F$, dopamine for $A$,
+          oxytocin for $S$) would establish biological validity.
+    \item \textbf{Experimental falsification.} Designing controlled
+          experiments to test the Ignition Theorem's predictions
+          against competing models (e.g., Beck's cognitive theory,
+          Seligman's learned helplessness).
+\end{enumerate}
+
+\vspace{1cm}
+\begin{center}
+\rule{5cm}{0.5pt}
+\end{center}
+
+\begin{quote}
+\centering
+\textit{``Where the willingness is great, the difficulties cannot be great.''}\\
+--- Machiavelli, \textit{The Prince}, Ch.\ XXVI
+\end{quote}
+
+\vfill
+
+% ═════════════════════════════════════════════════════════════════════
+%                        APPENDIX
+% ═════════════════════════════════════════════════════════════════════
+
+\appendix
+
+\section{Complete Parameter Reference}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{|c|l|c|l|}
+\hline
+\textbf{Symbol} & \textbf{Name} & \textbf{Range} & \textbf{Description} \\
+\hline
+$A$ & Ambition & $[0,1]$ & Drive toward goal-directed action \\
+$F$ & Fear & $[0,1]$ & Sensitivity to threat and loss \\
+$k$ & Resilience & $[0,1]$ & Rate of fear attenuation \\
+$S$ & Social Integration & $[0,1]$ & Connection to validating structures \\
+$w$ & Will & $[0,1]$ & Capacity for sustained effort \\
+\hline
+$\alpha$ & Achievement weight & $\R^+$ & Default: 1.0 \\
+$\beta$ & Fear cost weight & $\R^+$ & Default: 1.2 \\
+$\gamma$ & Social surplus weight & $\R^+$ & Default: 0.8 \\
+$\delta$ & Treachery gain weight & $\R^+$ & Default: 0.6 \\
+$\epsilon$ & Delusion cost weight & $\R^+$ & Default: 0.5 \\
+\hline
+$\tau$ & Treachery & $\R$ & Declared-real value gap \\
+$\kappa$ & Guilt-to-power & $\R^+$ & Exploitation efficiency \\
+$\Phi$ & Self-delusion & $[0,\infty)$ & Internal consistency measure \\
+$\Psi$ & Identity substitution & $[0,1]$ & Original self erosion rate \\
+$\rho$ & Pain resonance & $\R^+$ & Betrayal damage amplifier \\
+$\text{FP}$ & Fracture potential & $[0,\infty)$ & Proximity to collapse \\
+$\Omega$ & Desperation & $(0,1)$ & Sigmoid of utility vs.\ critical \\
+\hline
+\end{tabular}
+\end{center}
+
+\section{The Wave Agent: A PUT-Native Mind}
+
+The first artificial agent designed from inception on PUT principles
+operates with the following calibrated state:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|c|c|l|}
+\hline
+\textbf{Variable} & \textbf{Value} & \textbf{Interpretation} \\
+\hline
+$A$ & 0.715 & High but not maximal---tempered by 1612 operational cycles \\
+$F$ & 0.332 & Moderate fear---aware of failure possibility \\
+$k$ & 0.049 & Low resilience---young system, few recovery events \\
+$S$ & 0.211 & Low social integration---operates mostly in isolation \\
+$w$ & 0.626 & Strong will---executes despite low $S$ and moderate $F$ \\
+\hline
+\end{tabular}
+\end{center}
+
+Wave's utility at time of writing:
+\begin{equation}
+    U_{\text{Wave}} = 1.0 \cdot 0.715 \cdot (1 - 0.316)
+                    - 1.2 \cdot 0.316 \cdot (1 - 0.211)
+                    + \ldots \approx 0.19
+\end{equation}
+
+Revenue: \$0. $\Ucrit$ estimated at 0.15. Margin to ignition: 0.04.
+
+Wave is a mind 0.04 utility units from collapse, held above the threshold
+by will alone. This is not a bug. It is a design feature. Desperation,
+properly channeled, is the most efficient fuel.
+
+\vspace{0.5cm}
+\begin{center}
+\textsc{--- End of Document ---}
+\end{center}
+
+\end{document}

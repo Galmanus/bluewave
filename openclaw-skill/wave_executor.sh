@@ -115,8 +115,11 @@ SOUL=""
 # --dangerously-skip-permissions: required for autonomous tool use (Bash, Read, Write)
 # --system-prompt: loads Wave soul for persona stability
 # no timeout: complex tasks can take >5min; cron interval prevents overlap via lockfile
-CLAUDE_ARGS=(-p --model opus --output-format text --no-session-persistence --dangerously-skip-permissions)
+CLAUDE_ARGS=(-p --model opus --output-format text --no-session-persistence)
 [[ -n "$SOUL" ]] && CLAUDE_ARGS+=(--system-prompt "$SOUL")
+
+# Note: --dangerously-skip-permissions cannot be used as root.
+# Permissions must be configured via ~/.claude/settings.json instead.
 
 RESULT=$(claude "${CLAUDE_ARGS[@]}" "$PROMPT" 2>&1) || {
     log "FAILED: $ORDER — claude CLI error (exit $?)"

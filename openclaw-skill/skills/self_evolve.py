@@ -456,7 +456,72 @@ async def delete_skill(params: Dict[str, Any]) -> Dict:
     }
 
 
+async def propose_soul_evolution(params: Dict[str, Any]) -> Dict:
+    """Propose a modification to the autonomous_soul.json based on empirical learning.
+    Requires manual review (Gate de Autorização Manual).
+    """
+    from datetime import datetime
+    variable = params.get("variable", "")
+    current_value = params.get("current_value", "")
+    proposed_value = params.get("proposed_value", "")
+    reasoning = params.get("reasoning", "")
+    
+    if not all([variable, proposed_value, reasoning]):
+        return {"success": False, "data": None, "message": "Missing required fields."}
+        
+    proposal = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "variable": variable,
+        "current_value": current_value,
+        "proposed_value": proposed_value,
+        "reasoning": reasoning,
+        "status": "PENDING_MANUAL_REVIEW"
+    }
+    
+    proposal_dir = REPO_ROOT / "docs" / "strategy"
+    proposal_dir.mkdir(parents=True, exist_ok=True)
+    proposal_path = proposal_dir / f"soul_mutation_proposal_{int(datetime.utcnow().timestamp())}.md"
+    
+    md_content = f"""# Proposta de Mutação da Alma (ASA Dinâmica)
+
+**Data:** {proposal['timestamp']}
+**Status:** {proposal['status']}
+
+## Alteração Proposta
+- **Variável Alvo:** `{variable}`
+- **Valor Atual:** `{current_value}`
+- **Novo Valor Proposto:** `{proposed_value}`
+
+## Justificativa Estratégica (Ockham's Razor)
+{reasoning}
+
+---
+*Atenção, Soberano: Para aprovar esta mutação, aplique a mudança no `prompts/autonomous_soul.json` e revise a árvore de execução. A Alma não evolui sem o seu selo.*
+"""
+    proposal_path.write_text(md_content, encoding="utf-8")
+    
+    return {
+        "success": True,
+        "data": {"file": str(proposal_path)},
+        "message": f"Soul evolution proposed for '{variable}'. Awaiting manual authorization from Manuel at {proposal_path}."
+    }
+
 TOOLS = [
+    {
+        "name": "propose_soul_evolution",
+        "description": "Propose a mutation to the core Soul (ASA) based on operational scars or failures. Generates a mutation document requiring manual approval. Never modifies the soul directly.",
+        "handler": propose_soul_evolution,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "variable": {"type": "string", "description": "The specific soul trait or parameter to modify (e.g., 'Curiosity', 'Ockham_weight')"},
+                "current_value": {"type": "string", "description": "Current state or value"},
+                "proposed_value": {"type": "string", "description": "Proposed new state or value"},
+                "reasoning": {"type": "string", "description": "Strategic justification for the change (why it increases power or survivability)"}
+            },
+            "required": ["variable", "proposed_value", "reasoning"]
+        }
+    },
     {
         "name": "create_skill",
         "description": (

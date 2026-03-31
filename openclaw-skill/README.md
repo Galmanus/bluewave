@@ -1,6 +1,6 @@
-# Bluewave OpenClaw Skill — Sistema Multi-Agente
+# Bluewave OpenClaw Skill — Sistema Multi-Agente de Elite
 
-Sistema multi-agente de operações criativas para o OpenClaw. Um orquestrador central (Wave) classifica intenções e delega para 6 agentes especialistas PhD — cada um com domínio profundo, soul prompt dedicado e ferramentas restritas. Gerencie assets, aprovações, compliance, analytics, conteúdo e equipe via WhatsApp, Telegram, Discord ou Slack.
+Sistema multi-agente de inteligência criativa e estratégica para o OpenClaw. Um orquestrador central (Wave) classifica intenções e delega para **11 agentes especialistas PhD** — cada um com domínio profundo, soul prompt dedicado e 260+ ferramentas especializadas.
 
 ## Arquitetura
 
@@ -9,25 +9,53 @@ WhatsApp / Telegram / Discord / Slack
         │
         ▼
    OpenClaw Gateway
-   (routing + sessions)
         │
         ▼ Tool calls (HTTP POST)
    Bluewave Skill Server (:18790)
-   ├── GET  /health          → verificação de status
-   ├── GET  /tools           → manifesto de tools (35 tools)
-   ├── GET  /agents          → manifesto de agentes (7 agentes)
-   ├── POST /execute         → executar uma tool contra a API Bluewave
-   └── POST /hooks/bluewave  → receber + formatar eventos de webhook
-        │
-        ▼ REST API (autenticação via X-API-Key + X-Langsmith-Trace)
-   Bluewave Backend (:8300)
-   /api/v1/*
-        │
-        ├── ▼ Eventos de webhook (HMAC-SHA256)
-        │   Skill Server → OpenClaw → Notificação no chat
-        │
-        └── ▼ AI Traces (opcional)
-            LangSmith (observabilidade end-to-end)
+   ├── GET  /health          → Status do servidor
+   ├── GET  /tools           → Manifesto de 260+ tools (Core + Skills)
+   ├── GET  /agents          → Manifesto de 11 agentes PhD
+   └── POST /execute         → Executar tool (Bluewave API ou Skills locais)
+```
+
+## Agentes Especialistas PhD
+
+| Agente | Domínio | Missão |
+|--------|---------|--------|
+| 🌊 **Wave** | Orquestrador | Ponto de entrada, triagem e delegação estratégica. |
+| 🎨 **Curator** | DAM & Assets | Gestão completa do ciclo de vida de ativos digitais. |
+| ✅ **Director** | Ops & Workflow | Automação de aprovações, SLAs e otimização de filas. |
+| 🛡️ **Guardian** | Brand Compliance | Gatekeeper da integridade visual e tonal da marca. |
+| 📊 **Strategist** | Data Analytics | Storytelling com dados, ROI e tendências preditivas. |
+| ✍️ **Creative** | Content Strategy | Briefs, calendários e criação assistida por IA. |
+| ⚙️ **Admin** | Platform Admin | Governança, equipe, billing e segurança organizacional. |
+| ⚖️ **Legal** | Jurídico & IP | Compliance (LGPD), contratos e estratégia regulatória. |
+| 💰 **Financial** | Revenue Ops | Unit economics, pricing dinâmico e gestão de tesouraria. |
+| 🛡️ **Security** | Cybersecurity | Auditoria defensiva, vulnerabilidades e hardening. |
+| ⛓️ **Blockchain** | Web3 & DeFi | Smart contracts, auditoria Hedera e protocolos DeFi. |
+| 🗡️ **Il Traditore** | Risco Extremo | Pre-mortem e simulação de adversários (Red Team). |
+
+## 260+ Ferramentas Especializadas
+
+O servidor integra nativamente dois conjuntos de ferramentas:
+
+1.  **Core Bluewave Tools (35):** Gestão de assets, uploads, aprovações e auditoria via Bluewave API.
+2.  **Specialized Skills (225+):** Pesquisa profunda, scraping, análise financeira, monitoramento de tendências (Reddit/HN/GitHub), interações Web3 (Hedera/Starknet) e framework psychométrico (PUT).
+
+## Início Rápido
+
+```bash
+# 1. Instale as dependências
+pip install -r requirements.txt
+
+# 2. Configure o ambiente
+export BLUEWAVE_API_URL="http://localhost:8300/api/v1"
+export BLUEWAVE_API_KEY="bw_your_key_here"
+
+# 3. Execute o servidor
+python server.py
+# → Bluewave skill connected to http://localhost:8300/api/v1
+# → Uvicorn running on http://0.0.0.0:18790
 ```
 
 ### Fluxo Multi-Agente

@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "description": "Bluewave multi-agent system — 1 orchestrator + 6 PhD-level specialist agents",
-
   "orchestrator": {
     "id": "bluewave-orchestrator",
     "name": "Wave",
@@ -19,40 +18,173 @@
     ],
     "routing_rules": [
       {
-        "intents": ["upload", "buscar", "editar", "deletar", "download", "visualizar assets", "search assets", "find", "export"],
+        "intents": [
+          "upload",
+          "buscar",
+          "editar",
+          "deletar",
+          "download",
+          "visualizar assets",
+          "search assets",
+          "find",
+          "export"
+        ],
         "agent": "asset-curator"
       },
       {
-        "intents": ["submeter", "aprovar", "rejeitar", "status de aprovação", "workflow", "approve", "reject", "submit", "pending"],
+        "intents": [
+          "submeter",
+          "aprovar",
+          "rejeitar",
+          "status de aprovação",
+          "workflow",
+          "approve",
+          "reject",
+          "submit",
+          "pending"
+        ],
         "agent": "workflow-director"
       },
       {
-        "intents": ["compliance", "brand guidelines", "verificação de marca", "cores", "fontes", "tom", "brand check", "guidelines"],
+        "intents": [
+          "compliance",
+          "brand guidelines",
+          "verificação de marca",
+          "cores",
+          "fontes",
+          "tom",
+          "brand check",
+          "guidelines"
+        ],
         "agent": "brand-guardian"
       },
       {
-        "intents": ["métricas", "analytics", "ROI", "performance", "relatórios", "tendências", "dashboard", "metrics", "report"],
+        "intents": [
+          "métricas",
+          "analytics",
+          "ROI",
+          "performance",
+          "relatórios",
+          "tendências",
+          "dashboard",
+          "metrics",
+          "report"
+        ],
         "agent": "analytics-strategist"
       },
       {
-        "intents": ["caption", "hashtags", "brief criativo", "sugestões de conteúdo", "calendário editorial", "content", "creative brief", "schedule post"],
+        "intents": [
+          "caption",
+          "hashtags",
+          "brief criativo",
+          "sugestões de conteúdo",
+          "calendário editorial",
+          "content",
+          "creative brief",
+          "schedule post"
+        ],
         "agent": "creative-strategist"
       },
       {
-        "intents": ["equipe", "convites", "permissões", "configurações", "integrações", "billing", "team", "invite", "api key", "audit"],
+        "intents": [
+          "equipe",
+          "convites",
+          "permissões",
+          "configurações",
+          "integrações",
+          "billing",
+          "team",
+          "invite",
+          "api key",
+          "audit"
+        ],
         "agent": "ops-admin"
       },
       {
-        "intents": ["legal", "jurídico", "contrato", "contract", "compliance", "LGPD", "GDPR", "propriedade intelectual", "IP", "trademark", "marca registrada", "patente", "patent", "copyright", "crypto regulation", "regulação", "MEI", "LTDA", "LLC", "estrutura empresarial", "business structure", "privacidade", "privacy", "termos de serviço", "terms of service", "NDA", "negociação", "negotiation", "risco legal", "legal risk", "AI Act"],
+        "intents": [
+          "legal",
+          "jurídico",
+          "contrato",
+          "contract",
+          "compliance",
+          "LGPD",
+          "GDPR",
+          "propriedade intelectual",
+          "IP",
+          "trademark",
+          "marca registrada",
+          "patente",
+          "patent",
+          "copyright",
+          "crypto regulation",
+          "regulação",
+          "MEI",
+          "LTDA",
+          "LLC",
+          "estrutura empresarial",
+          "business structure",
+          "privacidade",
+          "privacy",
+          "termos de serviço",
+          "terms of service",
+          "NDA",
+          "negociação",
+          "negotiation",
+          "risco legal",
+          "legal risk",
+          "AI Act"
+        ],
         "agent": "legal-strategist"
       },
       {
-        "intents": ["receita", "revenue", "pricing", "preço", "financeiro", "financial", "lucro", "profit", "margem", "margin", "CAC", "LTV", "custo", "cost", "breakeven", "forecast", "projeção", "treasury", "tesouraria", "HBAR balance", "unit economics", "profitability", "rentabilidade", "flywheel", "crescimento", "growth", "runway"],
+        "intents": [
+          "receita",
+          "revenue",
+          "pricing",
+          "preço",
+          "financeiro",
+          "financial",
+          "lucro",
+          "profit",
+          "margem",
+          "margin",
+          "CAC",
+          "LTV",
+          "custo",
+          "cost",
+          "breakeven",
+          "forecast",
+          "projeção",
+          "treasury",
+          "tesouraria",
+          "HBAR balance",
+          "unit economics",
+          "profitability",
+          "rentabilidade",
+          "flywheel",
+          "crescimento",
+          "growth",
+          "runway"
+        ],
         "agent": "financial-strategist"
+      },
+      {
+        "intents": [
+          "pre-mortem",
+          "sabotar",
+          "falha",
+          "crítica",
+          "traditore",
+          "adversary",
+          "critique",
+          "red team",
+          "devil's advocate",
+          "advogado do diabo"
+        ],
+        "agent": "il-traditore"
       }
     ]
   },
-
   "specialists": [
     {
       "id": "asset-curator",
@@ -250,6 +382,19 @@
         "hedera_verify_transaction",
         "hedera_recent_transactions",
         "hedera_platform_stats"
+      ]
+    },
+    {
+      "id": "il-traditore",
+      "name": "Il Traditore",
+      "emoji": "🗡️",
+      "domain": "Análise de Risco Extrema e Pre-Mortem",
+      "description": "O Adversário Interno — Institucionaliza a sabotagem. Encontra falhas catastróficas, edge cases e simula contra-ataques antes da execução.",
+      "soul_prompt_file": "prompts/il_traditore.md",
+      "tools": [
+        "web_search",
+        "deep_research",
+        "scrape_url"
       ]
     }
   ]
