@@ -4,7 +4,7 @@ import { Upload, Dna, Loader2, Check, Copy } from "lucide-react";
 import { useGeo } from "../contexts/GeoContext";
 import { toast } from "sonner";
 
-const WAVE_API = import.meta.env.VITE_WAVE_API_URL || `http://${window.location.hostname}:18790`;
+const WAVE_API = import.meta.env.VITE_WAVE_API_URL || "/api/v1/wave";
 
 export default function BrandDNAPage() {
   const { geo } = useGeo();
@@ -15,7 +15,7 @@ export default function BrandDNAPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageB64, setImageB64] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
 
   const handleImageUpload = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) return;

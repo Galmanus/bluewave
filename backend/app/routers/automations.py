@@ -96,10 +96,15 @@ TEMPLATES = [
 
 @router.get("", response_model=list[AutomationOut])
 async def list_automations(
+    limit: int = 50,
+    offset: int = 0,
     current_user: UserContext = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_tenant_db),
 ):
-    result = await db.execute(select(Automation))
+    limit = min(limit, 200)
+    result = await db.execute(
+        select(Automation).order_by(Automation.created_at.desc()).offset(offset).limit(limit)
+    )
     return result.scalars().all()
 
 

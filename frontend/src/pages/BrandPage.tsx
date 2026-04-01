@@ -9,7 +9,7 @@ import { Textarea } from "../components/ui/Input";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 
-const WAVE_API = import.meta.env.VITE_WAVE_API_URL || `http://${window.location.hostname}:8300/api/v1/wave`;
+const WAVE_API = import.meta.env.VITE_WAVE_API_URL || "/api/v1/wave";
 
 function ListEditor({
   label,
@@ -263,7 +263,7 @@ export default function BrandPage() {
 
 function ComplianceChecker({ brandName }: { brandName: string }) {
   const [checking, setChecking] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -333,8 +333,8 @@ function ComplianceChecker({ brandName }: { brandName: string }) {
           const input = document.createElement("input");
           input.type = "file";
           input.accept = "image/*";
-          input.onchange = (e: any) => {
-            const file = e.target.files[0];
+          input.onchange = (e: Event) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
             if (file) handleFile(file);
           };
           input.click();

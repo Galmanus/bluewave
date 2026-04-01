@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import api from "../lib/api";
+import api, { setAccessToken, getAccessToken, clearAccessToken } from "../lib/api";
 
 interface User {
   user_id: string;
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
-    const token = localStorage.getItem("access_token");
+    const token = getAccessToken();
     if (!token) {
       setUser(null);
       setIsLoading(false);
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         full_name: data.full_name,
       });
     } catch {
-      localStorage.removeItem("access_token");
+      clearAccessToken();
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (email: string, password: string) => {
       const { data } = await api.post("/auth/login", { email, password });
-      localStorage.setItem("access_token", data.access_token);
+      setAccessToken(data.access_token);
       await fetchUser();
     },
     [fetchUser]
@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api.post("/auth/logout");
     } finally {
-      localStorage.removeItem("access_token");
+      clearAccessToken();
       setUser(null);
     }
   }, []);

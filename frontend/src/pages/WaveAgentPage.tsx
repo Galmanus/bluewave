@@ -20,7 +20,7 @@ import { useWallet } from "../hooks/useWallet";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-const WAVE_API = import.meta.env.VITE_WAVE_API_URL || `http://${window.location.hostname}:8300/api/v1/wave`;
+const WAVE_API = import.meta.env.VITE_WAVE_API_URL || "/api/v1/wave";
 
 interface Message {
   id: string;
@@ -377,8 +377,8 @@ export default function WaveAgentPage() {
               const inp = document.createElement("input");
               inp.type = "file";
               inp.accept = "image/*";
-              inp.onchange = async (e: any) => {
-                const file = e.target.files[0];
+              inp.onchange = async (e: Event) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
                 if (!file) return;
 
                 // Compress image client-side before sending (max 2MB, 1600px)

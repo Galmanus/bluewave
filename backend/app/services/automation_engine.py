@@ -28,12 +28,23 @@ from app.services.webhook_service import emit_event
 logger = logging.getLogger("bluewave.automations")
 
 
+# Fields allowed in automation conditions — prevents access to sensitive attributes
+ALLOWED_CONDITION_FIELDS = frozenset({
+    "status", "file_type", "file_size", "compliance_score",
+    "caption", "hashtags", "filename", "created_at", "updated_at",
+})
+
+
 def _evaluate_conditions(conditions: list[dict], asset: MediaAsset) -> bool:
     """Check if all conditions are met for an asset."""
     for cond in conditions:
         field = cond.get("field", "")
         operator = cond.get("operator", "eq")
         value = cond.get("value")
+
+        if field not in ALLOWED_CONDITION_FIELDS:
+            logger.warning("Automation condition blocked: field '%s' not in allowlist", field)
+            return False
 
         actual = getattr(asset, field, None)
         if actual is None:

@@ -32,10 +32,15 @@ async def get_me(
 
 @router.get("", response_model=list[UserOut])
 async def list_users(
+    limit: int = 50,
+    offset: int = 0,
     current_user: UserContext = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_tenant_db),
 ):
-    result = await db.execute(select(User))
+    limit = min(limit, 200)
+    result = await db.execute(
+        select(User).offset(offset).limit(limit)
+    )
     return result.scalars().all()
 
 

@@ -41,10 +41,15 @@ class APIKeyOut(BaseModel):
 
 @router.get("", response_model=list[APIKeyOut])
 async def list_api_keys(
+    limit: int = 50,
+    offset: int = 0,
     current_user: UserContext = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_tenant_db),
 ):
-    result = await db.execute(select(APIKey))
+    limit = min(limit, 200)
+    result = await db.execute(
+        select(APIKey).order_by(APIKey.created_at.desc()).offset(offset).limit(limit)
+    )
     return result.scalars().all()
 
 

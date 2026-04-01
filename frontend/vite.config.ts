@@ -13,4 +13,23 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 500,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom", "react-router-dom"],
+          ui: [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-tooltip",
+          ],
+          markdown: ["react-markdown", "remark-gfm"],
+          charts: ["recharts"],
+        },
+      },
+    },
+  },
 });

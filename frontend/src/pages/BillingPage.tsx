@@ -10,7 +10,14 @@ export default function BillingPage() {
   const p = geo.lang === "pt";
 
   const [loading, setLoading] = useState<string | null>(null);
-  const [pixData, setPixData] = useState<any>(null);
+  const [pixData, setPixData] = useState<{
+    success: boolean;
+    qr_code?: string;
+    qr_code_base64?: string;
+    ticket_url?: string;
+    payment_id?: string;
+    error?: string;
+  } | null>(null);
 
   const plans = [
     {
@@ -58,8 +65,9 @@ export default function BillingPage() {
       } else {
         toast.error(data.error || "Failed");
       }
-    } catch (e: any) {
-      toast.error(e.response?.data?.detail || (p ? "Erro ao gerar Pix" : "Error generating Pix"));
+    } catch (e: unknown) {
+      const axiosErr = e as { response?: { data?: { detail?: string } } };
+      toast.error(axiosErr.response?.data?.detail || (p ? "Erro ao gerar Pix" : "Error generating Pix"));
     }
     setLoading(null);
   }

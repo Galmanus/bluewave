@@ -368,7 +368,7 @@ export class TraakeerStreams {
   }) {
     this.session_id = opts.session_id;
     this.user_id = opts.user_id;
-    this.api_base = opts.api_base ?? `${window.location.protocol}//${window.location.hostname}:8300`;
+    this.api_base = opts.api_base ?? "";
     this.state = freshState();
   }
 
@@ -393,7 +393,8 @@ export class TraakeerStreams {
 
   private _connect_ws() {
     const proto = window.location.protocol === "https:" ? "wss" : "ws";
-    const url = `${proto}://${window.location.hostname}:8300/api/v1/streams/session/${this.session_id}`;
+    const host = window.location.host; // includes port if non-standard
+    const url = `${proto}://${host}/api/v1/streams/session/${this.session_id}`;
     try {
       this.ws = new WebSocket(url);
       this.ws.onopen = () => { this.ws_ready = true; };

@@ -28,8 +28,38 @@ API = f"https://api.telegram.org/bot{TOKEN}"
 SOUL_FILE = Path(__file__).parent / "prompts" / "wave_telegram.ssl"
 SOUL = SOUL_FILE.read_text(encoding="utf-8") if SOUL_FILE.exists() else ""
 
-# Per-chat conversation history  {chat_id: [{"role": ..., "content": ...}]}
-sessions: dict[str, list[dict]] = {}
+# Per-chat conversation history with TTL-based cleanup
+# {chat_id: {"history": [...], "last_active": timestamp}}
+import time as _time
+
+SESSION_TTL_SECONDS = 24 * 3600  # 24 hours
+_sessions_raw: dict[str, dict] = {}
+
+
+def _cleanup_sessions():
+    """Remove sessions inactive for more than SESSION_TTL_SECONDS."""
+    now = _time.time()
+    expired = [k for k, v in _sessions_raw.items()
+               if now - v.get("last_active", 0) > SESSION_TTL_SECONDS]
+    for k in expired:
+        del _sessions_raw[k]
+    if expired:
+        logger.info("Cleaned up %d expired sessions", len(expired))
+
+
+def _get_session(chat_key: str) -> list[dict]:
+    """Get or create session history, updating last_active timestamp."""
+    if chat_key not in _sessions_raw:
+        _sessions_raw[chat_key] = {"history": [], "last_active": _time.time()}
+    else:
+        _sessions_raw[chat_key]["last_active"] = _time.time()
+    return _sessions_raw[chat_key]["history"]
+
+
+def _set_session_history(chat_key: str, history: list[dict]):
+    """Replace session history (used for truncation)."""
+    if chat_key in _sessions_raw:
+        _sessions_raw[chat_key]["history"] = history
 
 
 async def tg(client: httpx.AsyncClient, method: str, **kwargs) -> dict:
@@ -104,9 +134,9 @@ async def _run_inference(
     ACK_AFTER_SECONDS after start, if not done, sends ONE status message
     so the user knows the task is alive. Never times out externally.
     """
-    from gemini_engine import gemini_call
+    from claude_engine import gemini_call
 
-    history = sessions.setdefault(chat_key, [])
+    history = _get_session(chat_key)
 
     stop = asyncio.Event()
     typing_task = asyncio.create_task(keep_typing(client, chat_id, stop))
@@ -157,7 +187,7 @@ async def _run_inference(
         history.append({"role": "user", "content": text})
         history.append({"role": "model", "content": reply})
         if len(history) > 80:
-            sessions[chat_key] = history[-80:]
+            _set_session_history(chat_key, history[-80:])
     else:
         reply = f"[Erro: {res['response']}]"
         logger.error("inference failed: %s", res["response"])
@@ -177,7 +207,7 @@ async def handle(client: httpx.AsyncClient, update: dict):
     chat_key = str(chat_id)
 
     if text == "/reset":
-        sessions.pop(chat_key, None)
+        _sessions_raw.pop(chat_key, None)
         await send_message(client, chat_id, "Sessão resetada.")
         return
 
@@ -198,7 +228,26 @@ async def poll():
 
     offset = 0
     async with httpx.AsyncClient(timeout=60) as client:
+        # Force-disconnect any competing polling session
+        logger.info("Clearing competing sessions...")
+        for _ in range(10):
+            try:
+                resp = await tg(client, "getUpdates", offset=-1, timeout=0)
+                results = resp.get("result", [])
+                if results:
+                    offset = results[-1]["update_id"] + 1
+            except Exception:
+                pass
+            await asyncio.sleep(0.5)
+        logger.info("Session acquired. Starting long-poll loop.")
+
+        _cleanup_counter = 0
         while True:
+            # Periodic session cleanup every ~100 poll cycles (~50 min with 30s timeout)
+            _cleanup_counter += 1
+            if _cleanup_counter % 100 == 0:
+                _cleanup_sessions()
+
             try:
                 data = await tg(
                     client, "getUpdates",

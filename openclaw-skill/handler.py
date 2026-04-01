@@ -23,6 +23,16 @@ BLUEWAVE_API_URL = os.environ.get("BLUEWAVE_API_URL", "http://localhost:8300/api
 BLUEWAVE_API_KEY = os.environ.get("BLUEWAVE_API_KEY", "")
 LANGSMITH_TRACE_HEADER = "X-Langsmith-Trace"
 
+
+def _require(params: dict, *keys: str) -> None:
+    """Validate that required keys are present in params dict.
+
+    Raises ValueError with a clear message listing missing keys.
+    """
+    missing = [k for k in keys if k not in params or params[k] is None]
+    if missing:
+        raise ValueError(f"Missing required parameter(s): {', '.join(missing)}")
+
 # Timeout for regular requests and uploads
 TIMEOUT_DEFAULT = httpx.Timeout(30.0, connect=10.0)
 TIMEOUT_UPLOAD = httpx.Timeout(120.0, connect=10.0)
@@ -128,6 +138,8 @@ class BlueWaveHandler:
             return ToolResult(False, None, f"Unknown tool: {tool_name}")
         try:
             return await handler(params)
+        except ValueError as e:
+            return ToolResult(False, None, str(e))
         except httpx.HTTPStatusError as e:
             detail = ""
             try:
@@ -175,6 +187,7 @@ class BlueWaveHandler:
         return ToolResult(True, data, "\n".join(lines))
 
     async def _get_asset(self, params: dict) -> ToolResult:
+        _require(params, "asset_id")
         asset_id = params["asset_id"]
         async with httpx.AsyncClient(timeout=TIMEOUT_DEFAULT) as c:
             r = await c.get(f"{self.api_url}/assets/{asset_id}", headers=self._headers())
@@ -199,6 +212,7 @@ class BlueWaveHandler:
         return ToolResult(True, a, msg)
 
     async def _upload_asset(self, params: dict) -> ToolResult:
+        _require(params, "file_url", "filename")
         file_url = params["file_url"]
         filename = params["filename"]
 
@@ -233,6 +247,7 @@ class BlueWaveHandler:
         )
 
     async def _update_asset(self, params: dict) -> ToolResult:
+        _require(params, "asset_id")
         asset_id = params["asset_id"]
         body: dict[str, Any] = {}
         if "caption" in params:
@@ -253,6 +268,7 @@ class BlueWaveHandler:
         return ToolResult(True, a, f"Updated {updated} for asset `{a['id'][:8]}`.")
 
     async def _delete_asset(self, params: dict) -> ToolResult:
+        _require(params, "asset_id")
         asset_id = params["asset_id"]
         async with httpx.AsyncClient(timeout=TIMEOUT_DEFAULT) as c:
             r = await c.delete(f"{self.api_url}/assets/{asset_id}", headers=self._headers())
@@ -263,6 +279,7 @@ class BlueWaveHandler:
     # ── Workflow ───────────────────────────────────────────────
 
     async def _submit_for_approval(self, params: dict) -> ToolResult:
+        _require(params, "asset_id")
         asset_id = params["asset_id"]
         async with httpx.AsyncClient(timeout=TIMEOUT_DEFAULT) as c:
             r = await c.post(f"{self.api_url}/assets/{asset_id}/submit", headers=self._headers())
@@ -271,6 +288,7 @@ class BlueWaveHandler:
         return ToolResult(True, r.json(), f"Asset `{asset_id[:8]}` submitted for approval. ⏳")
 
     async def _approve_asset(self, params: dict) -> ToolResult:
+        _require(params, "asset_id")
         asset_id = params["asset_id"]
         async with httpx.AsyncClient(timeout=TIMEOUT_DEFAULT) as c:
             r = await c.post(f"{self.api_url}/assets/{asset_id}/approve", headers=self._headers())
@@ -279,6 +297,7 @@ class BlueWaveHandler:
         return ToolResult(True, r.json(), f"Asset `{asset_id[:8]}` approved! ✅")
 
     async def _reject_asset(self, params: dict) -> ToolResult:
+        _require(params, "asset_id", "comment")
         asset_id = params["asset_id"]
         comment = params["comment"]
         async with httpx.AsyncClient(timeout=TIMEOUT_DEFAULT) as c:
@@ -390,6 +409,7 @@ class BlueWaveHandler:
         )
 
     async def _invite_user(self, params: dict) -> ToolResult:
+        _require(params, "email", "full_name", "role", "password")
         async with httpx.AsyncClient(timeout=TIMEOUT_DEFAULT) as c:
             r = await c.post(
                 f"{self.api_url}/users",
@@ -439,7 +459,8 @@ class BlueWaveHandler:
     # ── Enhanced: Asset Curator ───────────────────────────────
 
     async def _search_assets(self, params: dict) -> ToolResult:
-        query: dict[str, Any] = {"q": params["query"], "size": params.get("limit", 10)}
+        _require(params, "query")
+        query: dict[str, Any] = {"q": params["query"], "size": min(params.get("limit", 10), 100)}
         if params.get("status"):
             query["status"] = params["status"]
         if params.get("file_type"):
@@ -467,6 +488,7 @@ class BlueWaveHandler:
         return ToolResult(True, data, "\n".join(lines))
 
     async def _bulk_export(self, params: dict) -> ToolResult:
+        _require(params, "asset_ids")
         asset_ids = params["asset_ids"]
         async with httpx.AsyncClient(timeout=TIMEOUT_UPLOAD) as c:
             r = await c.post(
@@ -499,6 +521,7 @@ class BlueWaveHandler:
     # ── Enhanced: Workflow Director ───────────────────────────
 
     async def _batch_approve(self, params: dict) -> ToolResult:
+        _require(params, "asset_ids")
         asset_ids = params["asset_ids"]
         comment = params.get("comment", "")
         approved = []

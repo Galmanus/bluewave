@@ -25,12 +25,11 @@ const STATUS_VARIANT: Record<string, "draft" | "pending_approval" | "approved"> 
   draft: "draft", pending_approval: "pending_approval", approved: "approved",
 };
 
-const WAVE_API = import.meta.env.VITE_WAVE_API_URL || `http://${window.location.hostname}:8300/api/v1/wave`;
+const WAVE_API = import.meta.env.VITE_WAVE_API_URL || "/api/v1/wave";
 
 async function downloadCertificate(brandName: string, assetName: string, score: number, checkedAt: string) {
   try {
-    const waveBase = WAVE_API.replace("/wave", "").replace("/api/v1", "");
-    const apiUrl = `${waveBase || `http://${window.location.hostname}:18790`}/brand/certificate`;
+    const apiUrl = `${import.meta.env.VITE_OPENCLAW_API_URL || "/api/v1"}/brand/certificate`;
     const res = await fetch(apiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

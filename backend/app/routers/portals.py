@@ -84,10 +84,15 @@ admin_router = APIRouter(prefix="/portals", tags=["portals"])
 
 @admin_router.get("", response_model=list[PortalOut])
 async def list_portals(
+    limit: int = 50,
+    offset: int = 0,
     current_user: UserContext = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_tenant_db),
 ):
-    result = await db.execute(select(ClientPortal))
+    limit = min(limit, 200)
+    result = await db.execute(
+        select(ClientPortal).order_by(ClientPortal.created_at.desc()).offset(offset).limit(limit)
+    )
     return result.scalars().all()
 
 

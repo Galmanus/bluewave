@@ -182,6 +182,29 @@ async def save_memory(
                     content, topic, source, importance, memory_type, meta_json,
                 )
 
+            # Enforce MAX_MEMORIES cap per memory_type
+            try:
+                count = await conn.fetchval(
+                    "SELECT COUNT(*) FROM agent_memories WHERE memory_type = $1",
+                    memory_type,
+                )
+                if count and count > MAX_MEMORIES:
+                    excess = count - MAX_MEMORIES
+                    await conn.execute(
+                        """
+                        DELETE FROM agent_memories WHERE id IN (
+                            SELECT id FROM agent_memories
+                            WHERE memory_type = $1
+                            ORDER BY created_at ASC
+                            LIMIT $2
+                        )
+                        """,
+                        memory_type, excess,
+                    )
+                    logger.info("Pruned %d old memories (type=%s, cap=%d)", excess, memory_type, MAX_MEMORIES)
+            except Exception as prune_err:
+                logger.warning("Memory cap enforcement failed: %s", prune_err)
+
             return {
                 "success": True,
                 "data": {"id": row["id"], "has_embedding": embedding is not None},

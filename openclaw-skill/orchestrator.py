@@ -147,7 +147,21 @@ class Orchestrator:
         logger.info("  <- %s responded", config.name)
         return result.text or "(no response from specialist)"
 
+    MAX_HISTORY_MESSAGES = 40
+
+    def _prune_history(self):
+        """Keep history within bounds to prevent unbounded memory growth.
+
+        Retains the most recent MAX_HISTORY_MESSAGES entries. Tool results
+        and assistant_tools entries are counted individually.
+        """
+        if len(self.history) > self.MAX_HISTORY_MESSAGES:
+            pruned = len(self.history) - self.MAX_HISTORY_MESSAGES
+            self.history = self.history[-self.MAX_HISTORY_MESSAGES:]
+            logger.debug("Pruned %d old history entries", pruned)
+
     async def chat(self, user_message: str) -> str:
+        self._prune_history()
         self.history.append({"role": "user", "content": user_message})
 
         # Classify intent → choose model + tool subset

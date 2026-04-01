@@ -11,15 +11,44 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// In-memory token store — not persisted to localStorage, reducing XSS attack surface.
+// Refresh token lives in httpOnly cookie (set by backend), so page reload
+// triggers a silent refresh via /auth/refresh.
+let _accessToken: string | null = null;
+
+export function setAccessToken(token: string | null) {
+  _accessToken = token;
+  // Keep localStorage in sync for backward compat (existing tabs).
+  // TODO: remove localStorage usage entirely once all entry points migrate.
+  if (token) {
+    localStorage.setItem("access_token", token);
+  } else {
+    localStorage.removeItem("access_token");
+  }
+}
+
+export function getAccessToken(): string | null {
+  // Hydrate from localStorage on first call (page reload)
+  if (!_accessToken) {
+    _accessToken = localStorage.getItem("access_token");
+  }
+  return _accessToken;
+}
+
+export function clearAccessToken() {
+  _accessToken = null;
+  localStorage.removeItem("access_token");
+}
+
 const api = axios.create({
   baseURL: "/api/v1",
   withCredentials: true,
   timeout: 30_000,
 });
 
-// Request interceptor: attach access token
+// Request interceptor: attach access token from memory
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access_token");
+  const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -63,11 +92,11 @@ api.interceptors.response.use(
           {},
           { withCredentials: true }
         );
-        localStorage.setItem("access_token", data.access_token);
+        setAccessToken(data.access_token);
         original.headers.Authorization = `Bearer ${data.access_token}`;
         return api(original);
       } catch {
-        localStorage.removeItem("access_token");
+        clearAccessToken();
         window.location.href = "/login";
         return Promise.reject(error);
       }

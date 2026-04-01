@@ -6,10 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.deps import UserContext, get_current_user, require_role
 from app.core.tenant import get_tenant_db
 from app.models.comment import AssetComment
+from app.models.user import User
 
 router = APIRouter(prefix="/assets/{asset_id}/comments", tags=["comments"])
 
@@ -44,22 +46,17 @@ async def list_comments(
     current_user: UserContext = Depends(get_current_user),
     db: AsyncSession = Depends(get_tenant_db),
 ):
-    """List comments for an asset, ordered by creation time."""
+    """List comments for an asset, ordered by creation time.
+
+    Uses a single query with JOIN to avoid N+1 user lookups.
+    """
     result = await db.execute(
-        select(AssetComment)
+        select(AssetComment, User.full_name)
+        .outerjoin(User, AssetComment.user_id == User.id)
         .where(AssetComment.asset_id == asset_id)
         .order_by(AssetComment.created_at)
     )
-    comments = result.scalars().all()
-
-    # Enrich with user names
-    from app.models.user import User
-    user_ids = {c.user_id for c in comments}
-    if user_ids:
-        users_result = await db.execute(select(User).where(User.id.in_(user_ids)))
-        users_map = {u.id: u.full_name for u in users_result.scalars().all()}
-    else:
-        users_map = {}
+    rows = result.all()
 
     return [
         CommentOut(
@@ -71,9 +68,9 @@ async def list_comments(
             is_resolved=c.is_resolved,
             created_at=str(c.created_at),
             updated_at=str(c.updated_at),
-            user_name=users_map.get(c.user_id),
+            user_name=user_name,
         )
-        for c in comments
+        for c, user_name in rows
     ]
 
 
@@ -95,7 +92,6 @@ async def create_comment(
     await db.commit()
     await db.refresh(comment)
 
-    from app.models.user import User
     user_result = await db.execute(select(User).where(User.id == current_user.user_id))
     user = user_result.scalar_one_or_none()
 

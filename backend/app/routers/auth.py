@@ -118,7 +118,7 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(request: Request, response: Response):
+async def refresh(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     token = request.cookies.get(REFRESH_COOKIE)
     if not token:
         raise HTTPException(
@@ -133,11 +133,22 @@ async def refresh(request: Request, response: Response):
             detail="Invalid or expired refresh token",
         )
 
+    # Verify user still exists and is active before issuing new tokens
+    result = await db.execute(select(User).where(User.id == payload["sub"]))
+    user = result.scalar_one_or_none()
+    if not user:
+        response.delete_cookie(REFRESH_COOKIE)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User no longer exists",
+        )
+
+    # Issue new tokens (rotation: old refresh token is replaced by new cookie)
     access_token = create_access_token(
-        payload["sub"], payload["tenant_id"], payload["role"]
+        str(user.id), str(user.tenant_id), user.role.value
     )
     new_refresh = create_refresh_token(
-        payload["sub"], payload["tenant_id"], payload["role"]
+        str(user.id), str(user.tenant_id), user.role.value
     )
 
     _set_refresh_cookie(response, new_refresh)

@@ -9,6 +9,8 @@ Endpoints:
 - POST /webhooks/mercadopago  — Webhook for payment confirmations
 """
 
+import hashlib
+import hmac
 import logging
 import uuid
 from datetime import datetime
@@ -158,6 +160,50 @@ async def payment_status(
 
 # ── Webhook ─────────────────────────────────────────────────
 
+def _verify_mercadopago_signature(request: Request, body: bytes) -> bool:
+    """Verify Mercado Pago webhook signature (x-signature header).
+
+    See: https://www.mercadopago.com.br/developers/en/docs/your-integrations/notifications/webhooks
+    """
+    secret = settings.MERCADOPAGO_WEBHOOK_SECRET
+    if not secret:
+        logger.warning("MERCADOPAGO_WEBHOOK_SECRET not configured — skipping signature check")
+        return True
+
+    x_signature = request.headers.get("x-signature", "")
+    x_request_id = request.headers.get("x-request-id", "")
+
+    if not x_signature:
+        return False
+
+    # Parse ts and v1 from x-signature header: "ts=...,v1=..."
+    parts = {}
+    for part in x_signature.split(","):
+        kv = part.strip().split("=", 1)
+        if len(kv) == 2:
+            parts[kv[0].strip()] = kv[1].strip()
+
+    ts = parts.get("ts", "")
+    v1 = parts.get("v1", "")
+    if not ts or not v1:
+        return False
+
+    # Build the manifest string per MP docs
+    # Template: id:[data.id];request-id:[x-request-id];ts:[ts];
+    try:
+        payload_data = __import__("json").loads(body)
+        data_id = str(payload_data.get("data", {}).get("id", ""))
+    except Exception:
+        return False
+
+    manifest = f"id:{data_id};request-id:{x_request_id};ts:{ts};"
+    expected = hmac.new(
+        secret.encode(), manifest.encode(), hashlib.sha256
+    ).hexdigest()
+
+    return hmac.compare_digest(expected, v1)
+
+
 @webhook_router.post("/mercadopago")
 async def mercadopago_webhook(request: Request):
     """Receive Mercado Pago payment notifications.
@@ -167,8 +213,14 @@ async def mercadopago_webhook(request: Request):
     """
     from app.services.mercadopago_service import process_webhook, get_payment_status
 
+    body = await request.body()
+
+    if not _verify_mercadopago_signature(request, body):
+        logger.warning("Mercado Pago webhook signature verification failed")
+        raise HTTPException(403, "Invalid signature")
+
     try:
-        payload = await request.json()
+        payload = __import__("json").loads(body)
     except Exception:
         raise HTTPException(400, "Invalid JSON")
 
